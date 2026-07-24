@@ -19,7 +19,7 @@ export default {
     }
     const url = new URL(request.url);
     if (url.pathname === "/" || url.pathname.startsWith("/dashboard")) {
-      return Response.redirect(env.PAGES_URL || "https://byjood.pages.dev", 302);
+      return Response.redirect(env.PAGES_URL || "https://byjood-next.byjood.workers.dev/dashboard", 302);
     }
     return new Response("Use POST", { status: 405 });
   },

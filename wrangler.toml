@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 # ----- Environment variables (ไม่ลับ) -----
 [vars]
-SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
+SUPABASE_URL = "https://qrcgljdgzkqnjfnqbbgv.supabase.co"
 
 # ----- Secrets (ตั้งด้วย: wrangler secret put SUPABASE_SERVICE_ROLE_KEY) -----
 # wrangler secret put SUPABASE_SERVICE_ROLE_KEY

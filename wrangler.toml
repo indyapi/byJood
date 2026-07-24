@@ -1,0 +1,35 @@
+name = "social-poster"
+main = "src/producer.js"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ----- Environment variables (ไม่ลับ) -----
+[vars]
+SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
+
+# ----- Secrets (ตั้งด้วย: wrangler secret put SUPABASE_SERVICE_ROLE_KEY) -----
+# wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# wrangler secret put FACEBOOK_APP_SECRET
+# wrangler secret put TIKTOK_CLIENT_SECRET
+# ...ฯลฯ ต่อแพลตฟอร์ม
+
+# ----- Cron Trigger: ยิงทุกชั่วโมงตรง (ปรับตามที่ต้องการ) -----
+[triggers]
+crons = ["0 * * * *"]
+
+# ----- Queue Producer binding (ใช้ใน producer.js) -----
+[[queues.producers]]
+queue = "post-jobs"
+binding = "POST_QUEUE"
+
+# ----- Queue Consumer binding (ใช้ใน consumer.js) -----
+[[queues.consumers]]
+queue = "post-jobs"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 3
+dead_letter_queue = "post-jobs-dlq"
+
+# หมายเหตุ: ต้องสร้าง queue ก่อนด้วยคำสั่ง
+# wrangler queues create post-jobs
+# wrangler queues create post-jobs-dlq

@@ -358,7 +358,9 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd }) {
   async function submit(e) {
     e.preventDefault();
     if (selectedIds.length === 0) return;
-    const scheduled_at = `${date}T${time}:00`;
+    const [y, m, d] = date.split("-");
+    const [h, mi] = time.split(":");
+    const scheduled_at = new Date(+y, +m - 1, +d, +h, +mi).toISOString();
     const created = [];
     for (const pageId of selectedIds) {
       const page = pages.find((p) => p.id === pageId);
@@ -550,18 +552,20 @@ function pageFromDb(p) {
 }
 
 function postFromDb(p) {
+  const d = p.scheduled_at ? new Date(p.scheduled_at) : null;
   return {
     id: p.id,
     pageId: p.page_id,
     platform: p.platform,
     content: p.content,
-    date: p.scheduled_at?.slice(0, 10),
-    time: p.scheduled_at?.slice(11, 16),
+    date: d ? d.toLocaleDateString("sv-SE") : "",
+    time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
     status: p.status,
   };
 }
 
 function logFromDb(l) {
+  const d = l.created_at ? new Date(l.created_at) : null;
   return {
     id: l.id,
     pageLabel: l.page_id,
@@ -569,7 +573,7 @@ function logFromDb(l) {
     success: l.success,
     message: l.error_message || (l.success ? "โพสต์สำเร็จ" : "ล้มเหลว"),
     externalId: l.external_post_id || "—",
-    time: l.created_at,
+    time: d ? d.toLocaleString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }) : "",
   };
 }
 
@@ -587,6 +591,22 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     if (res.ok) {
       const data = await res.json();
       setPages(data.map(pageFromDb));
+    }
+  }, []);
+
+  const refreshPosts = useCallback(async () => {
+    const res = await fetch("/api/scheduled-posts");
+    if (res.ok) {
+      const data = await res.json();
+      setPosts(data.map(postFromDb));
+    }
+  }, []);
+
+  const refreshLogs = useCallback(async () => {
+    const res = await fetch("/api/logs");
+    if (res.ok) {
+      const data = await res.json();
+      setLogs(data.map(logFromDb));
     }
   }, []);
 
@@ -620,7 +640,9 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
   useEffect(() => {
     refreshPages();
-  }, [refreshPages]);
+    refreshPosts();
+    refreshLogs();
+  }, [refreshPages, refreshPosts, refreshLogs]);
 
   const nav = [
     { key: "connections", label: "จัดการเพจ", icon: Link2 },

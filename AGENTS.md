@@ -50,12 +50,11 @@ Schema lives in `supabase/schema.sql` — run in Supabase SQL Editor. 5 tables: 
 ## Wrangler secrets (set before deploy)
 
 ```sh
-# All secrets go to the single byjood Worker
+# Only secret needed on the byjood Worker
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name byjood
-wrangler secret put FACEBOOK_APP_SECRET --name byjood
-wrangler secret put TIKTOK_CLIENT_SECRET --name byjood
-# plus FACEBOOK_APP_ID, THREADS_APP_ID/SECRET, TIKTOK_CLIENT_KEY
 ```
+
+Platform credentials (app_id, app_secret, access_token) are stored per-page in the `page_tokens` table, not as Worker secrets. The `refresh-tokens.js` worker has its own secrets for token refresh.
 
 ## Wrangler vars
 

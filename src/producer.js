@@ -13,11 +13,15 @@ export default {
   },
 
   async fetch(request, env, ctx) {
-    if (request.method !== "POST") {
-      return new Response("Use POST", { status: 405 });
+    if (request.method === "POST") {
+      const result = await enqueueDuePosts(env);
+      return Response.json(result);
     }
-    const result = await enqueueDuePosts(env);
-    return Response.json(result);
+    const url = new URL(request.url);
+    if (url.pathname === "/" || url.pathname.startsWith("/dashboard")) {
+      return Response.redirect(env.PAGES_URL || "https://byjood.pages.dev", 302);
+    }
+    return new Response("Use POST", { status: 405 });
   },
 
   // Cloudflare เรียกตัวนี้เองเมื่อมี message ใน queue "post-jobs"

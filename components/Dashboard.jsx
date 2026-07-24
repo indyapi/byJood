@@ -355,25 +355,24 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd }) {
     setSelectedIds(pages.slice(0, MAX_PAGES_PER_POST).map((p) => p.id));
   }
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     if (selectedIds.length === 0) return;
-    const batchId = `b${Date.now()}`;
-    const newPosts = selectedIds.map((pageId, i) => {
+    const scheduled_at = `${date}T${time}:00`;
+    const created = [];
+    for (const pageId of selectedIds) {
       const page = pages.find((p) => p.id === pageId);
-      return {
-        id: `s${Date.now()}_${i}`,
-        pageId,
-        platform: page.platform,
-        content,
-        date,
-        time,
-        status: "pending",
-        batchId,
-        batchTotal: selectedIds.length,
-      };
-    });
-    onAdd(newPosts);
+      const res = await fetch("/api/scheduled-posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_id: pageId, platform: page.platform, content, scheduled_at }),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        created.push(saved);
+      }
+    }
+    if (created.length > 0) onAdd(created);
     onClose();
   }
 
@@ -909,7 +908,11 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           />
         )}
         {tab === "schedule" && (
-          <ScheduleView posts={posts} pages={pages} onAdd={(newPosts) => setPosts((prev) => [...newPosts, ...prev])} />
+          <ScheduleView
+            posts={posts}
+            pages={pages}
+            onAdd={(newPosts) => setPosts((prev) => [...newPosts.map(postFromDb), ...prev])}
+          />
         )}
         {tab === "logs" && <LogsView logs={logs} />}
       </main>

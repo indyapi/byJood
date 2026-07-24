@@ -37,6 +37,7 @@ Schema lives in `supabase/schema.sql` — run in Supabase SQL Editor. 5 tables: 
 
 ```sh
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+wrangler secret put PAGES_URL        # e.g. https://byjood.pages.dev (for Worker redirect)
 wrangler secret put FACEBOOK_APP_SECRET
 wrangler secret put TIKTOK_CLIENT_SECRET
 # plus FACEBOOK_APP_ID, THREADS_APP_ID/SECRET, TIKTOK_CLIENT_KEY

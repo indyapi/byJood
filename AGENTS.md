@@ -1,11 +1,12 @@
 # Social Poster — Agent Guide
 
-## Two Workers, One Repo
+## One Worker, Everything In It
 
 | Worker | Name | Entry | Config | URL | Deploy command |
 |---|---|---|---|---|---|
-| Next.js (OpenNext) | `byjood-next` | `.open-next/worker.js` | `wrangler.jsonc` | `byjood-next.byjood.workers.dev` | `npm run deploy` |
-| Social Poster (cron/queue) | `byjood` | `src/producer.js` | `wrangler.toml` | `byjood.byjood.workers.dev` | `npm run deploy:worker` |
+| Unified (Next.js + cron/queue) | `byjood` | `src/worker.js` | `wrangler.jsonc` | `byjood.byjood.workers.dev` | `npm run deploy` |
+
+`src/worker.js` wraps the OpenNext-generated `.open-next/worker.js` (handles all Next.js HTTP) and adds `scheduled()` (cron) + `queue()` handlers from the social-poster logic.
 
 ## Commands (run from root)
 
@@ -13,8 +14,7 @@
 npm run dev           # next dev
 npm run build         # next build (standalone, for OpenNext pipeline)
 npm run build:worker  # opennextjs-cloudflare build
-npm run deploy        # build:worker + wrangler deploy (byjood-next)
-npm run deploy:worker # wrangler deploy --config wrangler.toml (byjood)
+npm run deploy        # build:worker + wrangler deploy (byjood)
 npm run start         # next start
 npm run lint          # next lint
 ```
@@ -25,37 +25,41 @@ npm run lint          # next lint
 
 ## Architecture non-obvious facts
 
-- OpenNext (`@opennextjs/cloudflare`) bundles Next.js (pages + API routes) into a single Cloudflare Worker at `byjood-next.byjood.workers.dev`. Static assets are served via `ASSETS` binding.
-- `wrangler.jsonc` controls the OpenNext Worker; `wrangler.toml` controls the social-poster Worker.
-- Social-poster Worker (`byjood`) only handles cron/queue. Its `fetch()` redirects GET `/` and `/dashboard` to `PAGES_URL` (the OpenNext Worker).
-- Workers use **no npm dependencies** — all HTTP via native `fetch`, ES modules only.
-- `producer.js` is triple-purpose: `scheduled()` (cron), `fetch()` (manual trigger), `queue()` (consumer dispatcher).
+- OpenNext (`@opennextjs/cloudflare`) bundles Next.js (pages + API routes) into `.open-next/worker.js`. Static assets are served via `ASSETS` binding.
+- `src/worker.js` is the unified entry point. It re-exports OpenNext's Durable Objects, delegates `fetch()` to OpenNext (except `POST /__cron` which triggers enqueue), and adds `scheduled()` (cron) + `queue()` (consumer).
+- `src/enqueue.js` contains the shared `enqueueDuePosts` function (fetches due posts from Supabase, fans out to queue).
+- `src/producer.js` is kept as an alternative entry point (used by `wrangler-legacy.toml` if needed).
 - **Fan-out pattern**: 1 scheduled post fans out into N queue messages (1 per page). Each message is processed independently with its own timeout and retry counter.
-- Queue config in `wrangler.toml`: `max_retries=3`, `dead_letter_queue=post-jobs-dlq`.
-- `refresh-tokens.js` is a **separate Worker** (different `wrangler.toml`), not part of `social-poster`.
+- Queue config in `wrangler.jsonc`: `max_retries=3`, `dead_letter_queue=post-jobs-dlq`.
 - OAuth API routes are **dynamic** (`ƒ`) — handled by OpenNext Worker, not static export.
+
+## Source files
+
+| File | Purpose |
+|---|---|
+| `src/worker.js` | **Unified entry point** — re-exports OpenNext DOs, forwards fetch, adds scheduled + queue |
+| `src/producer.js` | Legacy entry point (cron/queue only, standalone) |
+| `src/enqueue.js` | Shared `enqueueDuePosts()` used by both entry points |
+| `src/consumer.js` | Queue message processor |
+| `src/platforms.js` | Platform-specific post handlers (Facebook, TikTok, etc.) |
 
 ## Supabase
 
 Schema lives in `supabase/schema.sql` — run in Supabase SQL Editor. 5 tables: `pages`, `page_tokens`, `scheduled_posts`, `post_logs`, `oauth_states`. Workers bypass RLS via `service_role` key. Frontend uses anon key with RLS.
 
-## Wrangler secrets
+## Wrangler secrets (set before deploy)
 
 ```sh
-# For byjood (social-poster Worker — cron/queue)
+# All secrets go to the single byjood Worker
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name byjood
-wrangler secret put PAGES_URL --name byjood               # https://byjood-next.byjood.workers.dev
 wrangler secret put FACEBOOK_APP_SECRET --name byjood
 wrangler secret put TIKTOK_CLIENT_SECRET --name byjood
 # plus FACEBOOK_APP_ID, THREADS_APP_ID/SECRET, TIKTOK_CLIENT_KEY
-
-# For byjood-next (OpenNext Worker — frontend + API)
-wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name byjood-next
 ```
 
 ## Wrangler vars
 
-`wrangler.toml` has `SUPABASE_URL` as a var — update before deploy.
+`wrangler.jsonc` has `SUPABASE_URL` as a var — update to real Supabase URL before deploy.
 
 ## Queues (create before first deploy)
 

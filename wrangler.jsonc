@@ -1,10 +1,57 @@
 {
-  "name": "byjood-next",
-  "main": ".open-next/worker.js",
+  "name": "byjood",
+  "main": "src/worker.js",
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "byjood"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "NEXT_TAG_CACHE_DO_SHARDED", "class_name": "DOShardedTagCache" },
+      { "name": "NEXT_CACHE_DO_QUEUE",       "class_name": "DOQueueHandler" },
+      { "name": "NEXT_CACHE_DO_PURGE",       "class_name": "BucketCachePurge" }
+    ]
+  },
+  "exports": {
+    "DOShardedTagCache": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    },
+    "DOQueueHandler": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    },
+    "BucketCachePurge": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "queues": {
+    "producers": [
+      { "queue": "post-jobs", "binding": "POST_QUEUE" }
+    ],
+    "consumers": [
+      {
+        "queue": "post-jobs",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "post-jobs-dlq"
+      }
+    ]
+  },
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "vars": {
+    "SUPABASE_URL": "https://qrcgljdgzkqnjfnqbbgv.supabase.co"
   }
 }

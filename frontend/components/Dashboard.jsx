@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Plus, X, Eye, EyeOff, Trash2, ChevronLeft, ChevronRight, Clock,
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
@@ -19,54 +19,16 @@ const PLATFORMS = {
   website:   { code: "WEB", name: "Website",        color: "#6C93A8" },
 };
 
-const CONNECTION_FIELDS = {
-  facebook:  [{ key: "pageId", label: "Page ID", placeholder: "1029384756512" },
-              { key: "token", label: "Page access token", secret: true, placeholder: "EAAGx..." }],
-  instagram: [{ key: "accountId", label: "IG business account ID", placeholder: "1784509213..." },
-              { key: "token", label: "Access token", secret: true, placeholder: "IGQVJ..." }],
-  threads:   [{ key: "accountId", label: "Threads user ID", placeholder: "7891023..." },
-              { key: "token", label: "Access token", secret: true, placeholder: "THQVJ..." }],
-  tiktok:    [{ key: "openId", label: "Open ID", placeholder: "-aBcDeFg..." },
-              { key: "token", label: "Access token", secret: true, placeholder: "act.xxxxx" }],
-  youtube:   [{ key: "channelId", label: "Channel ID", placeholder: "UCxxxxxxxxxxxxxxxx" },
-              { key: "token", label: "API key / OAuth token", secret: true, placeholder: "AIzaSy..." }],
-  website:   [{ key: "webhookUrl", label: "Webhook URL", placeholder: "https://yoursite.com/api/webhook" },
-              { key: "token", label: "API key", secret: true, placeholder: "sk_live_..." }],
-};
+const CONNECTION_FIELDS = [
+  { key: "appId", label: "App ID", placeholder: "Facebook App ID, TikTok Client Key, etc." },
+  { key: "pageId", label: "Page ID", placeholder: "Page ID, Account ID, or Channel ID" },
+  { key: "appSecret", label: "App Secret", secret: true, placeholder: "App Secret or Client Secret" },
+  { key: "accessToken", label: "Page access token", secret: true, placeholder: "Paste your access token or API key" },
+];
 
-/* ---------------------------------------------------------
-   Mock data — stand-in for what Supabase would return
---------------------------------------------------------- */
-const today = new Date("2026-07-24T09:00:00");
+const today = new Date();
 const dayKey = (d) => d.toISOString().slice(0, 10);
 const addDays = (d, n) => { const c = new Date(d); c.setDate(c.getDate() + n); return c; };
-
-const initialPages = [
-  { id: "p1", platform: "facebook", label: "ร้านกาแฟดอยสุเทพ", externalId: "1029384756512", status: "active", addedAt: "2026-07-10", tokenPreview: "EAAG••••••••3F9x" },
-  { id: "p2", platform: "instagram", label: "@doisuthep.coffee", externalId: "17845092130044", status: "active", addedAt: "2026-07-10", tokenPreview: "IGQV••••••••7k2M" },
-  { id: "p3", platform: "tiktok", label: "doisuthep.official", externalId: "-aBcDeFg91011", status: "expiring", addedAt: "2026-06-02", tokenPreview: "act.••••••••x02q" },
-  { id: "p4", platform: "threads", label: "@doisuthep.coffee", externalId: "78910233344", status: "active", addedAt: "2026-07-15", tokenPreview: "THQV••••••••b71z" },
-  { id: "p5", platform: "website", label: "เว็บไซต์หลัก", externalId: "webhook", status: "error", addedAt: "2026-05-28", tokenPreview: "sk_live_••••••9adf" },
-];
-
-const initialPosts = [
-  { id: "s1", pageId: "p1", platform: "facebook", content: "โปรโมชั่นเช้าวันศุกร์ ลาเต้ลดครึ่งราคาแก้วที่สอง ☕", date: dayKey(today), time: "08:00", status: "posted" },
-  { id: "s2", pageId: "p2", platform: "instagram", content: "รูปบรรยากาศร้านยามเช้า แสงแรกของวัน", date: dayKey(today), time: "09:30", status: "posted" },
-  { id: "s3", pageId: "p3", platform: "tiktok", content: "คลิปชงกาแฟดริปสไตล์ล้านนา", date: dayKey(today), time: "12:00", status: "queued" },
-  { id: "s4", pageId: "p1", platform: "facebook", content: "แจ้งปิดร้านเร็วขึ้น 1 ชม. วันเสาร์นี้", date: dayKey(addDays(today, 1)), time: "10:00", status: "pending" },
-  { id: "s5", pageId: "p4", platform: "threads", content: "ขอบคุณลูกค้าทุกท่านสำหรับ 3 ปีที่ผ่านมา 🎉", date: dayKey(addDays(today, 1)), time: "18:00", status: "pending" },
-  { id: "s6", pageId: "p5", platform: "website", content: "อัปเดตเมนูฤดูฝน พร้อมราคาใหม่", date: dayKey(addDays(today, 2)), time: "07:00", status: "pending" },
-  { id: "s7", pageId: "p2", platform: "instagram", content: "รีวิวจากลูกค้า 5 ดาว", date: dayKey(addDays(today, -1)), time: "15:00", status: "failed" },
-];
-
-const initialLogs = [
-  { id: "l1", pageLabel: "ร้านกาแฟดอยสุเทพ", platform: "facebook", success: true, message: "โพสต์สำเร็จ", externalId: "1029_998877", time: "2026-07-24 08:00:14" },
-  { id: "l2", pageLabel: "@doisuthep.coffee", platform: "instagram", success: true, message: "โพสต์สำเร็จ", externalId: "IG_44210091", time: "2026-07-24 09:30:22" },
-  { id: "l3", pageLabel: "doisuthep.official", platform: "tiktok", success: false, message: "Token ใกล้หมดอายุ กรุณา refresh", externalId: "—", time: "2026-07-24 12:00:05" },
-  { id: "l4", pageLabel: "@doisuthep.coffee", platform: "instagram", success: false, message: "รีวิวจากลูกค้า 5 ดาว ต้องมีรูปอย่างน้อย 1 ไฟล์", externalId: "—", time: "2026-07-23 15:00:09" },
-  { id: "l5", pageLabel: "เว็บไซต์หลัก", platform: "website", success: false, message: "Webhook ตอบกลับ 503", externalId: "—", time: "2026-07-22 07:00:44" },
-  { id: "l6", pageLabel: "ร้านกาแฟดอยสุเทพ", platform: "facebook", success: true, message: "โพสต์สำเร็จ", externalId: "1029_998801", time: "2026-07-21 08:00:11" },
-];
 
 /* ---------------------------------------------------------
    Small building blocks
@@ -203,18 +165,17 @@ function AddConnectionModal({ onClose, onAdd }) {
   const [values, setValues] = useState({});
   const [showSecret, setShowSecret] = useState({});
 
-  const fields = CONNECTION_FIELDS[platform];
+  const fields = CONNECTION_FIELDS;
 
   function submit(e) {
     e.preventDefault();
     onAdd({
-      id: `p${Date.now()}`,
       platform,
       label: label || PLATFORMS[platform].name,
-      externalId: values[fields[0].key] || "—",
-      status: "active",
-      addedAt: dayKey(today),
-      tokenPreview: "••••••••••••saved",
+      appId: values.appId || "",
+      pageId: values.pageId || "",
+      appSecret: values.appSecret || "",
+      accessToken: values.accessToken || "",
     });
     onClose();
   }
@@ -485,10 +446,7 @@ function LogsView({ logs }) {
   const [query, setQuery] = useState("");
 
   const resetInfo = useMemo(() => {
-    const lastReset = new Date("2026-07-21T00:00:00");
-    const daysSince = Math.floor((today - lastReset) / 86400000);
-    const daysLeft = 7 - (daysSince % 7);
-    return { daysLeft };
+    return { daysLeft: 7 };
   }, []);
 
   const filtered = logs.filter((l) => {
@@ -576,13 +534,94 @@ function LogsView({ logs }) {
 }
 
 /* ---------------------------------------------------------
+   DB shape helpers
+--------------------------------------------------------- */
+function pageFromDb(p) {
+  const token = p.page_tokens?.[0];
+  return {
+    id: p.id,
+    platform: p.platform,
+    label: p.display_name,
+    externalId: p.external_page_id,
+    appId: token?.app_id || "",
+    status: "active",
+    addedAt: p.created_at?.slice(0, 10),
+    tokenPreview: token?.access_token ? token.access_token.slice(0, 6) + "••••••••" + token.access_token.slice(-4) : "—",
+  };
+}
+
+function postFromDb(p) {
+  return {
+    id: p.id,
+    pageId: p.page_id,
+    platform: p.platform,
+    content: p.content,
+    date: p.scheduled_at?.slice(0, 10),
+    time: p.scheduled_at?.slice(11, 16),
+    status: p.status,
+  };
+}
+
+function logFromDb(l) {
+  return {
+    id: l.id,
+    pageLabel: l.page_id,
+    platform: l.platform,
+    success: l.success,
+    message: l.error_message || (l.success ? "โพสต์สำเร็จ" : "ล้มเหลว"),
+    externalId: l.external_post_id || "—",
+    time: l.created_at,
+  };
+}
+
+/* ---------------------------------------------------------
    App shell
 --------------------------------------------------------- */
-export default function Dashboard() {
+export default function Dashboard({ initialPages = [], initialPosts = [], initialLogs = [] }) {
   const [tab, setTab] = useState("connections");
-  const [pages, setPages] = useState(initialPages);
-  const [posts, setPosts] = useState(initialPosts);
-  const [logs] = useState(initialLogs);
+  const [pages, setPages] = useState(initialPages.map(pageFromDb));
+  const [posts, setPosts] = useState(initialPosts.map(postFromDb));
+  const [logs, setLogs] = useState(initialLogs.map(logFromDb));
+
+  const refreshPages = useCallback(async () => {
+    const res = await fetch("/api/pages");
+    if (res.ok) {
+      const data = await res.json();
+      setPages(data.map(pageFromDb));
+    }
+  }, []);
+
+  const handleAddPage = useCallback(async (raw) => {
+    const res = await fetch("/api/pages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        platform: raw.platform,
+        display_name: raw.label,
+        external_page_id: raw.pageId,
+        fields: {
+          app_id: raw.appId,
+          app_secret: raw.appSecret,
+          access_token: raw.accessToken,
+        },
+      }),
+    });
+    if (res.ok) {
+      const created = await res.json();
+      setPages((prev) => [pageFromDb(created), ...prev]);
+    }
+  }, []);
+
+  const handleRemovePage = useCallback(async (id) => {
+    const res = await fetch(`/api/pages/${id}`, { method: "DELETE" });
+    if (res.ok || res.status === 204) {
+      setPages((prev) => prev.filter((p) => p.id !== id));
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshPages();
+  }, [refreshPages]);
 
   const nav = [
     { key: "connections", label: "จัดการเพจ", icon: Link2 },
@@ -865,8 +904,8 @@ export default function Dashboard() {
         {tab === "connections" && (
           <ConnectionsView
             pages={pages}
-            onAdd={(p) => setPages((prev) => [p, ...prev])}
-            onRemove={(id) => setPages((prev) => prev.filter((p) => p.id !== id))}
+            onAdd={handleAddPage}
+            onRemove={handleRemovePage}
           />
         )}
         {tab === "schedule" && (

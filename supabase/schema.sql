@@ -6,7 +6,7 @@
 -- 1. ผู้ใช้เชื่อมเพจ/บัญชีของแพลตฟอร์มใดบ้าง
 create table pages (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) not null,
+  user_id uuid references auth.users(id),
   platform text not null check (platform in ('facebook','instagram','tiktok','threads','website')),
   external_page_id text not null,       -- page id / account id ของแพลตฟอร์มนั้นๆ
   display_name text,
@@ -20,7 +20,9 @@ create table page_tokens (
   id uuid primary key default gen_random_uuid(),
   page_id uuid references pages(id) on delete cascade not null,
   platform text not null,
-  access_token text not null,           -- ควรเข้ารหัสด้วย pgsodium/vault ถ้าจะให้ปลอดภัยสุด
+  app_id text,                          -- App ID / Client Key ของแพลตฟอร์ม
+  app_secret text,                      -- App Secret / Client Secret ของแพลตฟอร์ม
+  access_token text not null,           -- Page access token / API key
   refresh_token text,
   webhook_url text,                     -- ใช้เฉพาะ platform = 'website'
   expires_at timestamptz,
@@ -31,7 +33,7 @@ create table page_tokens (
 -- 3. คิวโพสต์ที่ผู้ใช้ตั้งเวลาไว้
 create table scheduled_posts (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) not null,
+  user_id uuid references auth.users(id),
   page_id uuid references pages(id) not null,
   platform text not null,
   content text not null,
@@ -61,7 +63,7 @@ create table post_logs (
 -- 5. เก็บ state ชั่วคราวตอนทำ OAuth กัน CSRF (ลบทิ้งทันทีหลัง callback สำเร็จ)
 create table oauth_states (
   state text primary key,
-  user_id uuid references auth.users(id) not null,
+  user_id uuid references auth.users(id),
   platform text not null,
   created_at timestamptz default now()
 );

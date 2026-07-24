@@ -5,9 +5,9 @@
 | Directory | Type | Entry | Deploy command |
 |---|---|---|---|
 | `src/` | Cloudflare Worker (ESM, no npm deps) | `producer.js` | `wrangler deploy` at root |
-| `frontend/` | Next.js 15 App Router | `frontend/package.json` | `npm run build` in `frontend/` then deploy to Cloudflare Pages |
+| Root | Next.js 15 App Router | `package.json` | `npm run build` then deploy to Cloudflare Pages |
 
-## Commands (run from `frontend/`)
+## Commands (run from root)
 
 ```sh
 npm run dev      # next dev
@@ -16,11 +16,9 @@ npm run start    # next start
 npm run lint     # next lint
 ```
 
-Root has no `package.json`. All npm commands run in `frontend/`.
-
 ## Path alias
 
-`@/` maps to `frontend/` (via `jsconfig.json`). Import like `@/components/Dashboard` or `@/lib/supabase-server`.
+`@/` maps to root (via `jsconfig.json`). Import like `@/components/Dashboard` or `@/lib/supabase-server`.
 
 ## Architecture non-obvious facts
 

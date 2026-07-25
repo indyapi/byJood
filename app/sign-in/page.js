@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/TranslationsProvider";
 import { createClientSupabase } from "@/lib/supabase-client";
 
 export default function SignInPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,30 +44,30 @@ export default function SignInPage() {
     <main className="pg">
       <div className="auth-card">
         <span className="auth-badge">SIGN IN</span>
-        <h1 className="auth-title">เข้าสู่ระบบ</h1>
-        <p className="auth-sub">ยังไม่มีบัญชี? <Link href="/sign-up" className="auth-link">สมัครสมาชิก</Link></p>
+        <h1 className="auth-title">{t("auth.signInTitle")}</h1>
+        <p className="auth-sub">{t("auth.signInSub")} <Link href="/sign-up" className="auth-link">{t("auth.signInSubLink")}</Link></p>
 
         <button className="btn-social" onClick={handleGoogleSignIn} disabled={loading}>
           <GoogleIcon />
-          เข้าสู่ระบบด้วย Google
+          {t("auth.googleSignIn")}
         </button>
 
-        <div className="divider"><span>หรือ</span></div>
+        <div className="divider"><span>{t("auth.or")}</span></div>
 
         <form className="auth-form" onSubmit={handleEmailSignIn}>
           <div className="field">
-            <label className="field-label">อีเมล</label>
-            <input className="input" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <label className="field-label">{t("auth.email")}</label>
+            <input className="input" type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="field">
-            <label className="field-label">รหัสผ่าน</label>
-            <input className="input" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <label className="field-label">{t("auth.password")}</label>
+            <input className="input" type="password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
           {error && <span className="auth-error">{error}</span>}
-          <button type="submit" className="btn-submit" disabled={loading}>{loading ? "กำลังเข้า..." : "เข้าสู่ระบบ"}</button>
+          <button type="submit" className="btn-submit" disabled={loading}>{loading ? t("auth.signInLoading") : t("auth.signInBtn")}</button>
         </form>
 
-        <Link href="/" className="back-link-auth">← กลับหน้าแรก</Link>
+        <Link href="/" className="back-link-auth">← {t("common.back")}</Link>
       </div>
 
       <style>{`
@@ -77,19 +79,11 @@ export default function SignInPage() {
         .auth-link { color: #4fd1c5; text-decoration: none; }
         .auth-link:hover { text-decoration: underline; }
         .auth-error { font-size: 12px; color: #f2795c; }
-
-        .btn-social {
-          width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
-          padding: 11px; border-radius: 8px; background: #20242e; border: 1px solid #2a2f3a;
-          color: #e8eaef; font-size: 13.5px; font-weight: 500; cursor: pointer;
-          transition: background 0.15s;
-        }
+        .btn-social { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 11px; border-radius: 8px; background: #20242e; border: 1px solid #2a2f3a; color: #e8eaef; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
         .btn-social:hover { background: #2a2f3a; }
         .btn-social:disabled { opacity: 0.5; cursor: not-allowed; }
-
         .divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: #5c6270; font-size: 12px; }
         .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #2a2f3a; }
-
         .auth-form { display: flex; flex-direction: column; gap: 14px; }
         .field { display: flex; flex-direction: column; gap: 6px; }
         .field-label { font-size: 12px; color: #8b93a3; }

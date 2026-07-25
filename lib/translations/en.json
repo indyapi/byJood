@@ -1,0 +1,91 @@
+{
+  "common": {
+    "appName": "Social Poster",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "back": "Back"
+  },
+  "nav": {
+    "about": "ABOUT",
+    "controlRoom": "CONTROL ROOM",
+    "signIn": "SIGN IN",
+    "signUp": "SIGN UP",
+    "signOut": "SIGN OUT"
+  },
+  "hero": {
+    "badge": "v0.1 — Cloudflare + Supabase",
+    "title": "Post to every platform",
+    "titleAccent": "from one place",
+    "subtitle": "Manage posts to Facebook, Instagram, TikTok, Threads and your Website across multiple pages without timeouts — powered by Cloudflare Queue Fan-Out.",
+    "ctaStart": "Get Started",
+    "ctaLearn": "Learn More"
+  },
+  "home": {
+    "howItWorks": "How It Works",
+    "step1Title": "Connect Pages",
+    "step1Desc": "Add Access Tokens for each platform via Dashboard or OAuth",
+    "step2Title": "Schedule Posts",
+    "step2Desc": "Pick pages, content, and time for auto-posting",
+    "step3Title": "Fan-Out",
+    "step3Desc": "Cron Trigger every 5 min pulls due posts, fans out into per-page queue jobs",
+    "step4Title": "Auto Post",
+    "step4Desc": "Consumer posts each page independently — auto retry on failure",
+    "archBadge": "FAN-OUT PATTERN",
+    "archTitle": "Not just another scheduler",
+    "archBody": "This project solves a real-world problem most schedulers face — more pages means more timeouts. Fan-out pattern splits 1 post into N queue messages (1 per page), each with its own timeout, retry, and dead-letter queue."
+  },
+  "about": {
+    "title": "What is Social Poster?",
+    "body": "Social Poster is an automated cross-platform posting system for businesses and Content Creators who need to manage multiple pages across multiple social media platforms simultaneously.",
+    "card1Title": "Problem Solved",
+    "card1Desc": "Posting page by page takes time, and looping all pages in one function causes timeouts. Social Poster uses Fan-Out Pattern — 1 page = 1 independent Queue job.",
+    "card2Title": "Architecture",
+    "card2Desc": "Next.js (OpenNext) + Cloudflare Workers + Queues + Supabase. Entirely in the Cloudflare ecosystem. Frontend on Cloudflare Pages, Job Runner as Workers + Queues, Database and Auth via Supabase.",
+    "card3Title": "Security",
+    "card3Desc": "OAuth with state CSRF protection per platform, service_role key server-side only, Dashboard never stores tokens client-side, RLS policies for Supabase Auth."
+  },
+  "controlRoom": {
+    "title": "Dashboard — Everything in One Place",
+    "subtitle": "Manage connected pages, schedule posts, and view real-time post history.",
+    "card1Title": "Connect Pages",
+    "card1Desc": "Add Access Tokens or connect via OAuth for Facebook, Instagram, TikTok, Threads, Website",
+    "card2Title": "Schedule Posts",
+    "card2Desc": "Select up to 10 pages per post, set content, pick date & time — system fans out to Queue automatically",
+    "card3Title": "Post History",
+    "card3Desc": "View 7-day post logs, filter by status, search, and track success rate stats",
+    "card4Title": "Auto Token Refresh",
+    "card4Desc": "Separate Worker runs daily at 3 AM, refreshing tokens expiring within 3 days to prevent post failures"
+  },
+  "auth": {
+    "signInTitle": "Sign In",
+    "signInSub": "Don't have an account?",
+    "signInSubLink": "Sign Up",
+    "signInBtn": "Sign In",
+    "signInLoading": "Signing in...",
+    "signUpTitle": "Sign Up",
+    "signUpSub": "Already have an account?",
+    "signUpSubLink": "Sign In",
+    "signUpBtn": "Sign Up",
+    "signUpLoading": "Signing up...",
+    "googleSignIn": "Sign in with Google",
+    "googleSignUp": "Sign up with Google",
+    "or": "or",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "displayName": "Display Name",
+    "username": "Username",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "••••••••",
+    "displayNamePlaceholder": "Your Name",
+    "usernamePlaceholder": "username",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "checkEmail": "Check your email to confirm your account"
+  },
+  "footer": {
+    "text": "Social Poster — Built with Next.js + Cloudflare Workers + Supabase"
+  }
+}

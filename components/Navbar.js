@@ -2,24 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const NAV_ITEMS = [
-  { href: "/about", label: "ABOUT" },
-  { href: "/control-room", label: "CONTROL ROOM" },
-];
+import { useTranslation } from "@/lib/TranslationsProvider";
+import LangSwitcher from "./LangSwitcher";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const isDashboard = pathname?.startsWith("/dashboard");
 
   if (isDashboard) return null;
+
+  const NAV_ITEMS = [
+    { href: "/about", label: t("nav.about") },
+    { href: "/control-room", label: t("nav.controlRoom") },
+  ];
 
   return (
     <nav className="navbar">
       <div className="nav-inner">
         <Link href="/" className="logo">
           <span className="logo-icon">SP</span>
-          <span className="logo-text">Social Poster</span>
+          <span className="logo-text">{t("common.appName")}</span>
         </Link>
 
         <div className="nav-links">
@@ -33,8 +36,9 @@ export default function Navbar() {
             </Link>
           ))}
           <div className="nav-divider" />
-          <Link href="/sign-in" className="nav-link">SIGN IN</Link>
-          <Link href="/sign-up" className="btn btn-nav">SIGN UP</Link>
+          <Link href="/sign-in" className="nav-link">{t("nav.signIn")}</Link>
+          <Link href="/sign-up" className="btn btn-nav">{t("nav.signUp")}</Link>
+          <LangSwitcher />
         </div>
       </div>
 

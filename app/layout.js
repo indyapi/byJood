@@ -1,4 +1,5 @@
 import Navbar from "@/components/Navbar";
+import { TranslationsProvider } from "@/lib/TranslationsProvider";
 
 export const metadata = {
   title: "Social Poster",
@@ -9,8 +10,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="th">
       <body>
-        <Navbar />
-        {children}
+        <TranslationsProvider>
+          <Navbar />
+          {children}
+        </TranslationsProvider>
         <style>{`
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body {

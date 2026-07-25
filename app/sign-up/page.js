@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/TranslationsProvider";
 import { createClientSupabase } from "@/lib/supabase-client";
 
 export default function SignUpPage() {
+  const { t } = useTranslation();
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -17,11 +19,11 @@ export default function SignUpPage() {
     e.preventDefault();
     setError("");
     if (password !== confirmPassword) {
-      setError("รหัสผ่านไม่ตรงกัน");
+      setError(t("auth.passwordMismatch"));
       return;
     }
     if (password.length < 6) {
-      setError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+      setError(t("auth.passwordTooShort"));
       return;
     }
     setLoading(true);
@@ -38,7 +40,7 @@ export default function SignUpPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      alert("ตรวจสอบอีเมลของคุณเพื่อยืนยันการสมัคร");
+      alert(t("auth.checkEmail"));
       window.location.href = "/sign-in";
     }
   }
@@ -61,42 +63,42 @@ export default function SignUpPage() {
     <main className="pg">
       <div className="auth-card">
         <span className="auth-badge">SIGN UP</span>
-        <h1 className="auth-title">สมัครสมาชิก</h1>
-        <p className="auth-sub">มีบัญชีแล้ว? <Link href="/sign-in" className="auth-link">เข้าสู่ระบบ</Link></p>
+        <h1 className="auth-title">{t("auth.signUpTitle")}</h1>
+        <p className="auth-sub">{t("auth.signUpSub")} <Link href="/sign-in" className="auth-link">{t("auth.signUpSubLink")}</Link></p>
 
         <button className="btn-social" onClick={handleGoogleSignUp} disabled={loading}>
           <GoogleIcon />
-          สมัครสมาชิกด้วย Google
+          {t("auth.googleSignUp")}
         </button>
 
-        <div className="divider"><span>หรือ</span></div>
+        <div className="divider"><span>{t("auth.or")}</span></div>
 
         <form className="auth-form" onSubmit={handleEmailSignUp}>
           <div className="field">
-            <label className="field-label">ชื่อที่แสดง</label>
-            <input className="input" type="text" placeholder="Your Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+            <label className="field-label">{t("auth.displayName")}</label>
+            <input className="input" type="text" placeholder={t("auth.displayNamePlaceholder")} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
           </div>
           <div className="field">
-            <label className="field-label">ชื่อผู้ใช้</label>
-            <input className="input" type="text" placeholder="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <label className="field-label">{t("auth.username")}</label>
+            <input className="input" type="text" placeholder={t("auth.usernamePlaceholder")} value={username} onChange={(e) => setUsername(e.target.value)} required />
           </div>
           <div className="field">
-            <label className="field-label">อีเมล</label>
-            <input className="input" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <label className="field-label">{t("auth.email")}</label>
+            <input className="input" type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="field">
-            <label className="field-label">รหัสผ่าน</label>
-            <input className="input" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <label className="field-label">{t("auth.password")}</label>
+            <input className="input" type="password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
           <div className="field">
-            <label className="field-label">ยืนยันรหัสผ่าน</label>
-            <input className="input" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+            <label className="field-label">{t("auth.confirmPassword")}</label>
+            <input className="input" type="password" placeholder={t("auth.passwordPlaceholder")} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
           </div>
           {error && <span className="auth-error">{error}</span>}
-          <button type="submit" className="btn-submit" disabled={loading}>{loading ? "กำลังสมัคร..." : "สมัครสมาชิก"}</button>
+          <button type="submit" className="btn-submit" disabled={loading}>{loading ? t("auth.signUpLoading") : t("auth.signUpBtn")}</button>
         </form>
 
-        <Link href="/" className="back-link-auth">← กลับหน้าแรก</Link>
+        <Link href="/" className="back-link-auth">← {t("common.back")}</Link>
       </div>
 
       <style>{`
@@ -108,19 +110,11 @@ export default function SignUpPage() {
         .auth-link { color: #4fd1c5; text-decoration: none; }
         .auth-link:hover { text-decoration: underline; }
         .auth-error { font-size: 12px; color: #f2795c; }
-
-        .btn-social {
-          width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
-          padding: 11px; border-radius: 8px; background: #20242e; border: 1px solid #2a2f3a;
-          color: #e8eaef; font-size: 13.5px; font-weight: 500; cursor: pointer;
-          transition: background 0.15s;
-        }
+        .btn-social { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 11px; border-radius: 8px; background: #20242e; border: 1px solid #2a2f3a; color: #e8eaef; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
         .btn-social:hover { background: #2a2f3a; }
         .btn-social:disabled { opacity: 0.5; cursor: not-allowed; }
-
         .divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: #5c6270; font-size: 12px; }
         .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #2a2f3a; }
-
         .auth-form { display: flex; flex-direction: column; gap: 14px; }
         .field { display: flex; flex-direction: column; gap: 6px; }
         .field-label { font-size: 12px; color: #8b93a3; }

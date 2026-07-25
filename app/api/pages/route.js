@@ -1,20 +1,27 @@
+import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
 export async function GET() {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const admin = createAdminSupabase();
   const { data: pages, error } = await admin
     .from("pages")
     .select("*, page_tokens(*)")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json(pages);
 }
 
 export async function POST(request) {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const admin = createAdminSupabase();
   const body = await request.json();
   const { platform, display_name, external_page_id, fields } = body;
@@ -25,17 +32,11 @@ export async function POST(request) {
 
   const { data: page, error: pageError } = await admin
     .from("pages")
-    .insert({
-      platform,
-      external_page_id,
-      display_name,
-    })
+    .insert({ platform, external_page_id, display_name, user_id: user.id })
     .select()
     .single();
 
-  if (pageError) {
-    return Response.json({ error: pageError.message }, { status: 500 });
-  }
+  if (pageError) return Response.json({ error: pageError.message }, { status: 500 });
 
   if (fields?.access_token || fields?.app_id || fields?.app_secret) {
     const { error: tokenError } = await admin
@@ -48,9 +49,7 @@ export async function POST(request) {
         access_token: fields.access_token || "",
       });
 
-    if (tokenError) {
-      return Response.json({ error: tokenError.message }, { status: 500 });
-    }
+    if (tokenError) return Response.json({ error: tokenError.message }, { status: 500 });
   }
 
   const { data: fullPage } = await admin

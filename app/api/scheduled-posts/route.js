@@ -1,20 +1,27 @@
+import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
 export async function GET() {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const admin = createAdminSupabase();
   const { data, error } = await admin
     .from("scheduled_posts")
     .select("*")
+    .eq("user_id", user.id)
     .order("scheduled_at", { ascending: true });
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json(data);
 }
 
 export async function POST(request) {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const admin = createAdminSupabase();
   const body = await request.json();
   const { page_id, platform, content, scheduled_at } = body;
@@ -25,19 +32,10 @@ export async function POST(request) {
 
   const { data, error } = await admin
     .from("scheduled_posts")
-    .insert({
-      page_id,
-      platform,
-      content,
-      scheduled_at,
-      status: "pending",
-    })
+    .insert({ page_id, platform, content, scheduled_at, user_id: user.id, status: "pending" })
     .select()
     .single();
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json(data, { status: 201 });
 }

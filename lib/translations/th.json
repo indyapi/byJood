@@ -1,0 +1,91 @@
+{
+  "common": {
+    "appName": "Social Poster",
+    "loading": "กำลังโหลด...",
+    "save": "บันทึก",
+    "cancel": "ยกเลิก",
+    "delete": "ลบ",
+    "back": "กลับ"
+  },
+  "nav": {
+    "about": "เกี่ยวกับ",
+    "controlRoom": "คอนโทรลรูม",
+    "signIn": "เข้าสู่ระบบ",
+    "signUp": "สมัครสมาชิก",
+    "signOut": "ออกจากระบบ"
+  },
+  "hero": {
+    "badge": "v0.1 — Cloudflare + Supabase",
+    "title": "โพสต์ทุกแพลตฟอร์ม",
+    "titleAccent": "จากที่เดียว",
+    "subtitle": "จัดการโพสต์ไปยัง Facebook, Instagram, TikTok, Threads และ Website ของคุณ พร้อมกันหลายเพจ โดยไม่เจอ timeout — ขับเคลื่อนด้วย Cloudflare Queue Fan-Out",
+    "ctaStart": "เริ่มต้นใช้งาน",
+    "ctaLearn": "ดูเพิ่มเติม"
+  },
+  "home": {
+    "howItWorks": "ทำงานอย่างไร",
+    "step1Title": "เชื่อมต่อเพจ",
+    "step1Desc": "เพิ่ม Access Token ของแต่ละแพลตฟอร์มผ่าน Dashboard หรือ OAuth",
+    "step2Title": "ตั้งเวลาโพสต์",
+    "step2Desc": "เลือกเพจ เนื้อหา และเวลาที่ต้องการให้ระบบโพสต์อัตโนมัติ",
+    "step3Title": "Fan-Out",
+    "step3Desc": "Cron Trigger ทุก 5 นาทีดึงโพสต์ที่ถึงเวลา ส่งเข้า queue แยกตามเพจ",
+    "step4Title": "โพสต์อัตโนมัติ",
+    "step4Desc": "Consumer โพสต์ทีละเพจแบบอิสระ ถ้าเพจไหนพลาด retry อัตโนมัติ",
+    "archBadge": "FAN-OUT PATTERN",
+    "archTitle": "ไม่ใช่แค่ scheduler ทั่วไป",
+    "archBody": "โปรเจคนี้แก้ปัญหา real-world ที่ระบบโพสต์ทั่วไปเจอ — ยิ่งมีเพจมาก ยิ่ง timeout. Fan-out pattern แยก 1 โพสต์ เป็น N queue message (1 ต่อเพจ) แต่ละ message มี timeout, retry, และ dead-letter queue ของตัวเอง ไม่แชร์กัน."
+  },
+  "about": {
+    "title": "Social Poster คืออะไร?",
+    "body": "Social Poster เป็นระบบโพสต์อัตโนมัติข้ามแพลตฟอร์ม สำหรับธุรกิจหรือ Content Creator ที่ต้องจัดการหลายเพจในหลาย Social Media พร้อมกัน",
+    "card1Title": "ปัญหาที่แก้",
+    "card1Desc": "เดิมทีการโพสต์ทีละเพจใช้เวลามาก และถ้าใช้ฟังก์ชัน loop โพสต์ทุกเพจพร้อมกันจะเจอ timeout ยิ่งเพจมาก ยิ่งพัง Social Poster ใช้ Fan-Out Pattern แยก 1 เพจ = 1 Job ใน Queue — แต่ละ job อิสระต่อกัน",
+    "card2Title": "สถาปัตยกรรม",
+    "card2Desc": "Next.js (OpenNext) + Cloudflare Workers + Queues + Supabase ทั้งโปรเจคอยู่ใน Cloudflare Ecosystem ทั้งหมด Frontend บน Cloudflare Pages, Job Runner เป็น Workers + Queues, Database และ Auth ใช้ Supabase",
+    "card3Title": "ความปลอดภัย",
+    "card3Desc": "OAuth ทุกแพลตฟอร์มมี state CSRF protection, Worker ใช้ service_role key เฉพาะฝั่ง server, หน้า Dashboard ไม่เก็บ token ฝั่ง client, มี RLS policy สำหรับ Supabase Auth"
+  },
+  "controlRoom": {
+    "title": "Dashboard จัดการทุกอย่าง",
+    "subtitle": "จัดการเพจที่เชื่อมต่อ ตั้งเวลาโพสต์ และดูประวัติการโพสต์แบบ Real-time",
+    "card1Title": "เชื่อมต่อเพจ",
+    "card1Desc": "เพิ่ม Access Token หรือเชื่อมต่อผ่าน OAuth สำหรับ Facebook, Instagram, TikTok, Threads, Website",
+    "card2Title": "ตั้งเวลาโพสต์",
+    "card2Desc": "เลือกเพจสูงสุด 10 เพจต่อครั้ง, ตั้งเนื้อหา, เลือกวัน-เวลา ระบบแตกงานส่ง Queue อัตโนมัติ",
+    "card3Title": "ประวัติการโพสต์",
+    "card3Desc": "ดู Log การโพสต์ย้อนหลัง 7 วัน, ตัวกรองสถานะ, ค้นหา, สถิติอัตราความสำเร็จ",
+    "card4Title": "Token Refresh อัตโนมัติ",
+    "card4Desc": "Worker แยกวิ่งทุกวันตี 3 refresh token ที่ใกล้หมดอายุใน 3 วัน ป้องกันโพสต์ล้มเหลว"
+  },
+  "auth": {
+    "signInTitle": "เข้าสู่ระบบ",
+    "signInSub": "ยังไม่มีบัญชี?",
+    "signInSubLink": "สมัครสมาชิก",
+    "signInBtn": "เข้าสู่ระบบ",
+    "signInLoading": "กำลังเข้า...",
+    "signUpTitle": "สมัครสมาชิก",
+    "signUpSub": "มีบัญชีแล้ว?",
+    "signUpSubLink": "เข้าสู่ระบบ",
+    "signUpBtn": "สมัครสมาชิก",
+    "signUpLoading": "กำลังสมัคร...",
+    "googleSignIn": "เข้าสู่ระบบด้วย Google",
+    "googleSignUp": "สมัครสมาชิกด้วย Google",
+    "or": "หรือ",
+    "email": "อีเมล",
+    "password": "รหัสผ่าน",
+    "confirmPassword": "ยืนยันรหัสผ่าน",
+    "displayName": "ชื่อที่แสดง",
+    "username": "ชื่อผู้ใช้",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "••••••••",
+    "displayNamePlaceholder": "Your Name",
+    "usernamePlaceholder": "username",
+    "passwordMismatch": "รหัสผ่านไม่ตรงกัน",
+    "passwordTooShort": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+    "checkEmail": "ตรวจสอบอีเมลของคุณเพื่อยืนยันการสมัคร"
+  },
+  "footer": {
+    "text": "Social Poster — สร้างด้วย Next.js + Cloudflare Workers + Supabase"
+  }
+}

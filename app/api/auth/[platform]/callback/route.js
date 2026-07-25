@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
     return Response.json({ error: "Missing code or state" }, { status: 400 });
   }
 
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
 
   // 1. ตรวจ state ว่าถูกสร้างโดยระบบเราจริง (กัน CSRF)
   const { data: stateRow } = await supabase

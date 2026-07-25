@@ -7,7 +7,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 export async function GET(request, { params }) {
   const { platform } = params;
 
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return Response.redirect(new URL("/login", request.url));

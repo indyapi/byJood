@@ -26,7 +26,22 @@ export async function handleQueueBatch(batch, env) {
 }
 
 async function processJob(job, env) {
-  // 1. ดึง access token ล่าสุดของเพจนี้จาก Supabase (เผื่อมีการ refresh token ไปแล้ว)
+  // 1. ดึง external_page_id ที่แท้จริงของเพจนี้ (ไม่ใช่ UUID ภายใน)
+  const pageRes = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/pages?id=eq.${job.page_id}&select=external_page_id`,
+    {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    }
+  );
+  const [pageRow] = await pageRes.json();
+  if (!pageRow) {
+    return { success: false, error: "ไม่พบเพจนี้" };
+  }
+
+  // 2. ดึง access token ล่าสุดของเพจนี้จาก Supabase (เผื่อมีการ refresh token ไปแล้ว)
   const tokenRes = await fetch(
     `${env.SUPABASE_URL}/rest/v1/page_tokens?page_id=eq.${job.page_id}&platform=eq.${job.platform}&select=access_token,webhook_url`,
     {
@@ -47,7 +62,7 @@ async function processJob(job, env) {
   }
 
   return handler(
-    { ...job, access_token: tokenRow.access_token, webhook_url: tokenRow.webhook_url },
+    { ...job, access_token: tokenRow.access_token, webhook_url: tokenRow.webhook_url, page_id: pageRow.external_page_id },
     env
   );
 }

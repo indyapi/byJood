@@ -1,0 +1,57 @@
+Bug Report: Posts stuck in "queued" status, never actually posted
+==================================================================
+
+Root cause: No mechanism exists to update scheduled_posts.status to "failed"
+when all queue retries are exhausted. The consumer only ever sets status to
+"posted" on success — on failure it retries, and after max_retries=3 the
+message silently drops into an unconsumed DLQ.
+
+Bug #1 — Status never transitions out of "queued" on failure
+-------------------------------------------------------------
+File: src/consumer.js, function logResult() (line 76-86)
+
+  The status update to "posted" only runs when result.success = true.
+  When the handler returns success=false (API error, token expired, etc.),
+  logResult logs the failure to post_logs but never PATCHes the
+  scheduled_posts row. The post stays "queued" forever.
+
+  But that alone is OK because the queue retries... until Bug #2.
+
+Bug #2 — No DLQ consumer → messages disappear after retry exhaustion
+----------------------------------------------------------------------
+File: wrangler.jsonc, queues.consumers (line 41-49)
+
+  dead_letter_queue is set to "post-jobs-dlq" but there is NO consumer
+  configured for "post-jobs-dlq". After max_retries=3, the message goes to
+  the DLQ and is never processed again. The corresponding scheduled_posts
+  row remains stuck at status="queued". The Dashboard will display it as
+  "Queued" indefinitely.
+
+  Neither the cron job's enqueueDuePosts nor any other process will ever
+  re-attempt this post.
+
+Bug #3 — enqueueDuePosts never picks up "queued" posts
+--------------------------------------------------------
+File: src/enqueue.js, line 3
+
+  The Supabase query only fetches WHERE status = 'pending'. Once a post is
+  set to "queued" (line 44), subsequent cron ticks skip it entirely. There
+  is no re-enqueue logic or periodic cleanup of stuck "queued" posts.
+
+  Combined with Bug #2, this is the final nail: after retry exhaustion, the
+  post is dead with no recovery path.
+
+Impact
+------
+- Any post whose platform API returns an error (wrong token, rate limit,
+  malformed content, network failure) will appear to be "Queued" forever.
+- User sees no error indication in the Dashboard.
+- No alert or retry mechanism to recover these posts.
+
+Summary of required changes
+---------------------------
+(a) Configure a queue consumer for "post-jobs-dlq" in wrangler.jsonc.
+(b) In the DLQ consumer, update scheduled_posts.status to "failed".
+(c) Optionally: in logResult on failure, set status to "failed" immediately
+    for non-retryable errors (e.g., "ไม่พบ token").
+(d) Optionally: add a periodic cleanup/re-enqueue of stuck "queued" posts.

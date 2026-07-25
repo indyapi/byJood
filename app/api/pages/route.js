@@ -14,6 +14,15 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
+
+  // Fetch real page names from platform API for Facebook/Instagram/Threads
+  await Promise.all(pages.map(async (page) => {
+    const token = page.page_tokens?.[0];
+    if (!token?.access_token) return;
+    const name = await fetchPlatformPageName(page.platform, page.external_page_id, token.access_token);
+    if (name) page.platform_name = name;
+  }));
+
   return Response.json(pages);
 }
 

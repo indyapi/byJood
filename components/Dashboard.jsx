@@ -553,7 +553,7 @@ function pageFromDb(p) {
   return {
     id: p.id,
     platform: p.platform,
-    label: p.display_name,
+    label: p.platform_name || p.display_name,
     externalId: p.external_page_id,
     appId: token?.app_id || "",
     status: "active",

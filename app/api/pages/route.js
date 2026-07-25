@@ -17,6 +17,20 @@ export async function GET() {
   return Response.json(pages);
 }
 
+async function fetchPlatformPageName(platform, externalPageId, accessToken) {
+  if (!accessToken) return null;
+  try {
+    if (["facebook", "instagram", "threads"].includes(platform)) {
+      const res = await fetch(
+        `https://graph.facebook.com/v21.0/${externalPageId}?fields=name&access_token=${accessToken}`
+      );
+      const data = await res.json();
+      return data.name ?? null;
+    }
+  } catch {}
+  return null;
+}
+
 export async function POST(request) {
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
@@ -26,13 +40,18 @@ export async function POST(request) {
   const body = await request.json();
   const { platform, display_name, external_page_id, fields } = body;
 
-  if (!platform || !display_name || !external_page_id) {
+  if (!platform || !external_page_id) {
     return Response.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  const resolvedName = display_name || (await fetchPlatformPageName(platform, external_page_id, fields?.access_token));
+  if (!resolvedName) {
+    return Response.json({ error: "display_name is required" }, { status: 400 });
   }
 
   const { data: page, error: pageError } = await admin
     .from("pages")
-    .insert({ platform, external_page_id, display_name, user_id: user.id })
+    .insert({ platform, external_page_id, display_name: resolvedName, user_id: user.id })
     .select()
     .single();
 

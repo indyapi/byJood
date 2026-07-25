@@ -17,7 +17,7 @@ export async function GET() {
 
   const { data, error } = await admin
     .from("post_logs")
-    .select("*")
+    .select("*, page:page_id(display_name)")
     .in("page_id", pageIds.length > 0 ? pageIds : [null])
     .order("created_at", { ascending: false })
     .limit(200);

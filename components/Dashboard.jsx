@@ -316,7 +316,7 @@ function ScheduleView({ posts, pages, onAdd, authed, t, PLATFORMS, locale }) {
                 <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
                 <div className="post-body">
                   <div className="post-page">
-                    {page?.label ?? t("dashboard.schedule.pageNotFound")}
+                    {p.pageName || page?.label || t("dashboard.schedule.pageNotFound")}
                     {p.batchTotal > 1 && <span className="batch-tag">{t("dashboard.schedule.batchTag")} {p.batchTotal} {t("dashboard.schedule.batchSuffix")}</span>}
                   </div>
                   <div className="post-content">{p.content}</div>
@@ -553,7 +553,7 @@ function pageFromDb(p) {
   return {
     id: p.id,
     platform: p.platform,
-    label: p.platform_name || p.display_name,
+    label: p.display_name,
     externalId: p.external_page_id,
     appId: token?.app_id || "",
     status: "active",
@@ -567,6 +567,7 @@ function postFromDb(p) {
   return {
     id: p.id,
     pageId: p.page_id,
+    pageName: p.page?.display_name || "",
     platform: p.platform,
     content: p.content,
     date: d ? d.toLocaleDateString("sv-SE") : "",
@@ -579,7 +580,7 @@ function logFromDb(l) {
   const d = l.created_at ? new Date(l.created_at) : null;
   return {
     id: l.id,
-    pageLabel: l.page_id,
+    pageLabel: l.page?.display_name || l.page_id,
     platform: l.platform,
     success: l.success,
     message: l.error_message || (l.success ? "โพสต์สำเร็จ" : "ล้มเหลว"),

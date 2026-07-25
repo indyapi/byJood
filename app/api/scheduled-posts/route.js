@@ -9,7 +9,7 @@ export async function GET() {
   const admin = createAdminSupabase();
   const { data, error } = await admin
     .from("scheduled_posts")
-    .select("*")
+    .select("*, page:page_id(display_name)")
     .eq("user_id", user.id)
     .order("scheduled_at", { ascending: true });
 

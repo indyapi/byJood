@@ -15,12 +15,15 @@ export async function GET() {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  // Fetch real page names from platform API for Facebook/Instagram/Threads
+  // Fetch real page names from platform API and persist to display_name
   await Promise.all(pages.map(async (page) => {
     const token = page.page_tokens?.[0];
     if (!token?.access_token) return;
     const name = await fetchPlatformPageName(page.platform, page.external_page_id, token.access_token);
-    if (name) page.platform_name = name;
+    if (name && name !== page.display_name) {
+      await admin.from("pages").update({ display_name: name }).eq("id", page.id);
+      page.display_name = name;
+    }
   }));
 
   return Response.json(pages);

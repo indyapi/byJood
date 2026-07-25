@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import LangSwitcher from "./LangSwitcher";
+import { useTranslation } from "@/lib/TranslationsProvider";
 import {
   Plus, X, Eye, EyeOff, Trash2, ChevronLeft, ChevronRight, Clock,
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
@@ -11,21 +13,25 @@ import {
 /* ---------------------------------------------------------
    Platform config — single source of truth for color/labels
 --------------------------------------------------------- */
-const PLATFORMS = {
-  facebook:  { code: "FB",  name: "Facebook Page", color: "#3D7DF6" },
-  instagram: { code: "IG",  name: "Instagram",      color: "#E14A8E" },
-  threads:   { code: "TH",  name: "Threads",        color: "#EDEDED", dark: true },
-  tiktok:    { code: "TT",  name: "TikTok",         color: "#FE4D6F" },
-  youtube:   { code: "YT",  name: "YouTube",        color: "#F0384A" },
-  website:   { code: "WEB", name: "Website",        color: "#6C93A8" },
-};
+function usePlatforms(t) {
+  return {
+    facebook:  { code: "FB",  name: t("dashboard.platforms.facebook"), color: "#3D7DF6" },
+    instagram: { code: "IG",  name: t("dashboard.platforms.instagram"), color: "#E14A8E" },
+    threads:   { code: "TH",  name: t("dashboard.platforms.threads"), color: "#EDEDED", dark: true },
+    tiktok:    { code: "TT",  name: t("dashboard.platforms.tiktok"), color: "#FE4D6F" },
+    youtube:   { code: "YT",  name: t("dashboard.platforms.youtube"), color: "#F0384A" },
+    website:   { code: "WEB", name: t("dashboard.platforms.website"), color: "#6C93A8" },
+  };
+}
 
-const CONNECTION_FIELDS = [
-  { key: "appId", label: "App ID", placeholder: "Facebook App ID, TikTok Client Key, etc." },
-  { key: "pageId", label: "Page ID", placeholder: "Page ID, Account ID, or Channel ID" },
-  { key: "appSecret", label: "App Secret", secret: true, placeholder: "App Secret or Client Secret" },
-  { key: "accessToken", label: "Page access token", secret: true, placeholder: "Paste your access token or API key" },
-];
+function useConnectionFields(t) {
+  return [
+    { key: "appId", label: t("dashboard.fields.appId"), placeholder: t("dashboard.fields.appIdPlaceholder") },
+    { key: "pageId", label: t("dashboard.fields.pageId"), placeholder: t("dashboard.fields.pageIdPlaceholder") },
+    { key: "appSecret", label: t("dashboard.fields.appSecret"), secret: true, placeholder: t("dashboard.fields.appSecretPlaceholder") },
+    { key: "accessToken", label: t("dashboard.fields.accessToken"), secret: true, placeholder: t("dashboard.fields.accessTokenPlaceholder") },
+  ];
+}
 
 const today = new Date();
 const dayKey = (d) => d.toISOString().slice(0, 10);
@@ -34,8 +40,9 @@ const addDays = (d, n) => { const c = new Date(d); c.setDate(c.getDate() + n); r
 /* ---------------------------------------------------------
    Small building blocks
 --------------------------------------------------------- */
-function PlatformChip({ platform, size = "md" }) {
-  const p = PLATFORMS[platform];
+function PlatformChip({ platform, size = "md", PLATFORMS: pMap }) {
+  const p = pMap[platform];
+  if (!p) return null;
   return (
     <span className={`chip chip-${size}`} style={{ "--chip-color": p.color, "--chip-text": p.dark ? "#111318" : "#fff" }}>
       <span className="chip-code">{p.code}</span>
@@ -44,14 +51,13 @@ function PlatformChip({ platform, size = "md" }) {
   );
 }
 
-const STATUS_META = {
-  pending: { label: "รอคิว", step: 0 },
-  queued: { label: "อยู่ในคิว", step: 1 },
-  posted: { label: "โพสต์แล้ว", step: 2 },
-  failed: { label: "ล้มเหลว", step: 2, failed: true },
-};
-
-function StatusPipeline({ status }) {
+function StatusPipeline({ status, t }) {
+  const STATUS_META = {
+    pending: { label: t("dashboard.status.pending"), step: 0 },
+    queued: { label: t("dashboard.status.queued"), step: 1 },
+    posted: { label: t("dashboard.status.posted"), step: 2 },
+    failed: { label: t("dashboard.status.failed"), step: 2, failed: true },
+  };
   const meta = STATUS_META[status] ?? STATUS_META.pending;
   return (
     <div className="pipeline" title={meta.label}>
@@ -72,11 +78,11 @@ function StatusPipeline({ status }) {
   );
 }
 
-function StatusPill({ status }) {
+function StatusPill({ status, t }) {
   const map = {
-    active: { label: "ใช้งานได้", color: "var(--success)" },
-    expiring: { label: "ใกล้หมดอายุ", color: "var(--warning)" },
-    error: { label: "มีปัญหา", color: "var(--danger)" },
+    active: { label: t("dashboard.connectionStatus.active"), color: "var(--success)" },
+    expiring: { label: t("dashboard.connectionStatus.expiring"), color: "var(--warning)" },
+    error: { label: t("dashboard.connectionStatus.error"), color: "var(--danger)" },
   };
   const m = map[status] ?? map.active;
   return (
@@ -90,7 +96,7 @@ function StatusPill({ status }) {
 /* ---------------------------------------------------------
    Pages (Connections) view
 --------------------------------------------------------- */
-function ConnectionsView({ pages, onAdd, onRemove, authed }) {
+function ConnectionsView({ pages, onAdd, onRemove, authed, t, PLATFORMS }) {
   const [revealed, setRevealed] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -98,55 +104,55 @@ function ConnectionsView({ pages, onAdd, onRemove, authed }) {
     <div className="view">
       <div className="view-head">
         <div>
-          <span className="eyebrow">CONNECTIONS</span>
-          <h1>จัดการเพจ</h1>
-          <p className="sub">เพิ่ม Access Token หรือ API Key ของแต่ละแพลตฟอร์ม เพื่อให้ระบบใช้โพสต์แทนคุณ</p>
+          <span className="eyebrow">{t("dashboard.connections.eyebrow")}</span>
+          <h1>{t("dashboard.connections.title")}</h1>
+          <p className="sub">{t("dashboard.connections.subtitle")}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
-          <Plus size={16} /> เพิ่มการเชื่อมต่อ
+          <Plus size={16} /> {t("dashboard.connections.addBtn")}
         </button>
       </div>
 
       <div className="notice">
         <Info size={15} />
-        <span>Token ถูกส่งตรงไปยัง backend และเก็บเป็น secret ใน Supabase เท่านั้น — หน้านี้จะไม่แสดง token เต็มซ้ำอีกหลังบันทึก</span>
+        <span>{t("dashboard.connections.notice")}</span>
       </div>
 
       {pages.length === 0 ? (
         <div className="empty">
           <Link2 size={28} />
-          <p>ยังไม่มีการเชื่อมต่อ เพิ่มเพจหรือ API key แรกของคุณเพื่อเริ่มโพสต์</p>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}><Plus size={16} /> เพิ่มการเชื่อมต่อ</button>
+          <p>{t("dashboard.connections.empty")}</p>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}><Plus size={16} /> {t("dashboard.connections.addBtn")}</button>
         </div>
       ) : (
         <div className="grid-cards">
           {pages.map((pg) => (
             <div className="card" key={pg.id}>
               <div className="card-top">
-                <PlatformChip platform={pg.platform} />
-                <StatusPill status={pg.status} />
+                <PlatformChip platform={pg.platform} PLATFORMS={PLATFORMS} />
+                <StatusPill status={pg.status} t={t} />
               </div>
               <div className="card-title">{pg.label}</div>
               <div className="card-row">
-                <span className="label-dim">ID</span>
+                <span className="label-dim">{t("dashboard.connections.idLabel")}</span>
                 <span className="mono">{pg.externalId}</span>
               </div>
               <div className="card-row">
-                <span className="label-dim">Token</span>
+                <span className="label-dim">{t("dashboard.connections.tokenLabel")}</span>
                 <span className="mono">
                   {revealed[pg.id] ? pg.tokenPreview.replace(/•+/g, "••••1a9c92") : pg.tokenPreview}
                 </span>
                 <button
                   className="icon-btn"
                   onClick={() => setRevealed((r) => ({ ...r, [pg.id]: !r[pg.id] }))}
-                  aria-label="แสดง/ซ่อน token"
+                  aria-label={t("dashboard.connections.revealAria")}
                 >
                   {revealed[pg.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
               <div className="card-foot">
-                <span className="label-dim">เพิ่มเมื่อ {pg.addedAt}</span>
-                <button className="icon-btn danger" onClick={() => onRemove(pg.id)} disabled={!authed} aria-label="ลบการเชื่อมต่อ">
+                <span className="label-dim">{t("dashboard.connections.addedPrefix")}{pg.addedAt}</span>
+                <button className="icon-btn danger" onClick={() => onRemove(pg.id)} disabled={!authed} aria-label={t("dashboard.connections.deleteAria")}>
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -155,18 +161,18 @@ function ConnectionsView({ pages, onAdd, onRemove, authed }) {
         </div>
       )}
 
-      {modalOpen && <AddConnectionModal onClose={() => setModalOpen(false)} onAdd={onAdd} />}
+      {modalOpen && <AddConnectionModal onClose={() => setModalOpen(false)} onAdd={onAdd} t={t} PLATFORMS={PLATFORMS} />}
     </div>
   );
 }
 
-function AddConnectionModal({ onClose, onAdd }) {
+function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
   const [platform, setPlatform] = useState("facebook");
   const [label, setLabel] = useState("");
   const [values, setValues] = useState({});
   const [showSecret, setShowSecret] = useState({});
 
-  const fields = CONNECTION_FIELDS;
+  const fields = useConnectionFields(t);
 
   function submit(e) {
     e.preventDefault();
@@ -185,13 +191,13 @@ function AddConnectionModal({ onClose, onAdd }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>เพิ่มการเชื่อมต่อ</h2>
+          <h2>{t("dashboard.connections.modalTitle")}</h2>
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
         </div>
 
         <form onSubmit={submit}>
           <div className="field-group">
-            <label className="field-label">แพลตฟอร์ม</label>
+            <label className="field-label">{t("dashboard.fields.platform")}</label>
             <div className="platform-picker">
               {Object.entries(PLATFORMS).map(([key, p]) => (
                 <button
@@ -209,7 +215,7 @@ function AddConnectionModal({ onClose, onAdd }) {
           </div>
 
           <div className="field-group">
-            <label className="field-label">ชื่อที่แสดง</label>
+            <label className="field-label">{t("dashboard.fields.displayName")}</label>
             <input className="input" placeholder={PLATFORMS[platform].name} value={label} onChange={(e) => setLabel(e.target.value)} />
           </div>
 
@@ -236,12 +242,12 @@ function AddConnectionModal({ onClose, onAdd }) {
 
           <div className="notice small">
             <Info size={13} />
-            <span>ค่าที่กรอกจะถูกส่งไปเก็บเป็น secret บน Supabase ผ่าน backend เท่านั้น ไม่มีการเก็บไว้ฝั่ง frontend</span>
+            <span>{t("dashboard.connections.formNotice")}</span>
           </div>
 
           <div className="modal-actions">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>ยกเลิก</button>
-            <button type="submit" className="btn btn-primary">บันทึกการเชื่อมต่อ</button>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>{t("dashboard.connections.cancel")}</button>
+            <button type="submit" className="btn btn-primary">{t("dashboard.connections.save")}</button>
           </div>
         </form>
       </div>
@@ -252,7 +258,7 @@ function AddConnectionModal({ onClose, onAdd }) {
 /* ---------------------------------------------------------
    Schedule view
 --------------------------------------------------------- */
-function ScheduleView({ posts, pages, onAdd, authed }) {
+function ScheduleView({ posts, pages, onAdd, authed, t, PLATFORMS, locale }) {
   const [selectedDate, setSelectedDate] = useState(dayKey(today));
   const [weekStart, setWeekStart] = useState(addDays(today, -1));
   const [modalOpen, setModalOpen] = useState(false);
@@ -262,18 +268,18 @@ function ScheduleView({ posts, pages, onAdd, authed }) {
   const dayPosts = posts.filter((p) => p.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time));
 
   const dayLabel = (d) =>
-    d.toLocaleDateString("th-TH", { weekday: "short" }).replace(".", "");
+    d.toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { weekday: "short" }).replace(".", "");
 
   return (
     <div className="view">
       <div className="view-head">
         <div>
-          <span className="eyebrow">SCHEDULE</span>
-          <h1>ตั้งเวลาโพสต์</h1>
-          <p className="sub">จัดคิวโพสต์ล่วงหน้าในแต่ละเพจ ระบบจะแตกงานส่งเข้าคิวอัตโนมัติเมื่อถึงเวลา</p>
+          <span className="eyebrow">{t("dashboard.schedule.eyebrow")}</span>
+          <h1>{t("dashboard.schedule.title")}</h1>
+          <p className="sub">{t("dashboard.schedule.subtitle")}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
-          <Plus size={16} /> ตั้งโพสต์ใหม่
+          <Plus size={16} /> {t("dashboard.schedule.addBtn")}
         </button>
       </div>
 
@@ -297,8 +303,8 @@ function ScheduleView({ posts, pages, onAdd, authed }) {
       {dayPosts.length === 0 ? (
         <div className="empty">
           <CalendarClock size={28} />
-          <p>ยังไม่มีโพสต์ที่ตั้งเวลาไว้ในวันนี้</p>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}><Plus size={16} /> ตั้งโพสต์ใหม่</button>
+          <p>{t("dashboard.schedule.empty")}</p>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}><Plus size={16} /> {t("dashboard.schedule.addBtn")}</button>
         </div>
       ) : (
         <div className="post-list">
@@ -307,15 +313,15 @@ function ScheduleView({ posts, pages, onAdd, authed }) {
             return (
               <div className="post-row" key={p.id}>
                 <div className="post-time"><Clock size={13} />{p.time}</div>
-                <PlatformChip platform={p.platform} size="sm" />
+                <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
                 <div className="post-body">
                   <div className="post-page">
-                    {page?.label ?? "ไม่พบเพจ"}
-                    {p.batchTotal > 1 && <span className="batch-tag">ชุดเดียวกัน {p.batchTotal} เพจ</span>}
+                    {page?.label ?? t("dashboard.schedule.pageNotFound")}
+                    {p.batchTotal > 1 && <span className="batch-tag">{t("dashboard.schedule.batchTag")} {p.batchTotal} {t("dashboard.schedule.batchSuffix")}</span>}
                   </div>
                   <div className="post-content">{p.content}</div>
                 </div>
-                <StatusPipeline status={p.status} />
+                <StatusPipeline status={p.status} t={t} />
               </div>
             );
           })}
@@ -328,6 +334,8 @@ function ScheduleView({ posts, pages, onAdd, authed }) {
           defaultDate={selectedDate}
           onClose={() => setModalOpen(false)}
           onAdd={onAdd}
+          t={t}
+          PLATFORMS={PLATFORMS}
         />
       )}
     </div>
@@ -336,7 +344,7 @@ function ScheduleView({ posts, pages, onAdd, authed }) {
 
 const MAX_PAGES_PER_POST = 10;
 
-function AddPostModal({ pages, defaultDate, onClose, onAdd }) {
+function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState([]);
   const [content, setContent] = useState("");
@@ -385,14 +393,14 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>ตั้งโพสต์ใหม่</h2>
+          <h2>{t("dashboard.schedule.modalTitle")}</h2>
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
         </div>
         <form onSubmit={submit}>
           <div className="field-group">
             <div className="field-label-row">
-              <label className="field-label">เลือกเพจ (ได้พร้อมกันสูงสุด {MAX_PAGES_PER_POST})</label>
-              <button type="button" className="link-btn" onClick={selectAll}>เลือกทั้งหมด</button>
+              <label className="field-label">{t("dashboard.fields.maxPages", { max: MAX_PAGES_PER_POST })}</label>
+              <button type="button" className="link-btn" onClick={selectAll}>{t("dashboard.fields.selectAll")}</button>
             </div>
             <div className="page-picker">
               {pages.map((p) => {
@@ -401,39 +409,39 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd }) {
                 return (
                   <label key={p.id} className={`page-option ${checked ? "selected" : ""} ${disabled ? "disabled" : ""}`}>
                     <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggle(p.id)} />
-                    <PlatformChip platform={p.platform} size="sm" />
+                    <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
                     <span className="page-option-name">{p.label}</span>
                   </label>
                 );
               })}
             </div>
-            <div className={`select-count ${atMax ? "at-max" : ""}`}>{selectedIds.length} / {MAX_PAGES_PER_POST} เพจที่เลือก</div>
+            <div className={`select-count ${atMax ? "at-max" : ""}`}>{t("dashboard.fields.selectedCount", { count: selectedIds.length, max: MAX_PAGES_PER_POST })}</div>
           </div>
 
           <div className="field-group">
-            <label className="field-label">เนื้อหา</label>
-            <textarea className="input textarea" rows={4} placeholder="ข้อความที่จะโพสต์..." value={content} onChange={(e) => setContent(e.target.value)} required />
+            <label className="field-label">{t("dashboard.fields.content")}</label>
+            <textarea className="input textarea" rows={4} placeholder={t("dashboard.fields.contentPlaceholder")} value={content} onChange={(e) => setContent(e.target.value)} required />
           </div>
           <div className="field-row">
             <div className="field-group">
-              <label className="field-label">วันที่</label>
+              <label className="field-label">{t("dashboard.fields.date")}</label>
               <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
             </div>
             <div className="field-group">
-              <label className="field-label">เวลา</label>
+              <label className="field-label">{t("dashboard.fields.time")}</label>
               <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
             </div>
           </div>
 
           <div className="notice small">
             <Info size={13} />
-            <span>แต่ละเพจจะถูกแตกเป็นงานแยกกันในคิวเมื่อถึงเวลา ถ้าเพจใดโพสต์ล้มเหลว จะไม่กระทบเพจอื่นในชุดนี้</span>
+            <span>{t("dashboard.schedule.formNotice")}</span>
           </div>
 
           <div className="modal-actions">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>ยกเลิก</button>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>{t("dashboard.schedule.cancel")}</button>
             <button type="submit" className="btn btn-primary" disabled={selectedIds.length === 0}>
-              บันทึกกำหนดการ {selectedIds.length > 1 ? `(${selectedIds.length} เพจ)` : ""}
+              {t("dashboard.schedule.save")}{selectedIds.length > 1 ? ` (${selectedIds.length} ${t("dashboard.schedule.batchSuffix")})` : ""}
             </button>
           </div>
         </form>
@@ -445,7 +453,7 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd }) {
 /* ---------------------------------------------------------
    Logs view
 --------------------------------------------------------- */
-function LogsView({ logs }) {
+function LogsView({ logs, t, PLATFORMS }) {
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
 
@@ -467,31 +475,31 @@ function LogsView({ logs }) {
     <div className="view">
       <div className="view-head">
         <div>
-          <span className="eyebrow">LOGS</span>
-          <h1>ประวัติการโพสต์</h1>
-          <p className="sub">เก็บชั่วคราว 7 วัน แล้วล้างอัตโนมัติ เพื่อไม่ให้ตารางบวมเกินไป</p>
+          <span className="eyebrow">{t("dashboard.logs.eyebrow")}</span>
+          <h1>{t("dashboard.logs.title")}</h1>
+          <p className="sub">{t("dashboard.logs.subtitle")}</p>
         </div>
         <div className="reset-badge">
           <RefreshCw size={13} />
-          ล้างข้อมูลอีก {resetInfo.daysLeft} วัน
+          {t("dashboard.logs.resetPrefix")}{resetInfo.daysLeft}{t("dashboard.logs.resetSuffix")}
         </div>
       </div>
 
       <div className="stat-row">
-        <div className="stat"><span className="stat-num">{logs.length}</span><span className="stat-label">รายการ (7 วันล่าสุด)</span></div>
-        <div className="stat"><span className="stat-num" style={{ color: "var(--success)" }}>{rate}%</span><span className="stat-label">สำเร็จ</span></div>
-        <div className="stat"><span className="stat-num" style={{ color: "var(--danger)" }}>{logs.length - successCount}</span><span className="stat-label">ล้มเหลว</span></div>
+        <div className="stat"><span className="stat-num">{logs.length}</span><span className="stat-label">{t("dashboard.logs.statTotal")}</span></div>
+        <div className="stat"><span className="stat-num" style={{ color: "var(--success)" }}>{rate}%</span><span className="stat-label">{t("dashboard.logs.statSuccess")}</span></div>
+        <div className="stat"><span className="stat-num" style={{ color: "var(--danger)" }}>{logs.length - successCount}</span><span className="stat-label">{t("dashboard.logs.statFailed")}</span></div>
       </div>
 
       <div className="log-toolbar">
         <div className="chip-filter">
-          {[["all", "ทั้งหมด"], ["success", "สำเร็จ"], ["failed", "ล้มเหลว"]].map(([k, label]) => (
+          {[["all", t("dashboard.logs.filterAll")], ["success", t("dashboard.logs.filterSuccess")], ["failed", t("dashboard.logs.filterFailed")]].map(([k, label]) => (
             <button key={k} className={`filter-btn ${filter === k ? "active" : ""}`} onClick={() => setFilter(k)}>{label}</button>
           ))}
         </div>
         <div className="search-box">
           <Search size={14} />
-          <input placeholder="ค้นหาเพจ หรือข้อความ..." value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input placeholder={t("dashboard.logs.searchPlaceholder")} value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
       </div>
 
@@ -499,12 +507,12 @@ function LogsView({ logs }) {
         <table className="log-table">
           <thead>
             <tr>
-              <th>สถานะ</th>
-              <th>แพลตฟอร์ม</th>
-              <th>เพจ</th>
-              <th>ข้อความ</th>
-              <th>External ID</th>
-              <th>เวลา</th>
+              <th>{t("dashboard.logs.colStatus")}</th>
+              <th>{t("dashboard.logs.colPlatform")}</th>
+              <th>{t("dashboard.logs.colPage")}</th>
+              <th>{t("dashboard.logs.colMessage")}</th>
+              <th>{t("dashboard.logs.colExternalId")}</th>
+              <th>{t("dashboard.logs.colTime")}</th>
             </tr>
           </thead>
           <tbody>
@@ -512,12 +520,12 @@ function LogsView({ logs }) {
               <tr key={l.id}>
                 <td>
                   {l.success ? (
-                    <span className="result-ok"><CheckCircle2 size={14} /> สำเร็จ</span>
+                    <span className="result-ok"><CheckCircle2 size={14} /> {t("dashboard.logs.resultSuccess")}</span>
                   ) : (
-                    <span className="result-fail"><XCircle size={14} /> ล้มเหลว</span>
+                    <span className="result-fail"><XCircle size={14} /> {t("dashboard.logs.resultFailed")}</span>
                   )}
                 </td>
-                <td><PlatformChip platform={l.platform} size="sm" /></td>
+                <td><PlatformChip platform={l.platform} size="sm" PLATFORMS={PLATFORMS} /></td>
                 <td>{l.pageLabel}</td>
                 <td className="msg-cell">{l.message}</td>
                 <td className="mono dim">{l.externalId}</td>
@@ -529,7 +537,7 @@ function LogsView({ logs }) {
         {filtered.length === 0 && (
           <div className="empty small">
             <ScrollText size={22} />
-            <p>ไม่พบรายการที่ตรงกับตัวกรอง</p>
+            <p>{t("dashboard.logs.empty")}</p>
           </div>
         )}
       </div>
@@ -585,6 +593,8 @@ function logFromDb(l) {
 --------------------------------------------------------- */
 export default function Dashboard({ initialPages = [], initialPosts = [], initialLogs = [] }) {
   const router = useRouter();
+  const { t, locale } = useTranslation();
+  const PLATFORMS = usePlatforms(t);
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
@@ -759,6 +769,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           font-family: 'IBM Plex Mono', monospace;
         }
         .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+        .sidebar-lang { padding: 4px 10px 12px; display: flex; }
+        .sidebar-lang .lang-switcher { border-left: none; padding-left: 0; margin-left: 0; }
 
         /* Main */
         .main { flex: 1; overflow-y: auto; padding: 28px 32px; }
@@ -927,7 +939,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         @media (max-width: 720px) {
           .shell { flex-direction: column; }
           .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 12px 14px; overflow-x: auto; }
-          .brand, .brand-sub, .sidebar-foot { display: none; }
+          .brand, .brand-sub, .sidebar-foot, .sidebar-lang { display: none; }
           .nav-item { width: auto; white-space: nowrap; }
           .main { padding: 20px; }
         }
@@ -942,6 +954,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           </button>
         ))}
         <div className="sidebar-foot"><span className="status-dot" /> Supabase • Connected</div>
+        <div className="sidebar-lang"><LangSwitcher /></div>
       </aside>
 
       <main className="main">
@@ -951,6 +964,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             onAdd={handleAddPage}
             onRemove={handleRemovePage}
             authed={authed}
+            t={t}
+            PLATFORMS={PLATFORMS}
           />
         )}
         {tab === "schedule" && (
@@ -959,9 +974,12 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             pages={pages}
             onAdd={(newPosts) => setPosts((prev) => [...newPosts.map(postFromDb), ...prev])}
             authed={authed}
+            t={t}
+            PLATFORMS={PLATFORMS}
+            locale={locale}
           />
         )}
-        {tab === "logs" && <LogsView logs={logs} />}
+        {tab === "logs" && <LogsView logs={logs} t={t} PLATFORMS={PLATFORMS} />}
       </main>
     </div>
   );

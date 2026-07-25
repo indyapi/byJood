@@ -88,5 +88,108 @@
   },
   "footer": {
     "text": "Social Poster — สร้างด้วย Next.js + Cloudflare Workers + Supabase"
+  },
+  "dashboard": {
+    "sidebar": {
+      "brandSub": "Social Poster / Control Room",
+      "status": "Supabase • เชื่อมต่อแล้ว",
+      "navConnections": "จัดการเพจ",
+      "navSchedule": "ตั้งเวลาโพสต์",
+      "navLogs": "Logs"
+    },
+    "platforms": {
+      "facebook": "Facebook Page",
+      "instagram": "Instagram",
+      "threads": "Threads",
+      "tiktok": "TikTok",
+      "youtube": "YouTube",
+      "website": "Website"
+    },
+    "fields": {
+      "appId": "App ID",
+      "appIdPlaceholder": "Facebook App ID, TikTok Client Key ฯลฯ",
+      "pageId": "Page ID",
+      "pageIdPlaceholder": "Page ID, Account ID หรือ Channel ID",
+      "appSecret": "App Secret",
+      "appSecretPlaceholder": "App Secret หรือ Client Secret",
+      "accessToken": "Page access token",
+      "accessTokenPlaceholder": "วาง Access Token หรือ API Key ของคุณ",
+      "displayName": "ชื่อที่แสดง",
+      "platform": "แพลตฟอร์ม",
+      "content": "เนื้อหา",
+      "contentPlaceholder": "ข้อความที่จะโพสต์...",
+      "date": "วันที่",
+      "time": "เวลา",
+      "selectAll": "เลือกทั้งหมด",
+      "selectedCount": "{count} / {max} เพจที่เลือก",
+      "maxPages": "เลือกเพจ (ได้พร้อมกันสูงสุด {max})"
+    },
+    "status": {
+      "pending": "รอคิว",
+      "queued": "อยู่ในคิว",
+      "posted": "โพสต์แล้ว",
+      "failed": "ล้มเหลว"
+    },
+    "connectionStatus": {
+      "active": "ใช้งานได้",
+      "expiring": "ใกล้หมดอายุ",
+      "error": "มีปัญหา"
+    },
+    "connections": {
+      "eyebrow": "CONNECTIONS",
+      "title": "จัดการเพจ",
+      "subtitle": "เพิ่ม Access Token หรือ API Key ของแต่ละแพลตฟอร์ม เพื่อให้ระบบใช้โพสต์แทนคุณ",
+      "addBtn": "เพิ่มการเชื่อมต่อ",
+      "notice": "Token ถูกส่งตรงไปยัง backend และเก็บเป็น secret ใน Supabase เท่านั้น — หน้านี้จะไม่แสดง token เต็มซ้ำอีกหลังบันทึก",
+      "empty": "ยังไม่มีการเชื่อมต่อ เพิ่มเพจหรือ API key แรกของคุณเพื่อเริ่มโพสต์",
+      "idLabel": "ID",
+      "tokenLabel": "Token",
+      "addedPrefix": "เพิ่มเมื่อ ",
+      "revealAria": "แสดง/ซ่อน token",
+      "deleteAria": "ลบการเชื่อมต่อ",
+      "modalTitle": "เพิ่มการเชื่อมต่อ",
+      "formNotice": "ค่าที่กรอกจะถูกส่งไปเก็บเป็น secret บน Supabase ผ่าน backend เท่านั้น ไม่มีการเก็บไว้ฝั่ง frontend",
+      "cancel": "ยกเลิก",
+      "save": "บันทึกการเชื่อมต่อ"
+    },
+    "schedule": {
+      "eyebrow": "SCHEDULE",
+      "title": "ตั้งเวลาโพสต์",
+      "subtitle": "จัดคิวโพสต์ล่วงหน้าในแต่ละเพจ ระบบจะแตกงานส่งเข้าคิวอัตโนมัติเมื่อถึงเวลา",
+      "addBtn": "ตั้งโพสต์ใหม่",
+      "empty": "ยังไม่มีโพสต์ที่ตั้งเวลาไว้ในวันนี้",
+      "pageNotFound": "ไม่พบเพจ",
+      "batchTag": "ชุดเดียวกัน",
+      "modalTitle": "ตั้งโพสต์ใหม่",
+      "formNotice": "แต่ละเพจจะถูกแตกเป็นงานแยกกันในคิวเมื่อถึงเวลา ถ้าเพจใดโพสต์ล้มเหลว จะไม่กระทบเพจอื่นในชุดนี้",
+      "cancel": "ยกเลิก",
+      "save": "บันทึกกำหนดการ",
+      "batchSuffix": "เพจ"
+    },
+    "logs": {
+      "eyebrow": "LOGS",
+      "title": "ประวัติการโพสต์",
+      "subtitle": "เก็บชั่วคราว 7 วัน แล้วล้างอัตโนมัติ เพื่อไม่ให้ตารางบวมเกินไป",
+      "resetPrefix": "ล้างข้อมูลอีก ",
+      "resetSuffix": " วัน",
+      "statTotal": " รายการ (7 วันล่าสุด)",
+      "statSuccess": "สำเร็จ",
+      "statFailed": "ล้มเหลว",
+      "filterAll": "ทั้งหมด",
+      "filterSuccess": "สำเร็จ",
+      "filterFailed": "ล้มเหลว",
+      "searchPlaceholder": "ค้นหาเพจ หรือข้อความ...",
+      "colStatus": "สถานะ",
+      "colPlatform": "แพลตฟอร์ม",
+      "colPage": "เพจ",
+      "colMessage": "ข้อความ",
+      "colExternalId": "External ID",
+      "colTime": "เวลา",
+      "resultSuccess": "สำเร็จ",
+      "resultFailed": "ล้มเหลว",
+      "empty": "ไม่พบรายการที่ตรงกับตัวกรอง",
+      "defaultSuccessMsg": "โพสต์สำเร็จ",
+      "defaultFailedMsg": "ล้มเหลว"
+    }
   }
 }

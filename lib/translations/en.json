@@ -88,5 +88,108 @@
   },
   "footer": {
     "text": "Social Poster — Built with Next.js + Cloudflare Workers + Supabase"
+  },
+  "dashboard": {
+    "sidebar": {
+      "brandSub": "Social Poster / Control Room",
+      "status": "Supabase • Connected",
+      "navConnections": "Manage Pages",
+      "navSchedule": "Schedule Posts",
+      "navLogs": "Logs"
+    },
+    "platforms": {
+      "facebook": "Facebook Page",
+      "instagram": "Instagram",
+      "threads": "Threads",
+      "tiktok": "TikTok",
+      "youtube": "YouTube",
+      "website": "Website"
+    },
+    "fields": {
+      "appId": "App ID",
+      "appIdPlaceholder": "Facebook App ID, TikTok Client Key, etc.",
+      "pageId": "Page ID",
+      "pageIdPlaceholder": "Page ID, Account ID, or Channel ID",
+      "appSecret": "App Secret",
+      "appSecretPlaceholder": "App Secret or Client Secret",
+      "accessToken": "Page access token",
+      "accessTokenPlaceholder": "Paste your access token or API key",
+      "displayName": "Display Name",
+      "platform": "Platform",
+      "content": "Content",
+      "contentPlaceholder": "Text to post...",
+      "date": "Date",
+      "time": "Time",
+      "selectAll": "Select All",
+      "selectedCount": "{count} / {max} pages selected",
+      "maxPages": "Select pages (up to {max} at once)"
+    },
+    "status": {
+      "pending": "Pending",
+      "queued": "Queued",
+      "posted": "Posted",
+      "failed": "Failed"
+    },
+    "connectionStatus": {
+      "active": "Active",
+      "expiring": "Expiring soon",
+      "error": "Error"
+    },
+    "connections": {
+      "eyebrow": "CONNECTIONS",
+      "title": "Manage Pages",
+      "subtitle": "Add Access Tokens or API Keys for each platform so the system can post on your behalf.",
+      "addBtn": "Add Connection",
+      "notice": "Tokens are sent directly to the backend and stored as secrets in Supabase only — this page will not show the full token again after saving.",
+      "empty": "No connections yet. Add your first page or API key to start posting.",
+      "idLabel": "ID",
+      "tokenLabel": "Token",
+      "addedPrefix": "Added ",
+      "revealAria": "Show/hide token",
+      "deleteAria": "Delete connection",
+      "modalTitle": "Add Connection",
+      "formNotice": "Values are sent to Supabase as secrets via the backend only — not stored client-side.",
+      "cancel": "Cancel",
+      "save": "Save Connection"
+    },
+    "schedule": {
+      "eyebrow": "SCHEDULE",
+      "title": "Schedule Posts",
+      "subtitle": "Queue posts in advance for each page. The system automatically fans out to the queue when the time comes.",
+      "addBtn": "New Post",
+      "empty": "No scheduled posts for this day.",
+      "pageNotFound": "Page not found",
+      "batchTag": "Same batch",
+      "modalTitle": "New Scheduled Post",
+      "formNotice": "Each page is split into an independent queue job. If one page fails, it won't affect others in the same batch.",
+      "cancel": "Cancel",
+      "save": "Save Schedule",
+      "batchSuffix": "page(s)"
+    },
+    "logs": {
+      "eyebrow": "LOGS",
+      "title": "Post History",
+      "subtitle": "Temporary storage for 7 days, then auto-cleared to prevent table bloat.",
+      "resetPrefix": "Auto-clear in ",
+      "resetSuffix": " day(s)",
+      "statTotal": " entries (last 7 days)",
+      "statSuccess": "Success",
+      "statFailed": "Failed",
+      "filterAll": "All",
+      "filterSuccess": "Success",
+      "filterFailed": "Failed",
+      "searchPlaceholder": "Search page or message...",
+      "colStatus": "Status",
+      "colPlatform": "Platform",
+      "colPage": "Page",
+      "colMessage": "Message",
+      "colExternalId": "External ID",
+      "colTime": "Time",
+      "resultSuccess": "Success",
+      "resultFailed": "Failed",
+      "empty": "No matching records found.",
+      "defaultSuccessMsg": "Posted successfully",
+      "defaultFailedMsg": "Failed"
+    }
   }
 }

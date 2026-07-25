@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/lib/TranslationsProvider";
@@ -8,8 +9,17 @@ import LangSwitcher from "./LangSwitcher";
 export default function Navbar() {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const isDashboard = pathname?.startsWith("/dashboard");
+  const [authed, setAuthed] = useState(false);
 
+  useEffect(() => {
+    import("@/lib/supabase-client").then(({ createClientSupabase }) => {
+      createClientSupabase().auth.getSession().then(({ data: { session } }) => {
+        setAuthed(!!session);
+      });
+    });
+  }, []);
+
+  const isDashboard = pathname?.startsWith("/dashboard");
   if (isDashboard) return null;
 
   const NAV_ITEMS = [
@@ -21,8 +31,11 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="nav-inner">
         <Link href="/" className="logo">
-          <span className="logo-icon">SP</span>
-          <span className="logo-text">{t("common.appName")}</span>
+          <span className="logo-icon">bJ</span>
+          <div className="logo-titles">
+            <span className="logo-text">{t("common.appName")}</span>
+            <span className="logo-sub">{t("common.appTagline")}</span>
+          </div>
         </Link>
 
         <div className="nav-links">
@@ -36,8 +49,14 @@ export default function Navbar() {
             </Link>
           ))}
           <div className="nav-divider" />
-          <Link href="/sign-in" className="nav-link">{t("nav.signIn")}</Link>
-          <Link href="/sign-up" className="btn btn-nav">{t("nav.signUp")}</Link>
+          {authed ? (
+            <Link href="/dashboard" className="btn btn-nav">{t("nav.controlRoom")}</Link>
+          ) : (
+            <>
+              <Link href="/sign-in" className="nav-link">{t("nav.signIn")}</Link>
+              <Link href="/sign-up" className="btn btn-nav">{t("nav.signUp")}</Link>
+            </>
+          )}
           <LangSwitcher />
         </div>
       </div>
@@ -81,11 +100,19 @@ export default function Navbar() {
           align-items: center;
           justify-content: center;
         }
+        .logo-titles { display: flex; flex-direction: column; line-height: 1.2; }
         .logo-text {
           font-family: "Space Grotesk", sans-serif;
-          font-weight: 600;
+          font-weight: 700;
           font-size: 16px;
           color: #e8eaef;
+        }
+        .logo-sub {
+          font-family: "IBM Plex Mono", monospace;
+          font-size: 9px;
+          letter-spacing: 0.08em;
+          color: #5c6270;
+          text-transform: uppercase;
         }
         .nav-links {
           display: flex;

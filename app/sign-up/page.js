@@ -28,7 +28,7 @@ export default function SignUpPage() {
     }
     setLoading(true);
     const supabase = createClientSupabase();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -40,6 +40,13 @@ export default function SignUpPage() {
       setError(error.message);
       setLoading(false);
     } else {
+      if (data?.user) {
+        await fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ display_name: displayName, username }),
+        });
+      }
       alert(t("auth.checkEmail"));
       window.location.href = "/sign-in";
     }

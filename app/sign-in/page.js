@@ -22,6 +22,17 @@ export default function SignInPage() {
       setError(error.message);
       setLoading(false);
     } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.display_name || user?.user_metadata?.username) {
+        await fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            display_name: user.user_metadata.display_name,
+            username: user.user_metadata.username,
+          }),
+        });
+      }
       window.location.href = "/dashboard";
     }
   }

@@ -2,7 +2,7 @@ import Navbar from "@/components/Navbar";
 import { TranslationsProvider } from "@/lib/TranslationsProvider";
 
 export const metadata = {
-  title: "Social Poster",
+  title: "byJood — Social Poster",
   description: "Manage and schedule posts across multiple social media platforms",
 };
 

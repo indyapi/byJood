@@ -43,7 +43,6 @@ export default function ControlRoomPage() {
 
         <div className="cr-cta">
           <Link href="/sign-up" className="btn-primary-lg">{t("hero.ctaStart")} →</Link>
-          <Link href="/dashboard" className="btn-ghost-lg">{t("nav.controlRoom")}</Link>
         </div>
       </div>
 

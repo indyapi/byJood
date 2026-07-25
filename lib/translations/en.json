@@ -1,6 +1,7 @@
 {
   "common": {
-    "appName": "Social Poster",
+    "appName": "byJood",
+    "appTagline": "Social Poster",
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",

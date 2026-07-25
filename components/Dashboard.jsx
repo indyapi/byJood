@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus, X, Eye, EyeOff, Trash2, ChevronLeft, ChevronRight, Clock,
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
@@ -89,7 +90,7 @@ function StatusPill({ status }) {
 /* ---------------------------------------------------------
    Pages (Connections) view
 --------------------------------------------------------- */
-function ConnectionsView({ pages, onAdd, onRemove }) {
+function ConnectionsView({ pages, onAdd, onRemove, authed }) {
   const [revealed, setRevealed] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -101,7 +102,7 @@ function ConnectionsView({ pages, onAdd, onRemove }) {
           <h1>จัดการเพจ</h1>
           <p className="sub">เพิ่ม Access Token หรือ API Key ของแต่ละแพลตฟอร์ม เพื่อให้ระบบใช้โพสต์แทนคุณ</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
+        <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
           <Plus size={16} /> เพิ่มการเชื่อมต่อ
         </button>
       </div>
@@ -115,7 +116,7 @@ function ConnectionsView({ pages, onAdd, onRemove }) {
         <div className="empty">
           <Link2 size={28} />
           <p>ยังไม่มีการเชื่อมต่อ เพิ่มเพจหรือ API key แรกของคุณเพื่อเริ่มโพสต์</p>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> เพิ่มการเชื่อมต่อ</button>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}><Plus size={16} /> เพิ่มการเชื่อมต่อ</button>
         </div>
       ) : (
         <div className="grid-cards">
@@ -145,7 +146,7 @@ function ConnectionsView({ pages, onAdd, onRemove }) {
               </div>
               <div className="card-foot">
                 <span className="label-dim">เพิ่มเมื่อ {pg.addedAt}</span>
-                <button className="icon-btn danger" onClick={() => onRemove(pg.id)} aria-label="ลบการเชื่อมต่อ">
+                <button className="icon-btn danger" onClick={() => onRemove(pg.id)} disabled={!authed} aria-label="ลบการเชื่อมต่อ">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -251,7 +252,7 @@ function AddConnectionModal({ onClose, onAdd }) {
 /* ---------------------------------------------------------
    Schedule view
 --------------------------------------------------------- */
-function ScheduleView({ posts, pages, onAdd }) {
+function ScheduleView({ posts, pages, onAdd, authed }) {
   const [selectedDate, setSelectedDate] = useState(dayKey(today));
   const [weekStart, setWeekStart] = useState(addDays(today, -1));
   const [modalOpen, setModalOpen] = useState(false);
@@ -271,7 +272,7 @@ function ScheduleView({ posts, pages, onAdd }) {
           <h1>ตั้งเวลาโพสต์</h1>
           <p className="sub">จัดคิวโพสต์ล่วงหน้าในแต่ละเพจ ระบบจะแตกงานส่งเข้าคิวอัตโนมัติเมื่อถึงเวลา</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
+        <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
           <Plus size={16} /> ตั้งโพสต์ใหม่
         </button>
       </div>
@@ -297,7 +298,7 @@ function ScheduleView({ posts, pages, onAdd }) {
         <div className="empty">
           <CalendarClock size={28} />
           <p>ยังไม่มีโพสต์ที่ตั้งเวลาไว้ในวันนี้</p>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)}><Plus size={16} /> ตั้งโพสต์ใหม่</button>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}><Plus size={16} /> ตั้งโพสต์ใหม่</button>
         </div>
       ) : (
         <div className="post-list">
@@ -336,6 +337,7 @@ function ScheduleView({ posts, pages, onAdd }) {
 const MAX_PAGES_PER_POST = 10;
 
 function AddPostModal({ pages, defaultDate, onClose, onAdd }) {
+  const router = useRouter();
   const [selectedIds, setSelectedIds] = useState([]);
   const [content, setContent] = useState("");
   const [date, setDate] = useState(defaultDate);
@@ -369,6 +371,7 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ page_id: pageId, platform: page.platform, content, scheduled_at }),
       });
+      if (res.status === 401) { router.replace("/sign-in"); return; }
       if (res.ok) {
         const saved = await res.json();
         created.push(saved);
@@ -581,37 +584,55 @@ function logFromDb(l) {
    App shell
 --------------------------------------------------------- */
 export default function Dashboard({ initialPages = [], initialPosts = [], initialLogs = [] }) {
+  const router = useRouter();
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    import("@/lib/supabase-client").then(({ createClientSupabase }) => {
+      createClientSupabase().auth.getSession().then(({ data: { session } }) => {
+        setAuthed(!!session);
+        if (!session) router.replace("/sign-in");
+      });
+    });
+  }, [router]);
+
+  async function authedFetch(url, options) {
+    const res = await fetch(url, options);
+    if (res.status === 401) router.replace("/sign-in");
+    return res;
+  }
+
   const [tab, setTab] = useState("connections");
   const [pages, setPages] = useState(initialPages.map(pageFromDb));
   const [posts, setPosts] = useState(initialPosts.map(postFromDb));
   const [logs, setLogs] = useState(initialLogs.map(logFromDb));
 
   const refreshPages = useCallback(async () => {
-    const res = await fetch("/api/pages");
-    if (res.ok) {
+    const res = await authedFetch("/api/pages");
+    if (res?.ok) {
       const data = await res.json();
       setPages(data.map(pageFromDb));
     }
   }, []);
 
   const refreshPosts = useCallback(async () => {
-    const res = await fetch("/api/scheduled-posts");
-    if (res.ok) {
+    const res = await authedFetch("/api/scheduled-posts");
+    if (res?.ok) {
       const data = await res.json();
       setPosts(data.map(postFromDb));
     }
   }, []);
 
   const refreshLogs = useCallback(async () => {
-    const res = await fetch("/api/logs");
-    if (res.ok) {
+    const res = await authedFetch("/api/logs");
+    if (res?.ok) {
       const data = await res.json();
       setLogs(data.map(logFromDb));
     }
   }, []);
 
   const handleAddPage = useCallback(async (raw) => {
-    const res = await fetch("/api/pages", {
+    const res = await authedFetch("/api/pages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -632,8 +653,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
   }, []);
 
   const handleRemovePage = useCallback(async (id) => {
-    const res = await fetch(`/api/pages/${id}`, { method: "DELETE" });
-    if (res.ok || res.status === 204) {
+    const res = await authedFetch(`/api/pages/${id}`, { method: "DELETE" });
+    if (res?.ok || res?.status === 204) {
       setPages((prev) => prev.filter((p) => p.id !== id));
     }
   }, []);
@@ -892,6 +913,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
 
         .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .icon-btn:disabled:hover { background: none; color: var(--text-dim); }
 
         .platform-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
         .platform-option {
@@ -911,8 +934,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
       `}</style>
 
       <aside className="sidebar">
-        <div className="brand">Social Poster</div>
-        <div className="brand-sub">Control Room</div>
+        <div className="brand">byJood</div>
+        <div className="brand-sub">Social Poster / Control Room</div>
         {nav.map((n) => (
           <button key={n.key} className={`nav-item ${tab === n.key ? "active" : ""}`} onClick={() => setTab(n.key)}>
             <n.icon size={16} /> {n.label}
@@ -927,6 +950,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             pages={pages}
             onAdd={handleAddPage}
             onRemove={handleRemovePage}
+            authed={authed}
           />
         )}
         {tab === "schedule" && (
@@ -934,6 +958,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             posts={posts}
             pages={pages}
             onAdd={(newPosts) => setPosts((prev) => [...newPosts.map(postFromDb), ...prev])}
+            authed={authed}
           />
         )}
         {tab === "logs" && <LogsView logs={logs} />}

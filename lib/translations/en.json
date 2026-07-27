@@ -91,7 +91,15 @@
   "profile": {
     "noName": "No name",
     "email": "Email",
-    "loginMethod": "Logged in with"
+    "loginMethod": "Logged in with",
+    "edit": "Edit",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Your name",
+    "username": "Username",
+    "usernamePlaceholder": "username",
+    "avatarTooLarge": "Avatar must not exceed 2 MB",
+    "uploadFailed": "Avatar upload failed",
+    "saveFailed": "Save failed"
   },
   "footer": {
     "text": "Social Poster — Built with Next.js + Cloudflare Workers + Supabase"

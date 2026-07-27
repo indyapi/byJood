@@ -33,7 +33,7 @@ export async function POST(request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { display_name, username } = await request.json();
+  const { display_name, username, avatar_url } = await request.json();
 
   const admin = createAdminSupabase();
   const { data, error } = await admin.from("profiles").upsert(
@@ -42,6 +42,7 @@ export async function POST(request) {
       email: user.email,
       display_name: display_name ?? user.user_metadata?.display_name ?? null,
       username: username ?? user.user_metadata?.username ?? null,
+      avatar_url: avatar_url ?? user.user_metadata?.avatar_url ?? null,
       auth_provider: user.app_metadata?.provider ?? null,
       updated_at: new Date().toISOString(),
     },

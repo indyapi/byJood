@@ -91,7 +91,15 @@
   "profile": {
     "noName": "ไม่มีชื่อ",
     "email": "อีเมล",
-    "loginMethod": "เข้าสู่ระบบด้วย"
+    "loginMethod": "เข้าสู่ระบบด้วย",
+    "edit": "แก้ไข",
+    "displayName": "ชื่อที่แสดง",
+    "displayNamePlaceholder": "ชื่อของคุณ",
+    "username": "ชื่อผู้ใช้",
+    "usernamePlaceholder": "username",
+    "avatarTooLarge": "รูปต้องไม่เกิน 2 MB",
+    "uploadFailed": "อัปโหลดรูปไม่สำเร็จ",
+    "saveFailed": "บันทึกไม่สำเร็จ"
   },
   "footer": {
     "text": "Social Poster — สร้างด้วย Next.js + Cloudflare Workers + Supabase"

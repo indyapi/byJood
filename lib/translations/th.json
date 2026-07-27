@@ -18,7 +18,7 @@
     "profile": "โปรไฟล์"
   },
   "hero": {
-    "badge": "v0.1 — Cloudflare + Supabase",
+    "badge": "byJood v0.2 | Auto-post to multiple platforms",
     "title": "โพสต์ทุกแพลตฟอร์ม",
     "titleAccent": "จากที่เดียว",
     "subtitle": "จัดการโพสต์ไปยัง Facebook, Instagram, TikTok, Threads และ Website ของคุณ พร้อมกันหลายเพจ โดยไม่เจอ timeout — ขับเคลื่อนด้วย Cloudflare Queue Fan-Out",

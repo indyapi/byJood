@@ -526,5 +526,16 @@ const profileStyles = `
     color: #e8eaef;
     border-color: #5c6270;
   }
+
+  @media (max-width: 720px) {
+    .profile-page { padding: 80px 12px 20px; }
+    .profile-card { padding: 24px 16px; }
+    .back-btn { top: 10px; left: 10px; font-size: 11px; padding: 4px 8px; }
+    .edit-btn { top: 10px; right: 10px; font-size: 11px; padding: 4px 8px; }
+    .display-name { font-size: 18px; }
+    .info-row { padding: 10px 12px; font-size: 12px; }
+    .info-label { min-width: 52px; font-size: 11px; }
+    .sign-out-btn { font-size: 12px; padding: 8px; }
+  }
 `;
 

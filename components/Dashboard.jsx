@@ -8,6 +8,7 @@ import {
   Plus, X, Eye, EyeOff, Trash2, ChevronLeft, ChevronRight, Clock,
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
   Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal, User,
+  Mail, Shield, Edit3, Camera, Check, LogOut,
 } from "lucide-react";
 import { createClientSupabase } from "@/lib/supabase-client";
 
@@ -862,6 +863,183 @@ function LogsView({ logs, t, PLATFORMS }) {
 }
 
 /* ---------------------------------------------------------
+   Profile Modal
+--------------------------------------------------------- */
+const PROVIDER_LABELS = {
+  google: "Google", facebook: "Facebook", github: "GitHub",
+  twitter: "Twitter", apple: "Apple", email: "Email",
+};
+const PROVIDER_ICONS = {
+  google: "G", facebook: "F", github: "Gh", email: "E",
+};
+
+function ProfileModal({ onClose, t }) {
+  const router = useRouter();
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const supabase = createClientSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const fallback = {
+        id: session?.user?.id,
+        email: session?.user?.email,
+        auth_provider: session?.user?.app_metadata?.provider || null,
+        display_name: session?.user?.user_metadata?.display_name || null,
+        username: session?.user?.user_metadata?.username || null,
+        avatar_url: session?.user?.user_metadata?.avatar_url || null,
+      };
+      const res = await fetch("/api/profile");
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(data);
+        setEditDisplayName(data.display_name || "");
+        setEditUsername(data.username || "");
+      } else {
+        setProfile(fallback);
+        setEditDisplayName(fallback.display_name || "");
+        setEditUsername(fallback.username || "");
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  async function handleSignOut() {
+    const supabase = createClientSupabase();
+    await supabase.auth.signOut();
+    router.replace("/");
+  }
+
+  function startEditing() {
+    setEditDisplayName(profile.display_name || "");
+    setEditUsername(profile.username || "");
+    setAvatarFile(null); setAvatarPreview(null); setSaveError("");
+    setEditing(true);
+  }
+
+  function cancelEditing() {
+    setEditing(false); setAvatarFile(null); setAvatarPreview(null); setSaveError("");
+  }
+
+  function handleAvatarSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setSaveError(t("profile.avatarTooLarge")); return; }
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  }
+
+  async function saveProfile(e) {
+    e.preventDefault();
+    setSaving(true); setSaveError("");
+
+    let avatarUrl = profile.avatar_url;
+    if (avatarFile) {
+      const supabase = createClientSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) { setSaveError("Not authenticated"); setSaving(false); return; }
+      const ext = avatarFile.name.split(".").pop();
+      const filePath = `${userId}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, avatarFile, { upsert: true });
+      if (uploadError) { setSaveError(t("profile.uploadFailed")); setSaving(false); return; }
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      avatarUrl = publicUrl;
+    }
+
+    const res = await fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        display_name: editDisplayName.trim() || null,
+        username: editUsername.trim() || null,
+        avatar_url: avatarUrl,
+      }),
+    });
+    if (!res.ok) { const err = await res.json(); setSaveError(err.error || t("profile.saveFailed")); setSaving(false); return; }
+    const updated = await res.json();
+    setProfile(updated);
+    setEditing(false); setSaving(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="modal-overlay"><div className="modal"><p style={{ color: "#5c6270", textAlign: "center", padding: "20px 0" }}>{t("common.loading")}</p></div></div>
+    );
+  }
+
+  if (!profile) return null;
+
+  const providerLabel = PROVIDER_LABELS[profile.auth_provider] || profile.auth_provider || "Email";
+  const providerIcon = PROVIDER_ICONS[profile.auth_provider] || "E";
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal modal-profile">
+        <div className="modal-head">
+          <h2>{t("nav.profile")}</h2>
+          <button className="icon-btn" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div className="pfp-avatar-wrap">
+          {editing ? (
+            <label className="pfp-avatar-upload">
+              {avatarPreview ? <img src={avatarPreview} alt="" className="avatar" />
+              : profile.avatar_url ? <img src={profile.avatar_url} alt="" className="avatar" />
+              : <div className="avatar-fallback"><User size={28} /></div>}
+              <div className="pfp-avatar-overlay"><Camera size={16} /></div>
+              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleAvatarSelect} hidden />
+            </label>
+          ) : (
+            profile.avatar_url ? <img src={profile.avatar_url} alt="" className="avatar" />
+            : <div className="avatar-fallback"><User size={28} /></div>
+          )}
+        </div>
+
+        {editing ? (
+          <form onSubmit={saveProfile} className="pfp-form">
+            <div className="field-group">
+              <label className="field-label">{t("profile.displayName")}</label>
+              <input className="input" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder={t("profile.displayNamePlaceholder")} />
+            </div>
+            <div className="field-group">
+              <label className="field-label">{t("profile.username")}</label>
+              <input className="input mono" value={editUsername} onChange={(e) => setEditUsername(e.target.value)} placeholder={t("profile.usernamePlaceholder")} />
+            </div>
+            {saveError && <p className="pfp-error">{saveError}</p>}
+            <div className="pfp-edit-actions">
+              <button type="button" className="btn btn-ghost" onClick={cancelEditing} disabled={saving}>{t("common.cancel")}</button>
+              <button type="submit" className="btn btn-primary" disabled={saving}><Check size={14} /> {saving ? t("common.loading") : t("common.save")}</button>
+            </div>
+          </form>
+        ) : (
+          <div className="pfp-view">
+            <h3 className="pfp-name">{profile.display_name || profile.username || t("profile.noName")}</h3>
+            {profile.username && profile.display_name && <p className="pfp-username">@{profile.username}</p>}
+            <div className="pfp-info">
+              <div className="pfp-row"><Mail size={14} /><span>{t("profile.email")}</span><span className="pfp-val">{profile.email}</span></div>
+              <div className="pfp-row"><Shield size={14} /><span>{t("profile.loginMethod")}</span><span className="pfp-val"><span className="provider-badge"><span className="provider-icon">{providerIcon}</span>{providerLabel}</span></span></div>
+            </div>
+            <div className="pfp-actions">
+              <button className="btn btn-ghost" onClick={startEditing}><Edit3 size={14} /> {t("profile.edit")}</button>
+              <button className="btn btn-danger pfp-signout" onClick={handleSignOut}><LogOut size={14} /> {t("nav.signOut")}</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
    DB shape helpers
 --------------------------------------------------------- */
 function pageFromDb(p) {
@@ -915,14 +1093,22 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
   const { t, locale } = useTranslation();
   const PLATFORMS = usePlatforms(t);
   const [authed, setAuthed] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileAvatar, setProfileAvatar] = useState(null);
 
   useEffect(() => {
     import("@/lib/supabase-client").then(({ createClientSupabase }) => {
       createClientSupabase().auth.getSession().then(({ data: { session } }) => {
         setAuthed(!!session);
         if (!session) router.replace("/sign-in");
+        if (session?.user?.user_metadata?.avatar_url) {
+          setProfileAvatar(session.user.user_metadata.avatar_url);
+        }
       });
     });
+    fetch("/api/profile").then((r) => r.ok && r.json()).then((data) => {
+      if (data?.avatar_url) setProfileAvatar(data.avatar_url);
+    }).catch(() => {});
   }, [router]);
 
   async function authedFetch(url, options) {
@@ -1298,6 +1484,58 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           .modal-overlay { padding: 20px 12px; }
           .modal { padding: 16px; }
         }
+
+        .sidebar-avatar { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+
+        /* ── Profile Modal ── */
+        .modal-profile { max-width: 400px; }
+        .pfp-avatar-wrap { display: flex; justify-content: center; margin: 6px 0 14px; }
+        .pfp-avatar-wrap .avatar,
+        .avatar-fallback {
+          width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+          border: 2px solid var(--border);
+        }
+        .avatar-fallback {
+          background: var(--panel-alt); display: flex; align-items: center; justify-content: center;
+          color: var(--text-dim);
+        }
+        .pfp-avatar-upload {
+          position: relative; cursor: pointer;
+        }
+        .pfp-avatar-overlay {
+          position: absolute; inset: 0; border-radius: 50%;
+          background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;
+          opacity: 0; transition: opacity 0.15s; color: #fff;
+        }
+        .pfp-avatar-upload:hover .pfp-avatar-overlay { opacity: 1; }
+        .pfp-view { text-align: center; }
+        .pfp-name { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 600; margin: 0 0 2px; }
+        .pfp-username { color: var(--text-dim); font-size: 12.5px; margin: 0 0 14px; }
+        .pfp-info { text-align: left; margin: 0 0 18px; }
+        .pfp-row {
+          display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-dim);
+          padding: 8px 0; border-bottom: 1px solid var(--border);
+        }
+        .pfp-row:last-child { border-bottom: none; }
+        .pfp-row svg { flex-shrink: 0; }
+        .pfp-val { margin-left: auto; color: var(--text); font-weight: 500; }
+        .provider-badge {
+          display: inline-flex; align-items: center; gap: 5px; background: var(--panel-alt);
+          border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px 2px 4px; font-size: 12px;
+        }
+        .provider-icon {
+          width: 18px; height: 18px; border-radius: 4px; background: var(--accent-soft);
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 10px; font-weight: 700; color: var(--accent);
+        }
+        .pfp-actions { display: flex; gap: 8px; justify-content: center; }
+        .pfp-signout { background: none; border: 1px solid var(--danger); color: var(--danger); }
+        .pfp-signout:hover { background: var(--danger); color: #fff; }
+
+        .pfp-form { text-align: left; }
+        .pfp-form .mono { font-family: 'IBM Plex Mono', monospace; }
+        .pfp-error { color: var(--danger); font-size: 12px; margin: 0 0 10px; text-align: center; }
+        .pfp-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
       `}</style>
 
       <aside className="sidebar">
@@ -1310,8 +1548,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             <n.icon size={16} /> {n.label}
           </button>
         ))}
-        <button className="nav-item profile-btn" onClick={() => router.push("/profile")}>
-          <User size={16} /> {t("nav.profile")}
+        <button className="nav-item profile-btn" onClick={() => setProfileOpen(true)}>
+          {profileAvatar ? (
+            <img src={profileAvatar} alt="" className="sidebar-avatar" />
+          ) : (
+            <User size={16} />
+          )}
+          {t("nav.profile")}
         </button>
         <div className="sidebar-foot"><span className="status-dot" /> Supabase • Connected</div>
         <div className="sidebar-lang"><LangSwitcher /></div>
@@ -1344,6 +1587,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         )}
         {tab === "logs" && <LogsView logs={logs} t={t} PLATFORMS={PLATFORMS} />}
       </main>
+
+      {profileOpen && (
+        <ProfileModal
+          onClose={() => setProfileOpen(false)}
+          t={t}
+        />
+      )}
     </div>
   );
 }

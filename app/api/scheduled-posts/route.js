@@ -24,15 +24,18 @@ export async function POST(request) {
 
   const admin = createAdminSupabase();
   const body = await request.json();
-  const { page_id, platform, content, scheduled_at } = body;
+  const { page_id, platform, content, scheduled_at, media_urls } = body;
 
   if (!page_id || !platform || !content || !scheduled_at) {
     return Response.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  const insertData = { page_id, platform, content, scheduled_at, user_id: user.id, status: "pending" };
+  if (media_urls?.length > 0) insertData.media_urls = media_urls;
+
   const { data, error } = await admin
     .from("scheduled_posts")
-    .insert({ page_id, platform, content, scheduled_at, user_id: user.id, status: "pending" })
+    .insert(insertData)
     .select()
     .single();
 

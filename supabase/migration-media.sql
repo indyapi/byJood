@@ -15,11 +15,12 @@ values (
 on conflict (id) do nothing;
 
 -- 2. สร้าง Storage bucket สำหรับรูปโพสต์ (ใช้ใน AddPostModal)
+-- ต้องเป็น public เพราะ Facebook/Instagram/TikTok ต้องเข้าถึง URL รูปได้
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'post-images',
   'post-images',
-  false,
+  true,
   5242880,  -- 5 MB
   array['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 )
@@ -79,11 +80,9 @@ create policy "user delete own media files" on storage.objects
   );
 
 -- ==========================================================
--- RLS: storage.objects สำหรับ bucket 'post-images'
+-- RLS: storage.objects สำหรับ bucket 'post-images' (public bucket)
+-- ไม่ต้องมี read policy เพราะ public URL bypass RLS
 -- ==========================================================
-create policy "read post-images" on storage.objects
-  for select using (bucket_id = 'post-images' and auth.role() = 'authenticated');
-
 create policy "upload post-images" on storage.objects
   for insert with check (bucket_id = 'post-images' and auth.role() = 'authenticated');
 

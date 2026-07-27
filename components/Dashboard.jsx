@@ -189,8 +189,8 @@ function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal">
         <div className="modal-head">
           <h2>{t("dashboard.connections.modalTitle")}</h2>
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
@@ -259,7 +259,7 @@ function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
 /* ---------------------------------------------------------
    Schedule view
 --------------------------------------------------------- */
-function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, authed, t, PLATFORMS, locale }) {
+function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, authed, t, PLATFORMS, locale }) {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(dayKey(today));
   const [weekStart, setWeekStart] = useState(addDays(today, -1));
@@ -269,6 +269,12 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, authed, t, PLAT
   const [editPost, setEditPost] = useState(null);
   const [changeTimePost, setChangeTimePost] = useState(null);
   const [deletePost, setDeletePost] = useState(null);
+
+  useEffect(() => {
+    if (!onRefresh) return;
+    const interval = setInterval(onRefresh, 15000);
+    return () => clearInterval(interval);
+  }, [onRefresh]);
 
   useEffect(() => {
     function handleClick(e) {
@@ -416,8 +422,8 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, authed, t, PLAT
       )}
 
       {deletePost && (
-        <div className="modal-overlay" onClick={() => setDeletePost(null)}>
-          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal modal-sm">
             <div className="modal-head">
               <h2>{t("dashboard.schedule.deleteTitle")}</h2>
               <button className="icon-btn" onClick={() => setDeletePost(null)}><X size={18} /></button>
@@ -545,8 +551,8 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal">
         <div className="modal-head">
           <h2>{t("dashboard.schedule.modalTitle")}</h2>
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
@@ -624,8 +630,8 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
 function ViewDetailModal({ post, page, onClose, t, PLATFORMS }) {
   if (!post) return null;
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-detail" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal modal-detail">
         <div className="modal-head">
           <h2>{t("dashboard.schedule.viewTitle")}</h2>
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
@@ -685,8 +691,8 @@ function EditPostModal({ post, onClose, onUpdate, t }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal">
         <div className="modal-head">
           <h2>{t("dashboard.schedule.editTitle")}</h2>
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
@@ -733,8 +739,8 @@ function ChangeTimeModal({ post, onClose, onUpdate, t }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal">
         <div className="modal-head">
           <h2>{t("dashboard.schedule.changeTimeTitle")}</h2>
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
@@ -1315,6 +1321,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             onAdd={(newPosts) => setPosts((prev) => [...newPosts.map(postFromDb), ...prev])}
             onUpdate={(updated) => setPosts((prev) => prev.map((p) => p.id === updated.id ? postFromDb(updated) : p))}
             onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+            onRefresh={refreshPosts}
             authed={authed}
             t={t}
             PLATFORMS={PLATFORMS}

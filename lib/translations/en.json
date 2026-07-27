@@ -102,7 +102,22 @@
     "saveFailed": "Save failed"
   },
   "footer": {
-    "text": "Social Poster — Built with Next.js + Cloudflare Workers + Supabase"
+    "brand": "byJood",
+    "tagline": "Schedule and publish to every platform from one place.",
+    "product": "Product",
+    "productHow": "How It Works",
+    "productDashboard": "Dashboard",
+    "productAbout": "About",
+    "platforms": "Platforms",
+    "platformFacebook": "Facebook",
+    "platformInstagram": "Instagram",
+    "platformTikTok": "TikTok",
+    "platformThreads": "Threads",
+    "platformWebsite": "Website",
+    "legal": "Legal",
+    "legalPrivacy": "Privacy Policy",
+    "legalTerms": "Terms of Service",
+    "copyright": "© 2026 byJood. All rights reserved."
   },
   "dashboard": {
     "sidebar": {

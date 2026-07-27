@@ -79,7 +79,34 @@ export default function HomePage() {
       </section>
 
       <footer className="footer">
-        <div className="footer-inner">{t("footer.text")}</div>
+        <div className="footer-inner">
+          <div className="footer-cols">
+            <div className="footer-col brand-col">
+              <div className="footer-brand">{t("footer.brand")}</div>
+              <p className="footer-tagline">{t("footer.tagline")}</p>
+            </div>
+            <div className="footer-col">
+              <h4>{t("footer.product")}</h4>
+              <a href="#how-it-works">{t("footer.productHow")}</a>
+              <a href="/dashboard">{t("footer.productDashboard")}</a>
+              <a href="/about">{t("footer.productAbout")}</a>
+            </div>
+            <div className="footer-col">
+              <h4>{t("footer.platforms")}</h4>
+              <span>{t("footer.platformFacebook")}</span>
+              <span>{t("footer.platformInstagram")}</span>
+              <span>{t("footer.platformTikTok")}</span>
+              <span>{t("footer.platformThreads")}</span>
+              <span>{t("footer.platformWebsite")}</span>
+            </div>
+            <div className="footer-col">
+              <h4>{t("footer.legal")}</h4>
+              <a href="#">{t("footer.legalPrivacy")}</a>
+              <a href="#">{t("footer.legalTerms")}</a>
+            </div>
+          </div>
+          <div className="footer-bottom">{t("footer.copyright")}</div>
+        </div>
       </footer>
 
       <style>{`
@@ -117,8 +144,22 @@ export default function HomePage() {
         .arch-dot.blue { background: #3d7df6; }
         .arch-dot.yellow { background: #f2b84b; }
         .arch-dot.purple { background: #a78bfa; }
-        .footer { border-top: 1px solid #2a2f3a; padding: 20px 28px; }
-        .footer-inner { max-width: 1000px; margin: 0 auto; text-align: center; font-size: 12px; color: #5c6270; }
+        .footer { border-top: 1px solid #2a2f3a; padding: 48px 28px 24px; }
+        .footer-inner { max-width: 1000px; margin: 0 auto; }
+        .footer-cols { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 36px; }
+        .footer-col { display: flex; flex-direction: column; gap: 8px; }
+        .footer-col h4 { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #5c6270; margin: 0 0 4px; }
+        .footer-col a, .footer-col span { color: #8b93a3; font-size: 13px; text-decoration: none; cursor: default; }
+        .footer-col a { cursor: pointer; }
+        .footer-col a:hover { color: #e8eaef; }
+        .footer-brand { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: #e8eaef; margin-bottom: 4px; }
+        .footer-tagline { color: #5c6270; font-size: 13px; line-height: 1.5; margin: 0; max-width: 240px; }
+        .footer-bottom { border-top: 1px solid #2a2f3a; padding-top: 20px; text-align: center; font-size: 12px; color: #5c6270; }
+
+        @media (max-width: 720px) {
+          .footer-cols { grid-template-columns: 1fr 1fr; gap: 24px; }
+          .brand-col { grid-column: 1 / -1; }
+        }
         @media (max-width: 720px) { .steps { flex-direction: column; } .step-arrow { transform: rotate(90deg); padding: 4px 0; align-self: center; } .split { flex-direction: column; gap: 30px; } }
       `}</style>
     </>

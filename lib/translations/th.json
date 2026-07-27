@@ -21,7 +21,7 @@
     "badge": "byJood v0.2 | Auto-post to multiple platforms",
     "title": "โพสต์ทุกแพลตฟอร์ม",
     "titleAccent": "จากที่เดียว",
-    "subtitle": "จัดการโพสต์ไปยัง Facebook, Instagram, TikTok, Threads และ Website ของคุณ พร้อมกันหลายเพจ โดยไม่เจอ timeout — ขับเคลื่อนด้วย Cloudflare Queue Fan-Out",
+    "subtitle": "จัดตารางเวลาและเผยแพร่คอนเทนต์ไปยัง Facebook, Instagram, TikTok, Threads และ Website ของคุณ — จากที่เดียว",
     "ctaStart": "เริ่มต้นใช้งาน",
     "ctaLearn": "ดูเพิ่มเติม"
   },
@@ -102,7 +102,22 @@
     "saveFailed": "บันทึกไม่สำเร็จ"
   },
   "footer": {
-    "text": "Social Poster — สร้างด้วย Next.js + Cloudflare Workers + Supabase"
+    "brand": "byJood",
+    "tagline": "จัดตารางและเผยแพร่คอนเทนต์สู่ทุกแพลตฟอร์มจากที่เดียว",
+    "product": "ผลิตภัณฑ์",
+    "productHow": "ทำงานอย่างไร",
+    "productDashboard": "Dashboard",
+    "productAbout": "เกี่ยวกับ",
+    "platforms": "แพลตฟอร์ม",
+    "platformFacebook": "Facebook",
+    "platformInstagram": "Instagram",
+    "platformTikTok": "TikTok",
+    "platformThreads": "Threads",
+    "platformWebsite": "Website",
+    "legal": "กฎหมาย",
+    "legalPrivacy": "นโยบายความเป็นส่วนตัว",
+    "legalTerms": "ข้อกำหนดการให้บริการ",
+    "copyright": "© 2026 byJood สงวนลิขสิทธิ์"
   },
   "dashboard": {
     "sidebar": {

@@ -101,8 +101,8 @@ export default function HomePage() {
             </div>
             <div className="footer-col">
               <h4>{t("footer.legal")}</h4>
-              <a href="#">{t("footer.legalPrivacy")}</a>
-              <a href="#">{t("footer.legalTerms")}</a>
+              <a href="https://www.termsfeed.com/live/950784bf-83bd-410d-847f-86e89b53bffc" target="_blank" rel="noopener">{t("footer.legalPrivacy")}</a>
+              <a href="https://www.freeprivacypolicy.com/live/64bbdfb6-810b-4b1e-9b82-ca0ae2a82a3e" target="_blank" rel="noopener">{t("footer.legalTerms")}</a>
             </div>
           </div>
           <div className="footer-bottom">{t("footer.copyright")}</div>

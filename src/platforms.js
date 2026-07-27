@@ -7,48 +7,52 @@
 export async function postToFacebook(job) {
   const { page_id, content, media_urls, access_token } = job;
 
-  if (media_urls?.length > 0) {
-    const photos = await Promise.all(
-      media_urls.map(async (url) => {
-        const photoRes = await fetch(
-          `https://graph.facebook.com/v21.0/${page_id}/photos?url=${encodeURIComponent(url)}&access_token=${access_token}&published=false`,
-          { method: "POST" }
-        );
-        const photoData = await photoRes.json();
-        return photoData.id;
-      })
-    );
-
-    const validPhotos = photos.filter(Boolean);
-    if (validPhotos.length === 0) {
-      return { success: false, error: "ไม่สามารถอัปโหลดรูปไปยัง Facebook" };
-    }
-
-    const feedRes = await fetch(
-      `https://graph.facebook.com/v21.0/${page_id}/feed`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: content,
-          access_token,
-          attached_media: validPhotos.map((id) => ({ media_fbid: id })),
-        }),
-      }
-    );
-    const feedData = await feedRes.json();
-    if (!feedRes.ok) return { success: false, error: feedData.error?.message ?? "Unknown FB error" };
-    return { success: true, externalPostId: feedData.id };
+  if (media_urls?.length === 0) {
+    const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: content, access_token }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.error?.message ?? "Unknown FB error" };
+    return { success: true, externalPostId: data.id };
   }
 
-  const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, {
+  if (media_urls.length === 1) {
+    const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: media_urls[0], message: content, access_token }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.error?.message ?? "Unknown FB error" };
+    return { success: true, externalPostId: data.id };
+  }
+
+  const photoIds = [];
+  for (const url of media_urls) {
+    const photoRes = await fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, access_token, published: false }),
+    });
+    const photoData = await photoRes.json();
+    if (!photoRes.ok) return { success: false, error: `อัปโหลดรูปไม่สำเร็จ: ${photoData.error?.message}` };
+    photoIds.push(photoData.id);
+  }
+
+  const feedRes = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: content, access_token }),
+    body: JSON.stringify({
+      message: content,
+      access_token,
+      attached_media: photoIds.map((id) => ({ media_fbid: id })),
+    }),
   });
-  const data = await res.json();
-  if (!res.ok) return { success: false, error: data.error?.message ?? "Unknown FB error" };
-  return { success: true, externalPostId: data.id };
+  const feedData = await feedRes.json();
+  if (!feedRes.ok) return { success: false, error: feedData.error?.message ?? "Unknown FB error" };
+  return { success: true, externalPostId: feedData.id };
 }
 
 export async function postToInstagram(job) {

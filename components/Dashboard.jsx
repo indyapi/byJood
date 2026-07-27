@@ -99,9 +99,10 @@ function StatusPill({ status, t }) {
 /* ---------------------------------------------------------
    Pages (Connections) view
 --------------------------------------------------------- */
-function ConnectionsView({ pages, onAdd, onRemove, authed, t, PLATFORMS }) {
+function ConnectionsView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORMS }) {
   const [revealed, setRevealed] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
+  const [editPage, setEditPage] = useState(null);
 
   return (
     <div className="view">
@@ -155,9 +156,14 @@ function ConnectionsView({ pages, onAdd, onRemove, authed, t, PLATFORMS }) {
               </div>
               <div className="card-foot">
                 <span className="label-dim">{t("dashboard.connections.addedPrefix")}{pg.addedAt}</span>
-                <button className="icon-btn danger" onClick={() => onRemove(pg.id)} disabled={!authed} aria-label={t("dashboard.connections.deleteAria")}>
-                  <Trash2 size={14} />
-                </button>
+                <div className="card-foot-actions">
+                  <button className="icon-btn" onClick={() => setEditPage(pg)} disabled={!authed} aria-label={t("dashboard.connections.editAria")}>
+                    <Edit3 size={14} />
+                  </button>
+                  <button className="icon-btn danger" onClick={() => onRemove(pg.id)} disabled={!authed} aria-label={t("dashboard.connections.deleteAria")}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -165,6 +171,7 @@ function ConnectionsView({ pages, onAdd, onRemove, authed, t, PLATFORMS }) {
       )}
 
       {modalOpen && <AddConnectionModal onClose={() => setModalOpen(false)} onAdd={onAdd} t={t} PLATFORMS={PLATFORMS} />}
+      {editPage && <UpdateConnectionModal page={editPage} onClose={() => setEditPage(null)} onUpdate={onUpdate} t={t} />}
     </div>
   );
 }
@@ -251,6 +258,86 @@ function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>{t("dashboard.connections.cancel")}</button>
             <button type="submit" className="btn btn-primary">{t("dashboard.connections.save")}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   Update Connection Modal
+--------------------------------------------------------- */
+function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState(page.label || "");
+  const [appId, setAppId] = useState("");
+  const [appSecret, setAppSecret] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setSaving(true);
+
+    const body = {};
+    // Only send non-empty fields; empty/whitespace keeps old value on server
+    if (displayName.trim()) body.display_name = displayName.trim();
+    if (appId.trim()) body.app_id = appId.trim();
+    if (appSecret.trim()) body.app_secret = appSecret.trim();
+    if (accessToken.trim()) body.access_token = accessToken.trim();
+
+    const res = await fetch(`/api/pages/${page.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) { router.replace("/sign-in"); setSaving(false); return; }
+    if (res.ok) {
+      const updated = await res.json();
+      onUpdate(updated);
+    }
+    setSaving(false);
+    onClose();
+  }
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <div className="modal-head">
+          <h2>{t("dashboard.connections.editTitle") || "Update Page"}</h2>
+          <button className="icon-btn" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <form onSubmit={submit}>
+          <div className="field-group">
+            <label className="field-label">{t("dashboard.fields.displayName")}</label>
+            <input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={page.label} />
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">App ID</label>
+            <input className="input mono" value={appId} onChange={(e) => setAppId(e.target.value)} placeholder="Leave empty to keep current" />
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">App Secret</label>
+            <input className="input mono" type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="Leave empty to keep current" />
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">Access Token</label>
+            <input className="input mono" type="password" value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="Leave empty to keep current" />
+          </div>
+
+          <div className="notice small">
+            <Info size={13} />
+            <span>Empty fields keep their current values.</span>
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>{t("dashboard.connections.cancel")}</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t("common.loading") : t("common.save")}</button>
           </div>
         </form>
       </div>
@@ -1176,6 +1263,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     }
   }, []);
 
+  const handleUpdatePage = useCallback((updated) => {
+    setPages((prev) => prev.map((p) => p.id === updated.id ? pageFromDb(updated) : p));
+  }, []);
+
   useEffect(() => {
     refreshPages();
     refreshPosts();
@@ -1380,6 +1471,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .card-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; color: var(--text); }
         .label-dim { color: var(--text-dim); min-width: 34px; font-size: 11px; }
         .card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); }
+        .card-foot-actions { display: flex; align-items: center; gap: 2px; }
 
         .chip { display: inline-flex; align-items: center; gap: 6px; }
         .chip-code {
@@ -1751,6 +1843,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             pages={pages}
             onAdd={handleAddPage}
             onRemove={handleRemovePage}
+            onUpdate={handleUpdatePage}
             authed={authed}
             t={t}
             PLATFORMS={PLATFORMS}

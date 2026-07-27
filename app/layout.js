@@ -5,6 +5,16 @@ import { ThemeProvider } from "@/lib/ThemeProvider";
 export const metadata = {
   title: "byJood — Social Poster",
   description: "Manage and schedule posts across multiple social media platforms",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
 };
 
 export default function RootLayout({ children }) {

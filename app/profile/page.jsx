@@ -4,21 +4,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/TranslationsProvider";
 import { User, Mail, Shield, ArrowLeft, LogOut, Edit3, Check, X as XIcon, Camera } from "lucide-react";
+import Breadcrumb from "@/components/Breadcrumb";
 
 const PROVIDER_LABELS = {
-  google: "Google",
-  facebook: "Facebook",
-  github: "GitHub",
-  twitter: "Twitter",
-  apple: "Apple",
-  email: "Email",
+  google: "Google", facebook: "Facebook", github: "GitHub",
+  twitter: "Twitter", apple: "Apple", email: "Email",
 };
-
 const PROVIDER_ICONS = {
-  google: "G",
-  facebook: "F",
-  github: "Gh",
-  email: "E",
+  google: "G", facebook: "F", github: "Gh", email: "E",
 };
 
 export default function ProfilePage() {
@@ -38,18 +31,8 @@ export default function ProfilePage() {
     import("@/lib/supabase-client").then(async ({ createClientSupabase }) => {
       const supabase = createClientSupabase();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/sign-in");
-        return;
-      }
-      const fallback = {
-        id: session.user.id,
-        email: session.user.email,
-        auth_provider: session.user.app_metadata?.provider || null,
-        display_name: session.user.user_metadata?.display_name || null,
-        username: session.user.user_metadata?.username || null,
-        avatar_url: session.user.user_metadata?.avatar_url || null,
-      };
+      if (!session) { router.replace("/sign-in"); return; }
+      const fallback = { id: session.user.id, email: session.user.email, auth_provider: session.user.app_metadata?.provider || null, display_name: session.user.user_metadata?.display_name || null, username: session.user.user_metadata?.username || null, avatar_url: session.user.user_metadata?.avatar_url || null };
       const res = await fetch("/api/profile");
       if (res.ok) {
         const data = await res.json();
@@ -68,86 +51,40 @@ export default function ProfilePage() {
   function startEditing() {
     setEditDisplayName(profile.display_name || "");
     setEditUsername(profile.username || "");
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setSaveError("");
+    setAvatarFile(null); setAvatarPreview(null); setSaveError("");
     setEditing(true);
   }
-
-  function cancelEditing() {
-    setEditing(false);
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setSaveError("");
-  }
-
+  function cancelEditing() { setEditing(false); setAvatarFile(null); setAvatarPreview(null); setSaveError(""); }
   function handleAvatarSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setSaveError(t("profile.avatarTooLarge"));
-      return;
-    }
-    setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    if (file.size > 2 * 1024 * 1024) { setSaveError(t("profile.avatarTooLarge")); return; }
+    setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file));
   }
 
   async function saveProfile(e) {
-    e.preventDefault();
-    setSaving(true);
-    setSaveError("");
-
+    e.preventDefault(); setSaving(true); setSaveError("");
     let avatarUrl = profile.avatar_url;
-
     if (avatarFile) {
       const { createClientSupabase } = await import("@/lib/supabase-client");
       const supabase = createClientSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       if (!userId) { setSaveError("Not authenticated"); setSaving(false); return; }
-
       const ext = avatarFile.name.split(".").pop();
       const filePath = `${userId}/avatar.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, avatarFile, { upsert: true });
-
-      if (uploadError) {
-        setSaveError(t("profile.uploadFailed"));
-        setSaving(false);
-        return;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, avatarFile, { upsert: true });
+      if (uploadError) { setSaveError(t("profile.uploadFailed")); setSaving(false); return; }
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(filePath);
       avatarUrl = publicUrl;
     }
-
     const res = await fetch("/api/profile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        display_name: editDisplayName.trim() || null,
-        username: editUsername.trim() || null,
-        avatar_url: avatarUrl,
-      }),
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ display_name: editDisplayName.trim() || null, username: editUsername.trim() || null, avatar_url: avatarUrl }),
     });
-
-    if (!res.ok) {
-      const err = await res.json();
-      setSaveError(err.error || t("profile.saveFailed"));
-      setSaving(false);
-      return;
-    }
-
+    if (!res.ok) { const err = await res.json(); setSaveError(err.error || t("profile.saveFailed")); setSaving(false); return; }
     const updated = await res.json();
-    setProfile(updated);
-    setEditing(false);
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setSaving(false);
+    setProfile(updated); setEditing(false); setSaving(false);
   }
 
   async function handleSignOut() {
@@ -157,385 +94,234 @@ export default function ProfilePage() {
     router.replace("/");
   }
 
-  if (loading) {
-    return (
-      <div className="profile-page">
-        <div className="loading">{t("common.loading")}</div>
-        <style>{profileStyles}</style>
-      </div>
-    );
-  }
-
+  if (loading) return <div className="gl-prof-page"><div className="gl-prof-load">{t("common.loading")}</div><style>{profStyles}</style></div>;
   if (!profile) return null;
 
   const providerLabel = PROVIDER_LABELS[profile.auth_provider] || profile.auth_provider || "Email";
   const providerIcon = PROVIDER_ICONS[profile.auth_provider] || "E";
 
   return (
-    <div className="profile-page">
-      <div className="profile-card">
-        <button className="back-btn" onClick={() => router.back()}>
-          <ArrowLeft size={16} /> {t("common.back")}
+    <div className="gl-prof-page">
+      <div className="gl-prof-card">
+        <Breadcrumb paths={[{ label: t("nav.profile"), href: "/profile" }]} />
+        <button className="gl-prof-back" onClick={() => router.back()}>
+          <ArrowLeft size={15} /> {t("common.back")}
         </button>
-
         {!editing && (
-          <button className="edit-btn" onClick={startEditing}>
-            <Edit3 size={14} /> {t("profile.edit")}
+          <button className="gl-prof-edit" onClick={startEditing}>
+            <Edit3 size={13} /> {t("profile.edit")}
           </button>
         )}
-
-        <div className="avatar-wrap">
+        <div className="gl-prof-avatar">
           {editing ? (
-            <label className="avatar-upload">
-              {avatarPreview ? (
-                <img src={avatarPreview} alt="" className="avatar" />
-              ) : profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="avatar" />
-              ) : (
-                <div className="avatar-fallback"><User size={32} /></div>
-              )}
-              <div className="avatar-overlay"><Camera size={18} /></div>
+            <label className="gl-prof-upload">
+              {avatarPreview ? <img src={avatarPreview} alt="" className="gl-av" />
+              : profile.avatar_url ? <img src={profile.avatar_url} alt="" className="gl-av" />
+              : <div className="gl-av-fb"><User size={28} /></div>}
+              <div className="gl-av-overlay"><Camera size={16} /></div>
               <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleAvatarSelect} hidden />
             </label>
           ) : (
-            <>
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="avatar" />
-              ) : (
-                <div className="avatar-fallback"><User size={32} /></div>
-              )}
-            </>
+            profile.avatar_url ? <img src={profile.avatar_url} alt="" className="gl-av" />
+            : <div className="gl-av-fb"><User size={28} /></div>
           )}
         </div>
-
         {editing ? (
-          <form onSubmit={saveProfile} className="edit-form">
-            <div className="field-group">
-              <label className="field-label">{t("profile.displayName")}</label>
-              <input className="input" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder={t("profile.displayNamePlaceholder")} />
+          <form onSubmit={saveProfile} className="gl-prof-form">
+            <div className="gl-pfld">
+              <label className="gl-pfld-lbl">{t("profile.displayName")}</label>
+              <input className="gl-pinp" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder={t("profile.displayNamePlaceholder")} />
             </div>
-            <div className="field-group">
-              <label className="field-label">{t("profile.username")}</label>
-              <input className="input mono" value={editUsername} onChange={(e) => setEditUsername(e.target.value)} placeholder={t("profile.usernamePlaceholder")} />
+            <div className="gl-pfld">
+              <label className="gl-pfld-lbl">{t("profile.username")}</label>
+              <input className="gl-pinp gl-pmono" value={editUsername} onChange={(e) => setEditUsername(e.target.value)} placeholder={t("profile.usernamePlaceholder")} />
             </div>
-            {saveError && <p className="form-error">{saveError}</p>}
-            <div className="edit-actions">
-              <button type="button" className="btn btn-ghost" onClick={cancelEditing}><XIcon size={14} /> {t("common.cancel")}</button>
-              <button type="submit" className="btn btn-primary" disabled={saving}>
-                <Check size={14} /> {saving ? t("common.loading") : t("common.save")}
-              </button>
+            {saveError && <p className="gl-pferr">{saveError}</p>}
+            <div className="gl-pf-acts">
+              <button type="button" className="gl-pbtn gl-pbtn-g" onClick={cancelEditing}><XIcon size={13} /> {t("common.cancel")}</button>
+              <button type="submit" className="gl-pbtn gl-pbtn-p" disabled={saving}><Check size={13} /> {saving ? t("common.loading") : t("common.save")}</button>
             </div>
           </form>
         ) : (
           <>
-            <h1 className="display-name">{profile.display_name || profile.username || t("profile.noName")}</h1>
-            {profile.username && profile.display_name && (
-              <p className="username">@{profile.username}</p>
-            )}
-            <div className="info-list">
-              <div className="info-row">
-                <Mail size={16} />
-                <span className="info-label">{t("profile.email")}</span>
-                <span className="info-value">{profile.email}</span>
-              </div>
-              <div className="info-row">
-                <Shield size={16} />
-                <span className="info-label">{t("profile.loginMethod")}</span>
-                <span className="info-value provider-badge">
-                  <span className="provider-icon">{providerIcon}</span>
-                  {providerLabel}
-                </span>
-              </div>
+            <h1 className="gl-prof-name">{profile.display_name || profile.username || t("profile.noName")}</h1>
+            {profile.username && profile.display_name && <p className="gl-prof-uname">@{profile.username}</p>}
+            <div className="gl-prof-info">
+              <div className="gl-prof-row"><Mail size={14} /><span className="gl-prlbl">{t("profile.email")}</span><span className="gl-prval">{profile.email}</span></div>
+              <div className="gl-prof-row"><Shield size={14} /><span className="gl-prlbl">{t("profile.loginMethod")}</span><span className="gl-prval"><span className="gl-prvdr"><span className="gl-prvdr-icon">{providerIcon}</span>{providerLabel}</span></span></div>
             </div>
-            <button className="sign-out-btn" onClick={handleSignOut}>
-              <LogOut size={16} /> {t("nav.signOut")}
-            </button>
+            <button className="gl-prof-signout" onClick={handleSignOut}><LogOut size={14} /> {t("nav.signOut")}</button>
           </>
         )}
       </div>
-
-      <style>{profileStyles}</style>
+      <style>{profStyles}</style>
     </div>
   );
 }
 
-const profileStyles = `
-  .profile-page {
+const profStyles = `
+  .gl-prof-page {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 84px 24px 24px;
-    background: #12151b;
   }
-  .loading {
-    color: #5c6270;
-    font-size: 14px;
-  }
-  .profile-card {
-    background: #1a1e26;
-    border: 1px solid #2a2f3a;
-    border-radius: 14px;
-    padding: 40px;
-    width: 100%;
-    max-width: 400px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+  .gl-prof-load { color: var(--text-muted); font-size: 13px; }
+  .gl-prof-card {
     position: relative;
+    width: 100%; max-width: 400px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur-lg));
+    -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 40px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
   }
-  .back-btn {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    background: none;
-    border: none;
-    color: #8b93a3;
+  .gl-prof-back {
+    position: absolute; top: 16px; left: 16px;
+    background: var(--glass-bg-dark);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12.5px;
-    padding: 6px 10px;
-    border-radius: 8px;
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px; padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    transition: border-color .15s;
   }
-  .back-btn:hover {
-    color: #e8eaef;
-    background: #20242e;
+  .gl-prof-back:hover { border-color: var(--glass-border-light); }
+  .gl-prof-edit {
+    position: absolute; top: 16px; right: 16px;
+    background: var(--accent-dim);
+    border: 1px solid var(--glass-border-accent);
+    color: var(--accent); cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px; padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
   }
-  .edit-btn {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: none;
-    border: none;
-    color: #4fd1c5;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12.5px;
-    padding: 6px 10px;
-    border-radius: 8px;
-  }
-  .edit-btn:hover {
-    background: rgba(79, 209, 197, 0.1);
-  }
-  .avatar-wrap {
-    width: 80px;
-    height: 80px;
+  .gl-prof-edit:hover { background: var(--accent-dim); }
+  .gl-prof-avatar {
+    width: 80px; height: 80px;
     border-radius: 50%;
     overflow: hidden;
     margin-bottom: 16px;
-    border: 2px solid #2a2f3a;
-    position: relative;
+    border: 2px solid var(--glass-border);
   }
-  .avatar {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+  .gl-av { width: 100%; height: 100%; object-fit: cover; }
+  .gl-av-fb {
+    width: 100%; height: 100%;
+    background: var(--glass-bg-dark);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
   }
-  .avatar-fallback {
-    width: 100%;
-    height: 100%;
-    background: #20242e;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #5c6270;
+  .gl-prof-upload { display: block; width: 100%; height: 100%; cursor: pointer; position: relative; }
+  .gl-av-overlay {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: var(--overlay);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; opacity: 0; transition: opacity .2s;
   }
-  .avatar-upload {
-    display: block;
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
-    position: relative;
-  }
-  .avatar-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-  .avatar-upload:hover .avatar-overlay {
-    opacity: 1;
-  }
-  .display-name {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 22px;
-    font-weight: 600;
-    color: #e8eaef;
-    margin: 0 0 4px;
-  }
-  .username {
-    color: #5c6270;
-    font-size: 13px;
-    margin: 0 0 24px;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-  .info-list {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 28px;
-  }
-  .info-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #20242e;
-    border: 1px solid #2a2f3a;
-    border-radius: 10px;
+  .gl-prof-upload:hover .gl-av-overlay { opacity: 1; }
+  .gl-prof-name { font-family: var(--font-display); font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .gl-prof-uname { color: var(--text-muted); font-size: 12.5px; margin: 0 0 22px; font-family: var(--font-mono); }
+  .gl-prof-info { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .gl-prof-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--glass-bg-dark);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
     padding: 12px 14px;
-    font-size: 13px;
-    color: #8b93a3;
+    font-size: 12.5px;
+    color: var(--text-secondary);
   }
-  .info-row svg {
-    flex-shrink: 0;
-    color: #5c6270;
+  .gl-prof-row svg { flex-shrink: 0; color: var(--text-muted); }
+  .gl-prlbl { color: var(--text-muted); min-width: 70px; text-align: left; font-size: 11.5px; }
+  .gl-prval { color: var(--text); margin-left: auto; text-align: right; word-break: break-all; }
+  .gl-prvdr { display: flex; align-items: center; gap: 6px; }
+  .gl-prvdr-icon {
+    width: 20px; height: 20px; border-radius: 6px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 600; font-family: var(--font-mono);
+    color: var(--text);
   }
-  .info-label {
-    color: #5c6270;
-    min-width: 70px;
-    text-align: left;
-    font-size: 12px;
-  }
-  .info-value {
-    color: #e8eaef;
-    margin-left: auto;
-    text-align: right;
-    word-break: break-all;
-  }
-  .provider-badge {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .provider-icon {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    background: #2a2f3a;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: 600;
-    font-family: 'IBM Plex Mono', monospace;
-    color: #e8eaef;
-  }
-  .sign-out-btn {
+  .gl-prof-signout {
     width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
     padding: 10px;
-    border-radius: 8px;
-    background: none;
-    border: 1px solid #2a2f3a;
-    color: #f2795c;
-    font-size: 13px;
-    font-weight: 500;
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg-dark);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    color: var(--bokeh-3);
+    font-size: 12.5px; font-weight: 500;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
-    transition: background 0.15s;
+    font-family: var(--font);
+    transition: border-color .15s;
   }
-  .sign-out-btn:hover {
-    background: rgba(242,121,92,0.1);
-  }
-  .edit-form {
+  .gl-prof-signout:hover { border-color: var(--bokeh-3); }
+  .gl-prof-form { width: 100%; text-align: left; }
+  .gl-pfld { margin-bottom: 14px; display: flex; flex-direction: column; gap: 5px; }
+  .gl-pfld-lbl { font-size: 11.5px; color: var(--text-secondary); }
+  .gl-pinp {
     width: 100%;
-    text-align: left;
-  }
-  .field-group {
-    margin-bottom: 14px;
-  }
-  .field-label {
-    display: block;
-    font-size: 12px;
-    color: #8b93a3;
-    margin-bottom: 6px;
-  }
-  .input {
-    width: 100%;
-    background: #20242e;
-    border: 1px solid #2a2f3a;
-    border-radius: 8px;
+    background: var(--glass-bg-dark);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
     padding: 9px 11px;
-    color: #e8eaef;
-    font-size: 13px;
-    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    font-size: 12.5px;
+    font-family: var(--font);
     outline: none;
-    box-sizing: border-box;
+    transition: border-color .15s;
   }
-  .input:focus {
-    border-color: #4fd1c5;
+  .gl-pinp:focus { border-color: var(--accent); }
+  .gl-pmono { font-family: var(--font-mono); }
+  .gl-pferr { color: var(--bokeh-3); font-size: 11.5px; margin: 0 0 10px; font-weight: 600; }
+  .gl-pf-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .gl-pbtn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none;
+    font-family: var(--font);
   }
-  .input.mono {
-    font-family: 'IBM Plex Mono', monospace;
+  .gl-pbtn-p {
+    background: var(--accent); color: #fff;
+    border: 1px solid var(--glass-border-accent);
+    transition: opacity .15s;
   }
-  .form-error {
-    color: #ff2222;
-    font-size: 12px;
-    margin: 0 0 10px;
-    font-weight: 600;
+  .gl-pbtn-p:hover { opacity: .9; }
+  .gl-pbtn-p:disabled { opacity: .4; cursor: not-allowed; }
+  .gl-pbtn-g {
+    background: var(--glass-bg-dark);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    transition: border-color .15s;
   }
-  .edit-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 18px;
-  }
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1px solid transparent;
-    font-family: 'Inter', sans-serif;
-  }
-  .btn-primary {
-    background: #4fd1c5;
-    color: #0c1210;
-  }
-  .btn-primary:hover {
-    filter: brightness(1.08);
-  }
-  .btn-primary:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  .btn-ghost {
-    background: transparent;
-    color: #8b93a3;
-    border-color: #2a2f3a;
-  }
-  .btn-ghost:hover {
-    color: #e8eaef;
-    border-color: #5c6270;
-  }
-
+  .gl-pbtn-g:hover { border-color: var(--glass-border-light); }
   @media (max-width: 720px) {
-    .profile-page { padding: 80px 12px 20px; }
-    .profile-card { padding: 24px 16px; }
-    .back-btn { top: 10px; left: 10px; font-size: 11px; padding: 4px 8px; }
-    .edit-btn { top: 10px; right: 10px; font-size: 11px; padding: 4px 8px; }
-    .display-name { font-size: 18px; }
-    .info-row { padding: 10px 12px; font-size: 12px; }
-    .info-label { min-width: 52px; font-size: 11px; }
-    .sign-out-btn { font-size: 12px; padding: 8px; }
+    .gl-prof-page { padding: 80px 14px 20px; }
+    .gl-prof-card { padding: 24px 16px; }
+    .gl-prof-back { top: 10px; left: 10px; font-size: 11px; padding: 5px 8px; }
+    .gl-prof-edit { top: 10px; right: 10px; font-size: 11px; padding: 5px 8px; }
+    .gl-prof-name { font-size: 18px; }
+    .gl-prof-row { padding: 10px 12px; font-size: 11.5px; }
+    .gl-prlbl { min-width: 52px; font-size: 11px; }
+    .gl-prof-signout { font-size: 11.5px; padding: 8px; }
   }
 `;
-

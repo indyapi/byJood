@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/lib/TranslationsProvider";
 import { createClientSupabase } from "@/lib/supabase-client";
+import Breadcrumb from "@/components/Breadcrumb";
 
 export default function SignUpPage() {
   const { t } = useTranslation();
@@ -18,120 +19,176 @@ export default function SignUpPage() {
   async function handleEmailSignUp(e) {
     e.preventDefault();
     setError("");
-    if (password !== confirmPassword) {
-      setError(t("auth.passwordMismatch"));
-      return;
-    }
-    if (password.length < 6) {
-      setError(t("auth.passwordTooShort"));
-      return;
-    }
+    if (password !== confirmPassword) { setError(t("auth.passwordMismatch")); return; }
+    if (password.length < 6) { setError(t("auth.passwordTooShort")); return; }
     setLoading(true);
     const supabase = createClientSupabase();
     const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { display_name: displayName, username },
-        emailRedirectTo: `${location.origin}/auth/callback`,
-      },
+      email, password,
+      options: { data: { display_name: displayName, username }, emailRedirectTo: `${location.origin}/auth/callback` },
     });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      if (data?.user) {
-        await fetch("/api/profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ display_name: displayName, username }),
-        });
-      }
-      alert(t("auth.checkEmail"));
-      window.location.href = "/sign-in";
+    if (error) { setError(error.message); setLoading(false); return; }
+    if (data?.user) {
+      await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: displayName, username }),
+      });
     }
+    alert(t("auth.checkEmail"));
+    window.location.href = "/sign-in";
   }
 
   async function handleGoogleSignUp() {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     const supabase = createClientSupabase();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${location.origin}/auth/callback` },
     });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    }
+    if (error) { setError(error.message); setLoading(false); }
   }
 
   return (
-    <main className="pg">
-      <div className="auth-card">
-        <span className="auth-badge">SIGN UP</span>
-        <h1 className="auth-title">{t("auth.signUpTitle")}</h1>
-        <p className="auth-sub">{t("auth.signUpSub")} <Link href="/sign-in" className="auth-link">{t("auth.signUpSubLink")}</Link></p>
-
-        <button className="btn-social" onClick={handleGoogleSignUp} disabled={loading}>
-          <GoogleIcon />
-          {t("auth.googleSignUp")}
+    <main className="gl-auth-page">
+      <div className="gl-auth">
+        <Breadcrumb paths={[{ label: t("auth.signUpTitle"), href: "/sign-up" }]} />
+        <span className="gl-badge-sm">SIGN UP</span>
+        <h1 className="gl-auth-title">{t("auth.signUpTitle")}</h1>
+        <p className="gl-auth-sub">{t("auth.signUpSub")} <Link href="/sign-in" className="gl-auth-link">{t("auth.signUpSubLink")}</Link></p>
+        <button className="gl-social" onClick={handleGoogleSignUp} disabled={loading}>
+          <GoogleIcon /> {t("auth.googleSignUp")}
         </button>
-
-        <div className="divider"><span>{t("auth.or")}</span></div>
-
-        <form className="auth-form" onSubmit={handleEmailSignUp}>
-          <div className="field">
-            <label className="field-label">{t("auth.displayName")}</label>
-            <input className="input" type="text" placeholder={t("auth.displayNamePlaceholder")} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+        <div className="gl-divider"><span>{t("auth.or")}</span></div>
+        <form className="gl-form" onSubmit={handleEmailSignUp}>
+          <div className="gl-fld">
+            <label className="gl-fld-lbl">{t("auth.displayName")}</label>
+            <input className="gl-inp" type="text" placeholder={t("auth.displayNamePlaceholder")} value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
           </div>
-          <div className="field">
-            <label className="field-label">{t("auth.username")}</label>
-            <input className="input" type="text" placeholder={t("auth.usernamePlaceholder")} value={username} onChange={(e) => setUsername(e.target.value)} required />
+          <div className="gl-fld">
+            <label className="gl-fld-lbl">{t("auth.username")}</label>
+            <input className="gl-inp" type="text" placeholder={t("auth.usernamePlaceholder")} value={username} onChange={(e) => setUsername(e.target.value)} required />
           </div>
-          <div className="field">
-            <label className="field-label">{t("auth.email")}</label>
-            <input className="input" type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <div className="gl-fld">
+            <label className="gl-fld-lbl">{t("auth.email")}</label>
+            <input className="gl-inp" type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
-          <div className="field">
-            <label className="field-label">{t("auth.password")}</label>
-            <input className="input" type="password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <div className="gl-fld">
+            <label className="gl-fld-lbl">{t("auth.password")}</label>
+            <input className="gl-inp" type="password" placeholder={t("auth.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
-          <div className="field">
-            <label className="field-label">{t("auth.confirmPassword")}</label>
-            <input className="input" type="password" placeholder={t("auth.passwordPlaceholder")} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+          <div className="gl-fld">
+            <label className="gl-fld-lbl">{t("auth.confirmPassword")}</label>
+            <input className="gl-inp" type="password" placeholder={t("auth.passwordPlaceholder")} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
           </div>
-          {error && <span className="auth-error">{error}</span>}
-          <button type="submit" className="btn-submit" disabled={loading}>{loading ? t("auth.signUpLoading") : t("auth.signUpBtn")}</button>
+          {error && <span className="gl-err">{error}</span>}
+          <button type="submit" className="gl-submit" disabled={loading}>{loading ? t("auth.signUpLoading") : t("auth.signUpBtn")}</button>
         </form>
-
-        <Link href="/" className="back-link-auth">← {t("common.back")}</Link>
+        <Link href="/" className="gl-back-link">&larr; {t("common.back")}</Link>
       </div>
-
       <style>{`
-        .pg { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 100px 28px 60px; }
-        .auth-card { width: 100%; max-width: 380px; background: #1a1e26; border: 1px solid #2a2f3a; border-radius: 14px; padding: 32px; }
-        .auth-badge { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #4fd1c5; }
-        .auth-title { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; margin: 6px 0 4px; }
-        .auth-sub { font-size: 13px; color: #8b93a3; margin-bottom: 20px; }
-        .auth-link { color: #4fd1c5; text-decoration: none; }
-        .auth-link:hover { text-decoration: underline; }
-        .auth-error { font-size: 12px; color: #f2795c; }
-        .btn-social { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 11px; border-radius: 8px; background: #20242e; border: 1px solid #2a2f3a; color: #e8eaef; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
-        .btn-social:hover { background: #2a2f3a; }
-        .btn-social:disabled { opacity: 0.5; cursor: not-allowed; }
-        .divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: #5c6270; font-size: 12px; }
-        .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #2a2f3a; }
-        .auth-form { display: flex; flex-direction: column; gap: 14px; }
-        .field { display: flex; flex-direction: column; gap: 6px; }
-        .field-label { font-size: 12px; color: #8b93a3; }
-        .input { width: 100%; background: #20242e; border: 1px solid #2a2f3a; border-radius: 8px; padding: 10px 12px; color: #e8eaef; font-size: 13.5px; font-family: 'Inter', sans-serif; outline: none; }
-        .input:focus { border-color: #4fd1c5; }
-        .btn-submit { width: 100%; padding: 11px; border-radius: 8px; background: #4fd1c5; color: #0c1210; font-size: 14px; font-weight: 600; border: none; cursor: pointer; }
-        .btn-submit:hover { filter: brightness(1.08); }
-        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-        .back-link-auth { display: block; text-align: center; margin-top: 20px; color: #5c6270; text-decoration: none; font-size: 13px; }
-        .back-link-auth:hover { color: #8b93a3; }
+        .gl-auth-page {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 84px 24px 24px;
+        }
+        .gl-auth {
+          width: 100%; max-width: 380px;
+          background: var(--glass-bg);
+          backdrop-filter: blur(var(--glass-blur-lg));
+          -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius);
+          padding: 32px;
+        }
+        .gl-badge-sm {
+          font-family: var(--font-mono);
+          font-size: 9.5px; letter-spacing: .14em; color: var(--accent);
+        }
+        .gl-auth-title {
+          font-family: var(--font-display);
+          font-size: 24px; font-weight: 600;
+          margin: 6px 0 4px;
+        }
+        .gl-auth-sub {
+          font-size: 12.5px; color: var(--text-secondary);
+          margin-bottom: 20px;
+        }
+        .gl-auth-link { color: var(--accent); text-decoration: none; font-weight: 500; }
+        .gl-auth-link:hover { text-decoration: underline; }
+        .gl-err { font-size: 11.5px; color: var(--danger); }
+        .gl-social {
+          width: 100%;
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          padding: 10px;
+          border-radius: var(--radius-sm);
+          background: var(--glass-bg-dark);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid var(--glass-border);
+          color: var(--text);
+          font-size: 13px; font-weight: 500;
+          cursor: pointer;
+          font-family: var(--font);
+          transition: border-color .15s;
+        }
+        .gl-social:hover { border-color: var(--glass-border-light); }
+        .gl-social:disabled { opacity: .5; cursor: not-allowed; }
+        .gl-divider {
+          display: flex; align-items: center; gap: 12px;
+          margin: 16px 0;
+          color: var(--text-muted); font-size: 11px;
+        }
+        .gl-divider::before, .gl-divider::after {
+          content: ""; flex: 1;
+          height: 1px;
+          background: var(--glass-border);
+        }
+        .gl-form { display: flex; flex-direction: column; gap: 14px; }
+        .gl-fld { display: flex; flex-direction: column; gap: 5px; }
+        .gl-fld-lbl { font-size: 11.5px; color: var(--text-secondary); }
+        .gl-inp {
+          width: 100%;
+          background: var(--glass-bg-dark);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius-sm);
+          padding: 10px 12px;
+          color: var(--text);
+          font-size: 13px;
+          font-family: var(--font);
+          outline: none;
+          transition: border-color .15s;
+        }
+        .gl-inp:focus { border-color: var(--accent); }
+        .gl-submit {
+          width: 100%;
+          padding: 11px;
+          border-radius: var(--radius-sm);
+          background: var(--accent);
+          color: #fff;
+          font-size: 13.5px; font-weight: 600;
+          border: 1px solid var(--glass-border-accent);
+          cursor: pointer;
+          font-family: var(--font);
+          transition: opacity .15s;
+        }
+        .gl-submit:hover { background: var(--accent-hover); }
+        .gl-submit:disabled { opacity: .5; cursor: not-allowed; }
+        .gl-back-link {
+          display: block; text-align: center;
+          margin-top: 18px;
+          color: var(--text-muted);
+          text-decoration: none;
+          font-size: 12px;
+        }
+        .gl-back-link:hover { color: var(--text-secondary); }
+        @media (max-width: 720px) {
+          .gl-auth-page { padding: 80px 14px 20px; }
+        }
       `}</style>
     </main>
   );

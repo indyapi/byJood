@@ -26,12 +26,12 @@ export default function AuthGuard({ children }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#12151b",
-        color: "#5c6270",
-        fontFamily: "'Inter', sans-serif",
+        background: "var(--bg-body)",
+        color: "var(--text-muted)",
+        fontFamily: "var(--font)",
         fontSize: "14px",
       }}>
-        <span style={{ fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.08em" }}>LOADING...</span>
+        <span style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.08em" }}>LOADING...</span>
       </div>
     );
   }

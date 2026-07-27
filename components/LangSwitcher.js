@@ -6,47 +6,44 @@ export default function LangSwitcher() {
   const { locale, setLocale } = useTranslation();
 
   return (
-    <div className="lang-switcher">
+    <div className="gl-lang">
       <button
-        className={`lang-btn ${locale === "th" ? "active" : ""}`}
+        className={`gl-lang-btn ${locale === "th" ? "active" : ""}`}
         onClick={() => setLocale("th")}
-        aria-label="切换到泰语"
       >
         TH
       </button>
-      <span className="lang-divider">/</span>
+      <span className="gl-lang-div">/</span>
       <button
-        className={`lang-btn ${locale === "en" ? "active" : ""}`}
+        className={`gl-lang-btn ${locale === "en" ? "active" : ""}`}
         onClick={() => setLocale("en")}
-        aria-label="Switch to English"
       >
         EN
       </button>
       <style>{`
-        .lang-switcher {
+        .gl-lang {
           display: flex;
           align-items: center;
           gap: 2px;
-          margin-left: 6px;
+          margin-left: 8px;
           padding-left: 10px;
-          border-left: 1px solid var(--border);
+          border-left: 1px solid var(--glass-border);
         }
-        .lang-btn {
+        .gl-lang-btn {
           background: none;
           border: none;
           color: var(--text-muted);
-          font-family: var(--font-mono);
-          font-size: 11px;
+          font-family: var(--font-display);
+          font-size: 10px;
           font-weight: 600;
           cursor: pointer;
-          padding: 4px 6px;
-          border-radius: 4px;
-          transition: color .15s, background .15s;
-          letter-spacing: .04em;
+          padding: 3px 5px;
+          letter-spacing: .06em;
+          transition: color .15s;
         }
-        .lang-btn:hover { color: var(--text); background: var(--surface-hover); }
-        .lang-btn.active { color: var(--accent); background: var(--accent-dim); }
-        .lang-divider { color: var(--border); font-size: 11px; font-weight: 500; }
+        .gl-lang-btn:hover { color: var(--text); }
+        .gl-lang-btn.active { color: var(--accent); }
+        .gl-lang-div { color: var(--glass-border); font-size: 10px; font-weight: 500; }
       `}</style>
     </div>
   );

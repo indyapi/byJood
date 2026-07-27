@@ -1059,6 +1059,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           padding: 0 10px 20px;
           text-transform: uppercase;
         }
+        .sidebar-home {
+          display: block; width: 100%; text-align: left;
+          background: none; border: none; cursor: pointer; padding: 0;
+          border-radius: 8px; transition: background 0.15s;
+        }
+        .sidebar-home:hover { background: var(--panel-alt); }
+        .sidebar-home:hover .brand-sub { color: var(--text-muted); }
         .nav-item {
           display: flex;
           align-items: center;
@@ -1223,8 +1230,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .result-fail { display: inline-flex; align-items: center; gap: 5px; color: var(--danger); }
 
         /* Modal */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(8,10,14,0.6); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
-        .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 440px; padding: 20px; max-height: 88vh; overflow-y: auto; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(8,10,14,0.6); display: flex; align-items: flex-start; justify-content: center; z-index: 50; padding: 40px 20px; overflow-y: auto; }
+        .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 440px; padding: 20px; box-sizing: border-box; }
         .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .modal-head h2 { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 600; }
         .field-group { margin-bottom: 14px; }
@@ -1285,15 +1292,19 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         @media (max-width: 720px) {
           .shell { flex-direction: column; }
           .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 12px 14px; overflow-x: auto; }
-          .brand, .brand-sub, .sidebar-foot, .sidebar-lang { display: none; }
+          .sidebar-home, .brand, .brand-sub, .sidebar-foot, .sidebar-lang { display: none; }
           .nav-item { width: auto; white-space: nowrap; }
           .main { padding: 20px; }
+          .modal-overlay { padding: 20px 12px; }
+          .modal { padding: 16px; }
         }
       `}</style>
 
       <aside className="sidebar">
-        <div className="brand">byJood</div>
-        <div className="brand-sub">Social Poster / Control Room</div>
+        <button className="sidebar-home" onClick={() => router.push("/")}>
+          <div className="brand">byJood</div>
+          <div className="brand-sub">← {t("nav.home")}</div>
+        </button>
         {nav.map((n) => (
           <button key={n.key} className={`nav-item ${tab === n.key ? "active" : ""}`} onClick={() => setTab(n.key)}>
             <n.icon size={16} /> {n.label}

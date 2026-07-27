@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/lib/TranslationsProvider";
 import LangSwitcher from "./LangSwitcher";
+import { User } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -50,7 +51,12 @@ export default function Navbar() {
           ))}
           <div className="nav-divider" />
           {authed ? (
-            <Link href="/dashboard" className="btn btn-nav">{t("nav.controlRoom")}</Link>
+            <>
+              <Link href="/dashboard" className="btn btn-nav">{t("nav.controlRoom")}</Link>
+              <Link href="/profile" className="nav-icon-btn" aria-label={t("nav.profile")}>
+                <User size={18} />
+              </Link>
+            </>
           ) : (
             <>
               <Link href="/sign-in" className="nav-link">{t("nav.signIn")}</Link>
@@ -158,6 +164,13 @@ export default function Navbar() {
         .btn-nav:hover {
           filter: brightness(1.1);
         }
+        .nav-icon-btn {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 36px; height: 36px; border-radius: 8px;
+          color: #8b93a3; transition: color 0.15s, background 0.15s;
+          margin-left: 2px;
+        }
+        .nav-icon-btn:hover { color: #e8eaef; background: #20242e; }
         @media (max-width: 640px) {
           .nav-inner { padding: 0 16px; }
           .logo-text { display: none; }

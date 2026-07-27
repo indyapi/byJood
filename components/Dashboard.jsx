@@ -508,6 +508,19 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
         .from("post-images")
         .getPublicUrl(filePath);
       mediaUrls = [publicUrl];
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (userId) {
+        await supabase.from("media").insert({
+          user_id: userId,
+          filename: selectedFile.name,
+          mime_type: selectedFile.type,
+          size_bytes: selectedFile.size,
+          storage_path: filePath,
+          public_url: publicUrl,
+        });
+      }
     }
 
     const [y, m, d] = date.split("-");

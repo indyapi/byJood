@@ -7,8 +7,9 @@ import { useTranslation } from "@/lib/TranslationsProvider";
 import {
   Plus, X, Eye, EyeOff, Trash2, ChevronLeft, ChevronRight, Clock,
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
-  Info, RefreshCw, Search,
+  Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal,
 } from "lucide-react";
+import { createClientSupabase } from "@/lib/supabase-client";
 
 /* ---------------------------------------------------------
    Platform config — single source of truth for color/labels
@@ -258,10 +259,26 @@ function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
 /* ---------------------------------------------------------
    Schedule view
 --------------------------------------------------------- */
-function ScheduleView({ posts, pages, onAdd, authed, t, PLATFORMS, locale }) {
+function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, authed, t, PLATFORMS, locale }) {
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(dayKey(today));
   const [weekStart, setWeekStart] = useState(addDays(today, -1));
   const [modalOpen, setModalOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [viewPost, setViewPost] = useState(null);
+  const [editPost, setEditPost] = useState(null);
+  const [changeTimePost, setChangeTimePost] = useState(null);
+  const [deletePost, setDeletePost] = useState(null);
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (activeMenu && !e.target.closest(".post-actions")) {
+        setActiveMenu(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [activeMenu]);
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const countFor = (d) => posts.filter((p) => p.date === dayKey(d)).length;
@@ -269,6 +286,16 @@ function ScheduleView({ posts, pages, onAdd, authed, t, PLATFORMS, locale }) {
 
   const dayLabel = (d) =>
     d.toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { weekday: "short" }).replace(".", "");
+
+  async function handleDeleteConfirmed() {
+    if (!deletePost) return;
+    const res = await fetch(`/api/scheduled-posts/${deletePost.id}`, { method: "DELETE" });
+    if (res.status === 401) { router.replace("/sign-in"); return; }
+    if (res.ok || res.status === 204) {
+      onDelete(deletePost.id);
+    }
+    setDeletePost(null);
+  }
 
   return (
     <div className="view">
@@ -310,6 +337,7 @@ function ScheduleView({ posts, pages, onAdd, authed, t, PLATFORMS, locale }) {
         <div className="post-list">
           {dayPosts.map((p) => {
             const page = pages.find((pg) => pg.id === p.pageId);
+            const isPosted = p.status === "posted";
             return (
               <div className="post-row" key={p.id}>
                 <div className="post-time"><Clock size={13} />{p.time}</div>
@@ -317,11 +345,31 @@ function ScheduleView({ posts, pages, onAdd, authed, t, PLATFORMS, locale }) {
                 <div className="post-body">
                   <div className="post-page">
                     {p.pageName || page?.label || t("dashboard.schedule.pageNotFound")}
-                    {p.batchTotal > 1 && <span className="batch-tag">{t("dashboard.schedule.batchTag")} {p.batchTotal} {t("dashboard.schedule.batchSuffix")}</span>}
                   </div>
                   <div className="post-content">{p.content}</div>
                 </div>
                 <StatusPipeline status={p.status} t={t} />
+                <div className="post-actions">
+                  <button className="icon-btn" onClick={() => setActiveMenu(activeMenu === p.id ? null : p.id)}>
+                    <MoreHorizontal size={14} />
+                  </button>
+                  {activeMenu === p.id && (
+                    <div className="action-menu">
+                      <button onClick={() => { setActiveMenu(null); setViewPost(p); }}>
+                        {t("dashboard.schedule.viewAction")}
+                      </button>
+                      <button onClick={() => { setActiveMenu(null); setEditPost(p); }} disabled={isPosted}>
+                        {t("dashboard.schedule.editAction")}
+                      </button>
+                      <button onClick={() => { setActiveMenu(null); setChangeTimePost(p); }} disabled={isPosted}>
+                        {t("dashboard.schedule.changeTimeAction")}
+                      </button>
+                      <button className="danger" onClick={() => { setActiveMenu(null); setDeletePost(p); }}>
+                        {t("dashboard.schedule.deleteAction")}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -338,6 +386,50 @@ function ScheduleView({ posts, pages, onAdd, authed, t, PLATFORMS, locale }) {
           PLATFORMS={PLATFORMS}
         />
       )}
+
+      {viewPost && (
+        <ViewDetailModal
+          post={viewPost}
+          page={pages.find((pg) => pg.id === viewPost.pageId)}
+          onClose={() => setViewPost(null)}
+          t={t}
+          PLATFORMS={PLATFORMS}
+        />
+      )}
+
+      {editPost && (
+        <EditPostModal
+          post={editPost}
+          onClose={() => setEditPost(null)}
+          onUpdate={(updated) => { onUpdate(updated); setEditPost(null); }}
+          t={t}
+        />
+      )}
+
+      {changeTimePost && (
+        <ChangeTimeModal
+          post={changeTimePost}
+          onClose={() => setChangeTimePost(null)}
+          onUpdate={(updated) => { onUpdate(updated); setChangeTimePost(null); }}
+          t={t}
+        />
+      )}
+
+      {deletePost && (
+        <div className="modal-overlay" onClick={() => setDeletePost(null)}>
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{t("dashboard.schedule.deleteTitle")}</h2>
+              <button className="icon-btn" onClick={() => setDeletePost(null)}><X size={18} /></button>
+            </div>
+            <p className="delete-body">{t("dashboard.schedule.deleteConfirm")}</p>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setDeletePost(null)}>{t("dashboard.schedule.cancel")}</button>
+              <button className="btn btn-danger" onClick={handleDeleteConfirmed}>{t("dashboard.schedule.deleteConfirmBtn")}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -350,6 +442,10 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
   const [content, setContent] = useState("");
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState("09:00");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [fileError, setFileError] = useState("");
 
   const atMax = selectedIds.length >= MAX_PAGES_PER_POST;
 
@@ -365,9 +461,55 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
     setSelectedIds(pages.slice(0, MAX_PAGES_PER_POST).map((p) => p.id));
   }
 
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setFileError(t("dashboard.fields.fileTooLarge"));
+      setSelectedFile(null);
+      setPreviewUrl("");
+      e.target.value = "";
+      return;
+    }
+    setFileError("");
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function removeFile() {
+    setSelectedFile(null);
+    setPreviewUrl("");
+    setFileError("");
+  }
+
   async function submit(e) {
     e.preventDefault();
     if (selectedIds.length === 0) return;
+
+    let mediaUrls = [];
+    if (selectedFile) {
+      setUploading(true);
+      setFileError("");
+      const supabase = createClientSupabase();
+      const timestamp = Date.now();
+      const ext = selectedFile.name.split(".").pop();
+      const safeName = `${timestamp}.${ext}`;
+      const filePath = `posts/${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("post-images")
+        .upload(filePath, selectedFile);
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        setFileError(`อัปโหลดไม่สำเร็จ: ${uploadError.message || uploadError.error || JSON.stringify(uploadError)}`);
+        setUploading(false);
+        return;
+      }
+      const { data: { publicUrl } } = supabase.storage
+        .from("post-images")
+        .getPublicUrl(filePath);
+      mediaUrls = [publicUrl];
+    }
+
     const [y, m, d] = date.split("-");
     const [h, mi] = time.split(":");
     const scheduled_at = new Date(+y, +m - 1, +d, +h, +mi).toISOString();
@@ -377,7 +519,7 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
       const res = await fetch("/api/scheduled-posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page_id: pageId, platform: page.platform, content, scheduled_at }),
+        body: JSON.stringify({ page_id: pageId, platform: page.platform, content, scheduled_at, media_urls: mediaUrls }),
       });
       if (res.status === 401) { router.replace("/sign-in"); return; }
       if (res.ok) {
@@ -422,6 +564,19 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
             <label className="field-label">{t("dashboard.fields.content")}</label>
             <textarea className="input textarea" rows={4} placeholder={t("dashboard.fields.contentPlaceholder")} value={content} onChange={(e) => setContent(e.target.value)} required />
           </div>
+          <div className="field-group">
+            <label className="field-label">{t("dashboard.fields.image")}</label>
+            <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleFileSelect} className="input file-input" />
+            {fileError && <div className="file-error">{fileError}</div>}
+            {previewUrl && (
+              <div className="preview-wrap">
+                <img src={previewUrl} alt="preview" className="preview-img" />
+                <button type="button" className="remove-btn" onClick={removeFile}>
+                  <X size={12} /> {t("dashboard.fields.removeImage")}
+                </button>
+              </div>
+            )}
+          </div>
           <div className="field-row">
             <div className="field-group">
               <label className="field-label">{t("dashboard.fields.date")}</label>
@@ -440,9 +595,151 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
 
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>{t("dashboard.schedule.cancel")}</button>
-            <button type="submit" className="btn btn-primary" disabled={selectedIds.length === 0}>
-              {t("dashboard.schedule.save")}{selectedIds.length > 1 ? ` (${selectedIds.length} ${t("dashboard.schedule.batchSuffix")})` : ""}
+            <button type="submit" className="btn btn-primary" disabled={selectedIds.length === 0 || uploading}>
+              {uploading ? t("common.loading") : t("dashboard.schedule.save")}{selectedIds.length > 1 && !uploading ? ` (${selectedIds.length} ${t("dashboard.schedule.batchSuffix")})` : ""}
             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   View Detail Modal
+--------------------------------------------------------- */
+function ViewDetailModal({ post, page, onClose, t, PLATFORMS }) {
+  if (!post) return null;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal modal-detail" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>{t("dashboard.schedule.viewTitle")}</h2>
+          <button className="icon-btn" onClick={onClose}><X size={18} /></button>
+        </div>
+        {post.media_urls?.length > 0 && (
+          <div className="detail-media">
+            {post.media_urls.map((url, i) => (
+              <img key={i} src={url} alt="" className="detail-img" />
+            ))}
+          </div>
+        )}
+        <div className="detail-row">
+          <span className="detail-label">{t("dashboard.fields.platform")}</span>
+          <PlatformChip platform={post.platform} PLATFORMS={PLATFORMS} />
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">{t("dashboard.fields.displayName")}</span>
+          <span>{page?.label || post.pageName}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">{t("dashboard.fields.date")}</span>
+          <span>{post.date} {post.time}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">{t("dashboard.fields.content")}</span>
+          <span className="detail-content">{post.content}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">{t("dashboard.logs.colStatus")}</span>
+          <StatusPipeline status={post.status} t={t} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   Edit Post Modal
+--------------------------------------------------------- */
+function EditPostModal({ post, onClose, onUpdate, t }) {
+  const router = useRouter();
+  const [content, setContent] = useState(post.content || "");
+
+  async function submit(e) {
+    e.preventDefault();
+    const res = await fetch(`/api/scheduled-posts/${post.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    if (res.status === 401) { router.replace("/sign-in"); return; }
+    if (res.ok) {
+      const updated = await res.json();
+      onUpdate(updated);
+    }
+    onClose();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>{t("dashboard.schedule.editTitle")}</h2>
+          <button className="icon-btn" onClick={onClose}><X size={18} /></button>
+        </div>
+        <form onSubmit={submit}>
+          <div className="field-group">
+            <label className="field-label">{t("dashboard.fields.content")}</label>
+            <textarea className="input textarea" rows={6} value={content} onChange={(e) => setContent(e.target.value)} required />
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>{t("dashboard.schedule.cancel")}</button>
+            <button type="submit" className="btn btn-primary">{t("dashboard.schedule.save")}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   Change Schedule Time Modal
+--------------------------------------------------------- */
+function ChangeTimeModal({ post, onClose, onUpdate, t }) {
+  const router = useRouter();
+  const [date, setDate] = useState(post.date || "");
+  const [time, setTime] = useState(post.time || "09:00");
+
+  async function submit(e) {
+    e.preventDefault();
+    const [y, m, d] = date.split("-");
+    const [h, mi] = time.split(":");
+    const scheduled_at = new Date(+y, +m - 1, +d, +h, +mi).toISOString();
+    const res = await fetch(`/api/scheduled-posts/${post.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scheduled_at }),
+    });
+    if (res.status === 401) { router.replace("/sign-in"); return; }
+    if (res.ok) {
+      const updated = await res.json();
+      onUpdate(updated);
+    }
+    onClose();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>{t("dashboard.schedule.changeTimeTitle")}</h2>
+          <button className="icon-btn" onClick={onClose}><X size={18} /></button>
+        </div>
+        <form onSubmit={submit}>
+          <div className="field-row">
+            <div className="field-group">
+              <label className="field-label">{t("dashboard.fields.date")}</label>
+              <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
+            <div className="field-group">
+              <label className="field-label">{t("dashboard.fields.time")}</label>
+              <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+            </div>
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>{t("dashboard.schedule.cancel")}</button>
+            <button type="submit" className="btn btn-primary">{t("dashboard.schedule.save")}</button>
           </div>
         </form>
       </div>
@@ -570,6 +867,8 @@ function postFromDb(p) {
     pageName: p.page?.display_name || "",
     platform: p.platform,
     content: p.content,
+    media_urls: p.media_urls || [],
+    external_post_id: p.external_post_id || "",
     date: d ? d.toLocaleDateString("sv-SE") : "",
     time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
     status: p.status,
@@ -844,9 +1143,29 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .day-count { position: absolute; top: -6px; right: -6px; background: var(--accent); color: #0c1210; font-size: 9px; font-weight: 700; border-radius: 20px; padding: 1px 5px; }
 
         .post-list { display: flex; flex-direction: column; gap: 8px; }
-        .post-row { display: flex; align-items: center; gap: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+        .post-row { display: flex; align-items: center; gap: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; position: relative; }
         .post-time { display: flex; align-items: center; gap: 5px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-muted); width: 62px; flex-shrink: 0; }
         .post-body { flex: 1; min-width: 0; }
+        .post-actions { position: relative; flex-shrink: 0; }
+        .action-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--panel-alt); border: 1px solid var(--border); border-radius: 8px; padding: 4px; z-index: 30; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+        .action-menu button { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text); font-size: 12.5px; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .action-menu button:hover { background: var(--panel); }
+        .action-menu button.danger { color: var(--danger); }
+        .action-menu button.danger:hover { background: rgba(242,121,92,0.12); }
+        .action-menu button:disabled { opacity: 0.35; cursor: not-allowed; }
+        .action-menu button:disabled:hover { background: none; }
+
+        .modal-detail { max-width: 500px; }
+        .detail-media { margin-bottom: 14px; }
+        .detail-img { width: 100%; max-height: 260px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border); background: #000; }
+        .detail-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+        .detail-label { color: var(--text-dim); min-width: 80px; flex-shrink: 0; font-size: 12px; }
+        .detail-content { white-space: pre-wrap; word-break: break-word; color: var(--text-muted); line-height: 1.5; }
+
+        .modal-sm { max-width: 360px; }
+        .delete-body { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 4px; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { filter: brightness(1.1); }
         .post-page { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
         .post-content { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -925,6 +1244,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 10px;
         }
 
+        .file-input { cursor: pointer; }
+        .file-error { color: #ff2222; font-size: 12px; margin-top: 4px; font-weight: 600; }
+        .preview-wrap { margin-top: 8px; position: relative; display: inline-block; }
+        .preview-img { max-width: 100%; max-height: 180px; border-radius: 8px; border: 1px solid var(--border); object-fit: contain; background: #000; }
+        .remove-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.75); border: none; color: #fff; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 4px; transition: background 0.15s; }
+        .remove-btn:hover { background: rgba(255,0,0,0.8); }
+
         .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
         .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .icon-btn:disabled:hover { background: none; color: var(--text-dim); }
@@ -974,6 +1300,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             posts={posts}
             pages={pages}
             onAdd={(newPosts) => setPosts((prev) => [...newPosts.map(postFromDb), ...prev])}
+            onUpdate={(updated) => setPosts((prev) => prev.map((p) => p.id === updated.id ? postFromDb(updated) : p))}
+            onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
             authed={authed}
             t={t}
             PLATFORMS={PLATFORMS}

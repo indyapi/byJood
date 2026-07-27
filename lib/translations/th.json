@@ -122,7 +122,11 @@
       "time": "เวลา",
       "selectAll": "เลือกทั้งหมด",
       "selectedCount": "{count} / {max} เพจที่เลือก",
-      "maxPages": "เลือกเพจ (ได้พร้อมกันสูงสุด {max})"
+      "maxPages": "เลือกเพจ (ได้พร้อมกันสูงสุด {max})",
+      "image": "รูปภาพ",
+      "fileTooLarge": "ไฟล์ต้องไม่เกิน 5 MB",
+      "removeImage": "ลบรูป",
+      "uploadFailed": "อัปโหลดรูปไม่สำเร็จ"
     },
     "status": {
       "pending": "รอคิว",
@@ -164,7 +168,17 @@
       "formNotice": "แต่ละเพจจะถูกแตกเป็นงานแยกกันในคิวเมื่อถึงเวลา ถ้าเพจใดโพสต์ล้มเหลว จะไม่กระทบเพจอื่นในชุดนี้",
       "cancel": "ยกเลิก",
       "save": "บันทึกกำหนดการ",
-      "batchSuffix": "เพจ"
+      "batchSuffix": "เพจ",
+      "viewAction": "ดูรายละเอียด",
+      "editAction": "แก้ไข",
+      "changeTimeAction": "เปลี่ยนวันเวลา",
+      "deleteAction": "ลบ",
+      "viewTitle": "รายละเอียดโพสต์",
+      "editTitle": "แก้ไขโพสต์",
+      "changeTimeTitle": "เปลี่ยนวันเวลา",
+      "deleteTitle": "ลบโพสต์",
+      "deleteConfirm": "ยืนยันลบโพสต์ที่ตั้งเวลานี้?",
+      "deleteConfirmBtn": "ลบ"
     },
     "logs": {
       "eyebrow": "LOGS",

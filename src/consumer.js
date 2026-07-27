@@ -89,6 +89,8 @@ async function logResult(env, job, result) {
 
   // อัปเดตสถานะโพสต์หลักด้วย ถ้าสำเร็จ
   if (result.success) {
+    const patchBody = { status: "posted" };
+    if (result.externalPostId) patchBody.external_post_id = result.externalPostId;
     await fetch(`${env.SUPABASE_URL}/rest/v1/scheduled_posts?id=eq.${job.post_id}`, {
       method: "PATCH",
       headers: {
@@ -96,7 +98,7 @@ async function logResult(env, job, result) {
         Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ status: "posted" }),
+      body: JSON.stringify(patchBody),
     });
   }
 }

@@ -122,7 +122,11 @@
       "time": "Time",
       "selectAll": "Select All",
       "selectedCount": "{count} / {max} pages selected",
-      "maxPages": "Select pages (up to {max} at once)"
+      "maxPages": "Select pages (up to {max} at once)",
+      "image": "Image",
+      "fileTooLarge": "File must not exceed 5 MB",
+      "removeImage": "Remove",
+      "uploadFailed": "Image upload failed"
     },
     "status": {
       "pending": "Pending",
@@ -164,7 +168,17 @@
       "formNotice": "Each page is split into an independent queue job. If one page fails, it won't affect others in the same batch.",
       "cancel": "Cancel",
       "save": "Save Schedule",
-      "batchSuffix": "page(s)"
+      "batchSuffix": "page(s)",
+      "viewAction": "View",
+      "editAction": "Edit",
+      "changeTimeAction": "Change Schedule Time",
+      "deleteAction": "Delete",
+      "viewTitle": "Post Details",
+      "editTitle": "Edit Post",
+      "changeTimeTitle": "Change Schedule Time",
+      "deleteTitle": "Delete Post",
+      "deleteConfirm": "Are you sure you want to delete this scheduled post?",
+      "deleteConfirmBtn": "Delete"
     },
     "logs": {
       "eyebrow": "LOGS",

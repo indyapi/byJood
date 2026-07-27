@@ -2,24 +2,25 @@
 
 import Link from "next/link";
 import { useTranslation } from "@/lib/TranslationsProvider";
+import { ArrowRight, CheckCircle, Zap, Globe, Clock, Shield } from "lucide-react";
 
 export default function HomePage() {
   const { t } = useTranslation();
 
   return (
     <>
-      <main className="hero">
+      <section className="hero">
         <div className="hero-bg" />
         <div className="hero-content">
           <span className="hero-badge">{t("hero.badge")}</span>
           <h1 className="hero-title">
-            {t("hero.title")}<br />
-            <span className="hero-accent">{t("hero.titleAccent")}</span>
+            {t("hero.title")}
+            <span className="hero-accent"> {t("hero.titleAccent")}</span>
           </h1>
           <p className="hero-sub">{t("hero.subtitle")}</p>
           <div className="hero-actions">
-            <Link href="/sign-up" className="btn-primary-lg">{t("hero.ctaStart")}</Link>
-            <Link href="/about" className="btn-ghost-lg">{t("hero.ctaLearn")}</Link>
+            <Link href="/sign-up" className="btn-primary">{t("hero.ctaStart")}</Link>
+            <Link href="/about" className="btn-ghost">{t("hero.ctaLearn")}</Link>
           </div>
           <div className="hero-platforms">
             {["FACEBOOK", "INSTAGRAM", "TIKTOK", "THREADS", "WEBSITE"].map((p) => (
@@ -27,130 +28,115 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </main>
+      </section>
 
-      <section className="section">
-        <div className="section-inner split">
-          <div className="steps-wrap">
+      <section className="section features">
+        <div className="section-inner">
+          <div className="section-head">
+            <span className="section-badge">FEATURES</span>
             <h2 className="section-title">{t("home.howItWorks")}</h2>
-            <div className="steps">
-              <div className="step">
-                <span className="step-num">01</span>
-                <h3>{t("home.step1Title")}</h3>
-                <p>{t("home.step1Desc")}</p>
-              </div>
-              <div className="step-arrow">→</div>
-              <div className="step">
-                <span className="step-num">02</span>
-                <h3>{t("home.step2Title")}</h3>
-                <p>{t("home.step2Desc")}</p>
-              </div>
-              <div className="step-arrow">→</div>
-              <div className="step">
-                <span className="step-num">03</span>
-                <h3>{t("home.step3Title")}</h3>
-                <p>{t("home.step3Desc")}</p>
-              </div>
-              <div className="step-arrow">→</div>
-              <div className="step">
-                <span className="step-num">04</span>
-                <h3>{t("home.step4Title")}</h3>
-                <p>{t("home.step4Desc")}</p>
-              </div>
-            </div>
           </div>
-          <div className="steps-image">
-            <img src="/images/social-dashboard.jpg" alt="Social media dashboard" />
+          <div className="feature-grid">
+            <div className="feature-card">
+              <div className="feature-icon"><Zap size={20} /></div>
+              <h3>{t("home.step1Title")}</h3>
+              <p>{t("home.step1Desc")}</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon"><Globe size={20} /></div>
+              <h3>{t("home.step2Title")}</h3>
+              <p>{t("home.step2Desc")}</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon"><Clock size={20} /></div>
+              <h3>{t("home.step3Title")}</h3>
+              <p>{t("home.step3Desc")}</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon"><Shield size={20} /></div>
+              <h3>{t("home.step4Title")}</h3>
+              <p>{t("home.step4Desc")}</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="section section-alt">
+      <section className="section alt">
         <div className="section-inner">
-          <div className="split">
-            <div>
+          <div className="arch-grid">
+            <div className="arch-text">
               <span className="section-badge">{t("home.archBadge")}</span>
               <h2 className="section-title">{t("home.archTitle")}</h2>
-              <p className="section-body">{t("home.archBody")}</p>
-              <div className="arch-card">
-                <div className="arch-line"><span className="arch-dot green" /> Cron */5 * * * *</div>
-                <div className="arch-line"><span className="arch-dot blue" /> enqueueDuePosts()</div>
-                <div className="arch-line"><span className="arch-dot yellow" /> Queue post-jobs</div>
-                <div className="arch-line"><span className="arch-dot purple" /> Consumer → Platform API</div>
-              </div>
+              <p className="arch-body">{t("home.archBody")}</p>
             </div>
-            <div className="arch-visual">
-              <img src="/images/calendar-desk.jpg" alt="Content calendar" />
+            <div className="arch-card">
+              <div className="arch-line"><span className="arch-dot green" /> Cron */5 * * * *</div>
+              <div className="arch-line"><span className="arch-dot blue" /> enqueueDuePosts()</div>
+              <div className="arch-line"><span className="arch-dot yellow" /> Queue post-jobs</div>
+              <div className="arch-line"><span className="arch-dot purple" /> Consumer → Platform API</div>
+              <div className="arch-card-glow" />
             </div>
           </div>
         </div>
       </section>
 
-      <section className="section section-alt" id="setup-guide">
+      <section className="section" id="setup-guide">
         <div className="section-inner">
-          <span className="section-badge">GUIDE</span>
-          <h2 className="section-title">{t("tutorial.title")}</h2>
-          <p className="section-body" style={{ maxWidth: "none", marginBottom: 36 }}>{t("tutorial.subtitle")}</p>
+          <div className="section-head">
+            <span className="section-badge">GUIDE</span>
+            <h2 className="section-title">{t("tutorial.title")}</h2>
+            <p className="section-desc">{t("tutorial.subtitle")}</p>
+          </div>
           <div className="tutorial-grid">
-            <div className="tutorial-card">
-              <div className="tutorial-icon" style={{ background: "rgba(61,125,246,0.12)" }}><img src="/icons/facebook.svg" alt="Facebook" className="tutorial-icon-img" /></div>
-              <h3>{t("tutorial.facebookTitle")}</h3>
-              <p className="tutorial-desc">{t("tutorial.facebookDesc")}</p>
-              <Link href="/guide/facebook" className="tutorial-link">{t("tutorial.readMore")} →</Link>
-            </div>
-            <div className="tutorial-card">
-              <div className="tutorial-icon" style={{ background: "rgba(225,74,142,0.12)" }}><img src="/icons/instagram.svg" alt="Instagram" className="tutorial-icon-img" /></div>
-              <h3>{t("tutorial.instagramTitle")}</h3>
-              <p className="tutorial-desc">{t("tutorial.instagramDesc")}</p>
-              <Link href="/guide/instagram" className="tutorial-link">{t("tutorial.readMore")} →</Link>
-            </div>
-            <div className="tutorial-card">
-              <div className="tutorial-icon" style={{ background: "rgba(254,77,111,0.12)" }}><img src="/icons/tiktok.svg" alt="TikTok" className="tutorial-icon-img" /></div>
-              <h3>{t("tutorial.tiktokTitle")}</h3>
-              <p className="tutorial-desc">{t("tutorial.tiktokDesc")}</p>
-              <Link href="/guide/tiktok" className="tutorial-link">{t("tutorial.readMore")} →</Link>
-            </div>
-            <div className="tutorial-card">
-              <div className="tutorial-icon" style={{ background: "rgba(237,237,237,0.12)" }}><img src="/icons/threads.svg" alt="Threads" className="tutorial-icon-img" /></div>
-              <h3>{t("tutorial.threadsTitle")}</h3>
-              <p className="tutorial-desc">{t("tutorial.threadsDesc")}</p>
-              <Link href="/guide/threads" className="tutorial-link">{t("tutorial.readMore")} →</Link>
-            </div>
-            <div className="tutorial-card">
-              <div className="tutorial-icon" style={{ background: "rgba(108,147,168,0.12)" }}><img src="/icons/website.svg" alt="Website" className="tutorial-icon-img" /></div>
-              <h3>{t("tutorial.websiteTitle")}</h3>
-              <p className="tutorial-desc">{t("tutorial.websiteDesc")}</p>
-              <Link href="/guide/website" className="tutorial-link">{t("tutorial.readMore")} →</Link>
-            </div>
+            {[
+              { key: "facebook", color: "#3D7DF6", icon: "/icons/facebook.svg" },
+              { key: "instagram", color: "#E14A8E", icon: "/icons/instagram.svg" },
+              { key: "tiktok", color: "#FE4D6F", icon: "/icons/tiktok.svg" },
+              { key: "threads", color: "#EDEDED", icon: "/icons/threads.svg" },
+              { key: "website", color: "#6C93A8", icon: "/icons/website.svg" },
+            ].map((p) => (
+              <Link key={p.key} href={`/guide/${p.key}`} className="tutorial-card">
+                <div className="tutorial-icon" style={{ background: `${p.color}1a` }}>
+                  <img src={p.icon} alt="" className="tutorial-icon-img" />
+                </div>
+                <h3>{t(`tutorial.${p.key}Title`)}</h3>
+                <p className="tutorial-desc">{t(`tutorial.${p.key}Desc`)}</p>
+                <span className="tutorial-link">
+                  {t("tutorial.readMore")} <ArrowRight size={14} />
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
       <footer className="footer">
         <div className="footer-inner">
-          <div className="footer-cols">
-            <div className="footer-col brand-col">
-              <div className="footer-brand">{t("footer.brand")}</div>
+          <div className="footer-top">
+            <div className="footer-brand">
+              <div className="footer-logo">bJ</div>
               <p className="footer-tagline">{t("footer.tagline")}</p>
             </div>
-            <div className="footer-col">
-              <h4>{t("footer.product")}</h4>
-              <a href="#how-it-works">{t("footer.productHow")}</a>
-              <a href="/dashboard">{t("footer.productDashboard")}</a>
-              <a href="/about">{t("footer.productAbout")}</a>
-            </div>
-            <div className="footer-col">
-              <h4>{t("footer.platforms")}</h4>
-              <span>{t("footer.platformFacebook")}</span>
-              <span>{t("footer.platformInstagram")}</span>
-              <span>{t("footer.platformTikTok")}</span>
-              <span>{t("footer.platformThreads")}</span>
-              <span>{t("footer.platformWebsite")}</span>
-            </div>
-            <div className="footer-col">
-              <h4>{t("footer.legal")}</h4>
-              <a href="https://www.termsfeed.com/live/950784bf-83bd-410d-847f-86e89b53bffc" target="_blank" rel="noopener">{t("footer.legalPrivacy")}</a>
-              <a href="https://www.freeprivacypolicy.com/live/64bbdfb6-810b-4b1e-9b82-ca0ae2a82a3e" target="_blank" rel="noopener">{t("footer.legalTerms")}</a>
+            <div className="footer-links">
+              <div className="footer-col">
+                <h4>{t("footer.product")}</h4>
+                <a href="#how-it-works">{t("footer.productHow")}</a>
+                <a href="/dashboard">{t("footer.productDashboard")}</a>
+                <a href="/about">{t("footer.productAbout")}</a>
+              </div>
+              <div className="footer-col">
+                <h4>{t("footer.platforms")}</h4>
+                <span>{t("footer.platformFacebook")}</span>
+                <span>{t("footer.platformInstagram")}</span>
+                <span>{t("footer.platformTikTok")}</span>
+                <span>{t("footer.platformThreads")}</span>
+                <span>{t("footer.platformWebsite")}</span>
+              </div>
+              <div className="footer-col">
+                <h4>{t("footer.legal")}</h4>
+                <a href="https://www.termsfeed.com/live/950784bf-83bd-410d-847f-86e89b53bffc" target="_blank" rel="noopener">{t("footer.legalPrivacy")}</a>
+                <a href="https://www.freeprivacypolicy.com/live/64bbdfb6-810b-4b1e-9b82-ca0ae2a82a3e" target="_blank" rel="noopener">{t("footer.legalTerms")}</a>
+              </div>
             </div>
           </div>
           <div className="footer-bottom">{t("footer.copyright")}</div>
@@ -158,72 +144,329 @@ export default function HomePage() {
       </footer>
 
       <style>{`
-        .hero { position: relative; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 100px 28px 80px; overflow: hidden; }
-        .hero-bg { position: absolute; inset: 0; background: linear-gradient(rgba(14,16,22,.85),rgba(14,16,22,.92)), url(/images/hero-bg.jpg) center/cover; pointer-events: none; }
-        .hero-content { position: relative; max-width: 700px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .hero-badge { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #8b93a3; background: #1a1e26; border: 1px solid #2a2f3a; padding: 6px 14px; border-radius: 20px; }
-        .hero-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(36px, 6vw, 58px); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
-        .hero-accent { color: #4fd1c5; }
-        .hero-sub { font-size: 15px; line-height: 1.7; color: #8b93a3; max-width: 540px; }
-        .hero-actions { display: flex; gap: 12px; margin-top: 8px; }
-        .btn-primary-lg { display: inline-flex; align-items: center; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; background: #4fd1c5; color: #0c1210; transition: filter 0.15s; }
-        .btn-primary-lg:hover { filter: brightness(1.08); }
-        .btn-ghost-lg { display: inline-flex; align-items: center; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; background: transparent; color: #8b93a3; border: 1px solid #2a2f3a; transition: color 0.15s, border-color 0.15s; }
-        .btn-ghost-lg:hover { color: #e8eaef; border-color: #5c6270; }
-        .hero-platforms { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
-        .platform-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: #5c6270; background: #1a1e26; border: 1px solid #2a2f3a; padding: 5px 12px; border-radius: 6px; }
-        .section { padding: 80px 28px; border-top: 1px solid #2a2f3a; }
-        .section-alt { background: #14171d; }
+        .hero {
+          position: relative;
+          min-height: 100dvh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 100px 24px 80px;
+          overflow: hidden;
+        }
+        .hero-bg {
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(ellipse 800px 500px at 50% 30%, rgba(79,209,197,.08), transparent),
+            radial-gradient(ellipse 500px 400px at 80% 70%, rgba(79,209,197,.04), transparent);
+          pointer-events: none;
+        }
+        .hero-content {
+          position: relative;
+          max-width: 640px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 18px;
+        }
+        .hero-badge {
+          font-family: var(--font-mono);
+          font-size: 10.5px;
+          letter-spacing: .12em;
+          color: var(--text-secondary);
+          background: var(--surface);
+          border: 1px solid var(--border);
+          padding: 5px 14px;
+          border-radius: 20px;
+        }
+        .hero-title {
+          font-family: var(--font-display);
+          font-size: clamp(32px, 7vw, 56px);
+          font-weight: 700;
+          line-height: 1.1;
+          letter-spacing: -.025em;
+        }
+        .hero-accent { color: var(--accent); }
+        .hero-sub {
+          font-size: 14.5px;
+          line-height: 1.7;
+          color: var(--text-secondary);
+          max-width: 480px;
+        }
+        .hero-actions {
+          display: flex;
+          gap: 10px;
+          margin-top: 4px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .btn-primary, .btn-ghost {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 11px 24px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
+          transition: filter .15s, border-color .15s, color .15s;
+        }
+        .btn-primary {
+          background: var(--accent);
+          color: #0c1210;
+        }
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-ghost {
+          background: transparent;
+          color: var(--text-secondary);
+          border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
+        .hero-platforms {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          justify-content: center;
+          margin-top: 8px;
+        }
+        .platform-tag {
+          font-family: var(--font-mono);
+          font-size: 9.5px;
+          letter-spacing: .08em;
+          color: var(--text-muted);
+          background: var(--surface);
+          border: 1px solid var(--border);
+          padding: 4px 11px;
+          border-radius: 6px;
+        }
+
+        .section { padding: 64px 24px; }
+        .section.alt { background: var(--bg-alt); }
         .section-inner { max-width: 1000px; margin: 0 auto; }
-        .section-badge { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #4fd1c5; }
-        .section-title { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 600; margin: 6px 0 16px; }
-        .section-body { color: #8b93a3; font-size: 14.5px; line-height: 1.7; max-width: 520px; }
-        .steps { display: flex; align-items: flex-start; gap: 12px; margin-top: 30px; }
-        .step { flex: 1; background: #1a1e26; border: 1px solid #2a2f3a; border-radius: 12px; padding: 22px; }
-        .step-num { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; color: #4fd1c5; opacity: 0.4; }
-        .step h3 { font-family: 'Space Grotesk', sans-serif; font-size: 15px; margin: 8px 0 6px; }
-        .step p { font-size: 12.5px; color: #8b93a3; line-height: 1.6; }
-        .step-arrow { color: #5c6270; font-size: 20px; padding-top: 24px; }
-        .steps-wrap { flex: 1; }
-        .steps-image { width: 280px; flex-shrink: 0; }
-        .steps-image img { width: 100%; border-radius: 12px; border: 1px solid #2a2f3a; }
-        .split { display: flex; align-items: center; gap: 50px; }
-        .arch-visual { width: 260px; flex-shrink: 0; }
-        .arch-visual img { width: 100%; border-radius: 12px; border: 1px solid #2a2f3a; }
-        .arch-card { background: #1a1e26; border: 1px solid #2a2f3a; border-radius: 12px; padding: 22px 26px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; display: flex; flex-direction: column; gap: 14px; min-width: 240px; }
-        .arch-line { display: flex; align-items: center; gap: 10px; color: #8b93a3; }
+        .section-head { margin-bottom: 32px; }
+        .section-badge {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          letter-spacing: .14em;
+          color: var(--accent);
+        }
+        .section-title {
+          font-family: var(--font-display);
+          font-size: clamp(24px, 4vw, 32px);
+          font-weight: 600;
+          margin: 6px 0 12px;
+        }
+        .section-desc {
+          color: var(--text-secondary);
+          font-size: 14px;
+          line-height: 1.6;
+          max-width: 480px;
+        }
+
+        .feature-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 14px;
+        }
+        .feature-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          transition: border-color .2s;
+        }
+        .feature-card:hover { border-color: var(--text-muted); }
+        .feature-icon {
+          width: 38px;
+          height: 38px;
+          border-radius: 10px;
+          background: var(--accent-dim);
+          color: var(--accent);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .feature-card h3 {
+          font-family: var(--font-display);
+          font-size: 15px;
+          font-weight: 600;
+        }
+        .feature-card p {
+          font-size: 13px;
+          color: var(--text-secondary);
+          line-height: 1.6;
+        }
+
+        .arch-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 40px;
+          align-items: center;
+        }
+        .arch-body {
+          color: var(--text-secondary);
+          font-size: 14px;
+          line-height: 1.7;
+        }
+        .arch-card {
+          position: relative;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          padding: 22px 26px;
+          font-family: var(--font-mono);
+          font-size: 12.5px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          overflow: hidden;
+        }
+        .arch-card-glow {
+          position: absolute;
+          top: -50%;
+          right: -30%;
+          width: 200px;
+          height: 200px;
+          background: radial-gradient(circle, rgba(79,209,197,.06), transparent);
+          pointer-events: none;
+        }
+        .arch-line { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); }
         .arch-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
         .arch-dot.green { background: #5fd068; }
         .arch-dot.blue { background: #3d7df6; }
         .arch-dot.yellow { background: #f2b84b; }
         .arch-dot.purple { background: #a78bfa; }
-        .footer { border-top: 1px solid #2a2f3a; padding: 48px 28px 24px; }
-        .footer-inner { max-width: 1000px; margin: 0 auto; }
-        .footer-cols { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 36px; }
-        .footer-col { display: flex; flex-direction: column; gap: 8px; }
-        .footer-col h4 { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #5c6270; margin: 0 0 4px; }
-        .footer-col a, .footer-col span { color: #8b93a3; font-size: 13px; text-decoration: none; cursor: default; }
-        .footer-col a { cursor: pointer; }
-        .footer-col a:hover { color: #e8eaef; }
-        .footer-brand { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: #e8eaef; margin-bottom: 4px; }
-        .footer-tagline { color: #5c6270; font-size: 13px; line-height: 1.5; margin: 0; max-width: 240px; }
-        .footer-bottom { border-top: 1px solid #2a2f3a; padding-top: 20px; text-align: center; font-size: 12px; color: #5c6270; }
 
-        .tutorial-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-        .tutorial-card { background: #1a1e26; border: 1px solid #2a2f3a; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; transition: border-color 0.15s; }
-        .tutorial-card:hover { border-color: #5c6270; }
-        .tutorial-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; padding: 6px; }
+        .tutorial-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap: 14px;
+        }
+        .tutorial-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          padding: 22px;
+          display: flex;
+          flex-direction: column;
+          transition: border-color .2s;
+          text-decoration: none;
+        }
+        .tutorial-card:hover { border-color: var(--text-muted); }
+        .tutorial-icon {
+          width: 36px; height: 36px;
+          border-radius: var(--radius-sm);
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 12px;
+          padding: 6px;
+        }
         .tutorial-icon-img { width: 100%; height: 100%; object-fit: contain; }
-        .tutorial-card h3 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; margin: 0 0 8px; }
-        .tutorial-desc { font-size: 13px; color: #8b93a3; line-height: 1.6; margin: 0 0 auto; }
-        .tutorial-link { display: inline-flex; align-items: center; margin-top: 16px; font-size: 13px; font-weight: 600; color: #4fd1c5; text-decoration: none; }
-        .tutorial-link:hover { text-decoration: underline; }
+        .tutorial-card h3 {
+          font-family: var(--font-display);
+          font-size: 15px;
+          font-weight: 600;
+          margin-bottom: 6px;
+        }
+        .tutorial-desc {
+          font-size: 12.5px;
+          color: var(--text-secondary);
+          line-height: 1.6;
+          margin-bottom: auto;
+        }
+        .tutorial-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          margin-top: 14px;
+          font-size: 12.5px;
+          font-weight: 600;
+          color: var(--accent);
+        }
 
-        @media (max-width: 720px) { .footer-cols { grid-template-columns: 1fr 1fr; gap: 24px; }
-          .brand-col { grid-column: 1 / -1; }
+        .footer {
+          border-top: 1px solid var(--border);
+          padding: 44px 24px 24px;
+        }
+        .footer-inner { max-width: 1000px; margin: 0 auto; }
+        .footer-top {
+          display: flex;
+          gap: 48px;
+          margin-bottom: 32px;
+        }
+        .footer-logo {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          background: var(--accent);
+          color: #0c1210;
+          font-family: var(--font-display);
+          font-weight: 700;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 10px;
+        }
+        .footer-tagline {
+          color: var(--text-muted);
+          font-size: 13px;
+          line-height: 1.5;
+          max-width: 220px;
+        }
+        .footer-links {
+          display: flex;
+          gap: 40px;
+          flex: 1;
+          justify-content: flex-end;
+        }
+        .footer-col {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .footer-col h4 {
+          font-family: var(--font-display);
+          font-size: 11.5px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: .06em;
+          color: var(--text-muted);
+          margin-bottom: 4px;
+        }
+        .footer-col a, .footer-col span {
+          color: var(--text-secondary);
+          font-size: 12.5px;
+          cursor: default;
+        }
+        .footer-col a { cursor: pointer; }
+        .footer-col a:hover { color: var(--text); }
+        .footer-bottom {
+          border-top: 1px solid var(--border);
+          padding-top: 18px;
+          text-align: center;
+          font-size: 11.5px;
+          color: var(--text-muted);
+        }
+
+        @media (max-width: 720px) {
+          .hero { padding: 80px 18px 60px; min-height: 90dvh; }
+          .hero-title { font-size: clamp(28px, 10vw, 40px); }
+          .hero-actions { flex-direction: column; align-items: center; width: 100%; }
+          .btn-primary, .btn-ghost { width: 100%; justify-content: center; }
+          .section { padding: 48px 18px; }
+          .feature-grid { grid-template-columns: 1fr; }
+          .arch-grid { grid-template-columns: 1fr; gap: 24px; }
           .tutorial-grid { grid-template-columns: 1fr; }
-          .steps-image, .arch-visual { display: none; } }
-        @media (max-width: 720px) { .steps { flex-direction: column; } .step-arrow { transform: rotate(90deg); padding: 4px 0; align-self: center; } .split { flex-direction: column; gap: 30px; } }
+          .footer-top { flex-direction: column; gap: 28px; }
+          .footer-links { flex-wrap: wrap; gap: 24px; justify-content: flex-start; }
+        }
+
+        @media (min-width: 721px) {
+          .feature-grid { grid-template-columns: repeat(4, 1fr); }
+        }
       `}</style>
     </>
   );

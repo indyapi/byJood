@@ -29,24 +29,24 @@ export default function LangSwitcher() {
           gap: 2px;
           margin-left: 6px;
           padding-left: 10px;
-          border-left: 1px solid #2a2f3a;
+          border-left: 1px solid var(--border);
         }
         .lang-btn {
           background: none;
           border: none;
-          color: #5c6270;
-          font-family: 'IBM Plex Mono', monospace;
+          color: var(--text-muted);
+          font-family: var(--font-mono);
           font-size: 11px;
           font-weight: 600;
           cursor: pointer;
           padding: 4px 6px;
           border-radius: 4px;
-          transition: color 0.15s, background 0.15s;
-          letter-spacing: 0.04em;
+          transition: color .15s, background .15s;
+          letter-spacing: .04em;
         }
-        .lang-btn:hover { color: #e8eaef; background: #20242e; }
-        .lang-btn.active { color: #4fd1c5; background: rgba(79, 209, 197, 0.1); }
-        .lang-divider { color: #2a2f3a; font-size: 11px; font-weight: 500; }
+        .lang-btn:hover { color: var(--text); background: var(--surface-hover); }
+        .lang-btn.active { color: var(--accent); background: var(--accent-dim); }
+        .lang-divider { color: var(--border); font-size: 11px; font-weight: 500; }
       `}</style>
     </div>
   );

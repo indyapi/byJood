@@ -1540,7 +1540,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
       <aside className="sidebar">
         <button className="sidebar-home" onClick={() => router.push("/")}>
-          <div className="brand">byJood</div>
+          <div className="brand" style={{ color: "white" }}>byJood</div>
           <div className="brand-sub">← {t("nav.home")}</div>
         </button>
         {nav.map((n) => (

@@ -30,32 +30,37 @@ export default function HomePage() {
       </main>
 
       <section className="section">
-        <div className="section-inner">
-          <h2 className="section-title">{t("home.howItWorks")}</h2>
-          <div className="steps">
-            <div className="step">
-              <span className="step-num">01</span>
-              <h3>{t("home.step1Title")}</h3>
-              <p>{t("home.step1Desc")}</p>
+        <div className="section-inner split">
+          <div className="steps-wrap">
+            <h2 className="section-title">{t("home.howItWorks")}</h2>
+            <div className="steps">
+              <div className="step">
+                <span className="step-num">01</span>
+                <h3>{t("home.step1Title")}</h3>
+                <p>{t("home.step1Desc")}</p>
+              </div>
+              <div className="step-arrow">→</div>
+              <div className="step">
+                <span className="step-num">02</span>
+                <h3>{t("home.step2Title")}</h3>
+                <p>{t("home.step2Desc")}</p>
+              </div>
+              <div className="step-arrow">→</div>
+              <div className="step">
+                <span className="step-num">03</span>
+                <h3>{t("home.step3Title")}</h3>
+                <p>{t("home.step3Desc")}</p>
+              </div>
+              <div className="step-arrow">→</div>
+              <div className="step">
+                <span className="step-num">04</span>
+                <h3>{t("home.step4Title")}</h3>
+                <p>{t("home.step4Desc")}</p>
+              </div>
             </div>
-            <div className="step-arrow">→</div>
-            <div className="step">
-              <span className="step-num">02</span>
-              <h3>{t("home.step2Title")}</h3>
-              <p>{t("home.step2Desc")}</p>
-            </div>
-            <div className="step-arrow">→</div>
-            <div className="step">
-              <span className="step-num">03</span>
-              <h3>{t("home.step3Title")}</h3>
-              <p>{t("home.step3Desc")}</p>
-            </div>
-            <div className="step-arrow">→</div>
-            <div className="step">
-              <span className="step-num">04</span>
-              <h3>{t("home.step4Title")}</h3>
-              <p>{t("home.step4Desc")}</p>
-            </div>
+          </div>
+          <div className="steps-image">
+            <img src="/images/social-dashboard.jpg" alt="Social media dashboard" />
           </div>
         </div>
       </section>
@@ -67,12 +72,55 @@ export default function HomePage() {
               <span className="section-badge">{t("home.archBadge")}</span>
               <h2 className="section-title">{t("home.archTitle")}</h2>
               <p className="section-body">{t("home.archBody")}</p>
+              <div className="arch-card">
+                <div className="arch-line"><span className="arch-dot green" /> Cron */5 * * * *</div>
+                <div className="arch-line"><span className="arch-dot blue" /> enqueueDuePosts()</div>
+                <div className="arch-line"><span className="arch-dot yellow" /> Queue post-jobs</div>
+                <div className="arch-line"><span className="arch-dot purple" /> Consumer → Platform API</div>
+              </div>
             </div>
-            <div className="arch-card">
-              <div className="arch-line"><span className="arch-dot green" /> Cron */5 * * * *</div>
-              <div className="arch-line"><span className="arch-dot blue" /> enqueueDuePosts()</div>
-              <div className="arch-line"><span className="arch-dot yellow" /> Queue post-jobs</div>
-              <div className="arch-line"><span className="arch-dot purple" /> Consumer → Platform API</div>
+            <div className="arch-visual">
+              <img src="/images/calendar-desk.jpg" alt="Content calendar" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section section-alt" id="setup-guide">
+        <div className="section-inner">
+          <span className="section-badge">GUIDE</span>
+          <h2 className="section-title">{t("tutorial.title")}</h2>
+          <p className="section-body" style={{ maxWidth: "none", marginBottom: 36 }}>{t("tutorial.subtitle")}</p>
+          <div className="tutorial-grid">
+            <div className="tutorial-card">
+              <div className="tutorial-icon" style={{ background: "rgba(61,125,246,0.12)" }}><img src="/icons/facebook.svg" alt="Facebook" className="tutorial-icon-img" /></div>
+              <h3>{t("tutorial.facebookTitle")}</h3>
+              <p className="tutorial-desc">{t("tutorial.facebookDesc")}</p>
+              <Link href="/guide/facebook" className="tutorial-link">{t("tutorial.readMore")} →</Link>
+            </div>
+            <div className="tutorial-card">
+              <div className="tutorial-icon" style={{ background: "rgba(225,74,142,0.12)" }}><img src="/icons/instagram.svg" alt="Instagram" className="tutorial-icon-img" /></div>
+              <h3>{t("tutorial.instagramTitle")}</h3>
+              <p className="tutorial-desc">{t("tutorial.instagramDesc")}</p>
+              <Link href="/guide/instagram" className="tutorial-link">{t("tutorial.readMore")} →</Link>
+            </div>
+            <div className="tutorial-card">
+              <div className="tutorial-icon" style={{ background: "rgba(254,77,111,0.12)" }}><img src="/icons/tiktok.svg" alt="TikTok" className="tutorial-icon-img" /></div>
+              <h3>{t("tutorial.tiktokTitle")}</h3>
+              <p className="tutorial-desc">{t("tutorial.tiktokDesc")}</p>
+              <Link href="/guide/tiktok" className="tutorial-link">{t("tutorial.readMore")} →</Link>
+            </div>
+            <div className="tutorial-card">
+              <div className="tutorial-icon" style={{ background: "rgba(237,237,237,0.12)" }}><img src="/icons/threads.svg" alt="Threads" className="tutorial-icon-img" /></div>
+              <h3>{t("tutorial.threadsTitle")}</h3>
+              <p className="tutorial-desc">{t("tutorial.threadsDesc")}</p>
+              <Link href="/guide/threads" className="tutorial-link">{t("tutorial.readMore")} →</Link>
+            </div>
+            <div className="tutorial-card">
+              <div className="tutorial-icon" style={{ background: "rgba(108,147,168,0.12)" }}><img src="/icons/website.svg" alt="Website" className="tutorial-icon-img" /></div>
+              <h3>{t("tutorial.websiteTitle")}</h3>
+              <p className="tutorial-desc">{t("tutorial.websiteDesc")}</p>
+              <Link href="/guide/website" className="tutorial-link">{t("tutorial.readMore")} →</Link>
             </div>
           </div>
         </div>
@@ -111,7 +159,7 @@ export default function HomePage() {
 
       <style>{`
         .hero { position: relative; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 100px 28px 80px; overflow: hidden; }
-        .hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 600px 400px at 50% 40%, rgba(79,209,197,0.08), transparent); pointer-events: none; }
+        .hero-bg { position: absolute; inset: 0; background: linear-gradient(rgba(14,16,22,.85),rgba(14,16,22,.92)), url(/images/hero-bg.jpg) center/cover; pointer-events: none; }
         .hero-content { position: relative; max-width: 700px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .hero-badge { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #8b93a3; background: #1a1e26; border: 1px solid #2a2f3a; padding: 6px 14px; border-radius: 20px; }
         .hero-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(36px, 6vw, 58px); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
@@ -136,7 +184,12 @@ export default function HomePage() {
         .step h3 { font-family: 'Space Grotesk', sans-serif; font-size: 15px; margin: 8px 0 6px; }
         .step p { font-size: 12.5px; color: #8b93a3; line-height: 1.6; }
         .step-arrow { color: #5c6270; font-size: 20px; padding-top: 24px; }
+        .steps-wrap { flex: 1; }
+        .steps-image { width: 280px; flex-shrink: 0; }
+        .steps-image img { width: 100%; border-radius: 12px; border: 1px solid #2a2f3a; }
         .split { display: flex; align-items: center; gap: 50px; }
+        .arch-visual { width: 260px; flex-shrink: 0; }
+        .arch-visual img { width: 100%; border-radius: 12px; border: 1px solid #2a2f3a; }
         .arch-card { background: #1a1e26; border: 1px solid #2a2f3a; border-radius: 12px; padding: 22px 26px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; display: flex; flex-direction: column; gap: 14px; min-width: 240px; }
         .arch-line { display: flex; align-items: center; gap: 10px; color: #8b93a3; }
         .arch-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -156,10 +209,20 @@ export default function HomePage() {
         .footer-tagline { color: #5c6270; font-size: 13px; line-height: 1.5; margin: 0; max-width: 240px; }
         .footer-bottom { border-top: 1px solid #2a2f3a; padding-top: 20px; text-align: center; font-size: 12px; color: #5c6270; }
 
-        @media (max-width: 720px) {
-          .footer-cols { grid-template-columns: 1fr 1fr; gap: 24px; }
+        .tutorial-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .tutorial-card { background: #1a1e26; border: 1px solid #2a2f3a; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; transition: border-color 0.15s; }
+        .tutorial-card:hover { border-color: #5c6270; }
+        .tutorial-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; padding: 6px; }
+        .tutorial-icon-img { width: 100%; height: 100%; object-fit: contain; }
+        .tutorial-card h3 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+        .tutorial-desc { font-size: 13px; color: #8b93a3; line-height: 1.6; margin: 0 0 auto; }
+        .tutorial-link { display: inline-flex; align-items: center; margin-top: 16px; font-size: 13px; font-weight: 600; color: #4fd1c5; text-decoration: none; }
+        .tutorial-link:hover { text-decoration: underline; }
+
+        @media (max-width: 720px) { .footer-cols { grid-template-columns: 1fr 1fr; gap: 24px; }
           .brand-col { grid-column: 1 / -1; }
-        }
+          .tutorial-grid { grid-template-columns: 1fr; }
+          .steps-image, .arch-visual { display: none; } }
         @media (max-width: 720px) { .steps { flex-direction: column; } .step-arrow { transform: rotate(90deg); padding: 4px 0; align-self: center; } .split { flex-direction: column; gap: 30px; } }
       `}</style>
     </>

@@ -1,7 +1,7 @@
 {
   "common": {
     "appName": "byJood",
-    "appTagline": "Social Poster",
+    "appTagline": "Automation Poster",
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",
@@ -18,7 +18,7 @@
     "profile": "Profile"
   },
   "hero": {
-    "badge": "v0.1 — Cloudflare + Supabase",
+    "badge": "byJood v0.2 | Auto-post to multiple platforms",
     "title": "Post to every platform",
     "titleAccent": "from one place",
     "subtitle": "Schedule and publish content to Facebook, Instagram, TikTok, Threads, and your Website — all from one dashboard.",
@@ -40,10 +40,10 @@
     "archBody": "This project solves a real-world problem most schedulers face — more pages means more timeouts. Fan-out pattern splits 1 post into N queue messages (1 per page), each with its own timeout, retry, and dead-letter queue."
   },
   "about": {
-    "title": "What is Social Poster?",
-    "body": "Social Poster is an automated cross-platform posting system for businesses and Content Creators who need to manage multiple pages across multiple social media platforms simultaneously.",
+    "title": "What is byJood?",
+    "body": "byJood is an automated cross-platform posting system for businesses and Content Creators who need to manage multiple pages across multiple social media platforms simultaneously.",
     "card1Title": "Problem Solved",
-    "card1Desc": "Posting page by page takes time, and looping all pages in one function causes timeouts. Social Poster uses Fan-Out Pattern — 1 page = 1 independent Queue job.",
+    "card1Desc": "Posting page by page takes time, and looping all pages in one function causes timeouts. byJood uses Fan-Out Pattern — 1 page = 1 independent Queue job.",
     "card2Title": "Architecture",
     "card2Desc": "Next.js (OpenNext) + Cloudflare Workers + Queues + Supabase. Entirely in the Cloudflare ecosystem. Frontend on Cloudflare Pages, Job Runner as Workers + Queues, Database and Auth via Supabase.",
     "card3Title": "Security",
@@ -101,6 +101,26 @@
     "uploadFailed": "Avatar upload failed",
     "saveFailed": "Save failed"
   },
+  "tutorial": {
+    "title": "Setup Guide",
+    "subtitle": "Step-by-step instructions to connect each platform.",
+    "readMore": "Read more",
+    "facebookTitle": "Facebook",
+    "facebookDesc": "Create a Meta app, enable Pages API, and obtain your App ID, App Secret, Page Access Token, and Page ID to connect your Facebook Page.",
+    "facebookArticle": "To connect your Facebook Page to byJood, you need to create a Meta for Developers app — this acts as the bridge between byJood and Facebook's APIs. Start by visiting developers.facebook.com and logging in with your Facebook account. Navigate to My Apps and select Create App, choosing Business as the app type. Give your app a name and provide your contact email, then complete the creation process.\n\n### Create the Meta App\n\nOnce your app is created, you will land on its dashboard. This is your control center for managing API access. The first thing you need to do is add the Pages API product. Go to the Add Products section, find Pages API, and click Set Up. This grants your app permission to read from and publish to Facebook Pages — without this, your app cannot interact with any page.\n\n### Gather Your Credentials\n\nWith the Pages API enabled, head to Settings → Basic in your app dashboard. Here you will find two critical pieces of information: your App ID and App Secret. The App ID is a public identifier for your app. The App Secret must be kept confidential — it is used to authenticate your app on the server side. Copy both values and store them securely.\n\n### Generate a Page Access Token\n\nNext, you need a Page Access Token. This token tells Facebook that your app has permission to act on behalf of a specific page. Open the Graph API Explorer at developers.facebook.com/tools/explorer. Select your app from the dropdown in the top-left corner. In the User or Page dropdown, choose your Facebook Page. Under Permissions, add the following scopes: pages_manage_posts (to create posts), pages_read_engagement (to view post performance), and pages_show_list (to list your pages). Click Generate Access Token, then copy the resulting token.\n\n### Find Your Page ID\n\nFinally, you need your Facebook Page ID. Open your Facebook Page in a browser, click About below the cover photo, and scroll down to the Page Transparency section. Your Page ID is a long numeric string — copy it. This ID tells byJood which Facebook Page to publish to.\n\nOnce you have your App ID, App Secret, Page Access Token, and Page ID, enter them in the byJood dashboard under Manage Pages. Your Facebook Page is now connected.",
+    "instagramTitle": "Instagram",
+    "instagramDesc": "Convert your Instagram account to Business or Creator, connect it to your Facebook Page, and get your Instagram Business Account ID using the same Meta app from Facebook.",
+    "instagramArticle": "Instagram uses the same Meta Graph API as Facebook, so you need a functioning Facebook Page connection first. Once that is in place, connecting Instagram is a matter of converting your account type and linking it to your Facebook Page.\n\n### Convert to a Professional Account\n\nOnly Instagram Business and Creator accounts can use the Graph API for automated posting. Open the Instagram app on your phone, go to Settings, then Account Type and Tools, and select Switch to Professional Account. Choose either Business (for a brand) or Creator (for an individual creator). Follow the on-screen prompts to complete the setup.\n\n### Link to Your Facebook Page\n\nWith a Professional account ready, you need to connect it to the same Facebook Page you set up earlier. Go to business.facebook.com and log in. Under Settings → Business Assets → Pages, select your Facebook Page. Navigate to Settings → Linked Accounts → Instagram and enter your Instagram credentials. This link is what allows the Graph API to route Instagram actions through your Facebook Page.\n\n### Get Your Instagram Business Account ID\n\nEvery Instagram Business Account has a unique numeric ID that byJood needs to publish to it. Open the Graph API Explorer, select your Facebook app, and generate a Page Access Token with the pages_show_list permission. Make a GET request to the endpoint: /me/accounts?fields=instagram_business_account. The response will contain your Instagram Business Account ID nested inside your page object.\n\n### Reuse Facebook Credentials\n\nThe Instagram Graph API runs on the same Meta app as your Facebook integration. You do not need separate credentials — use the same App ID, App Secret, and a long-lived Page Access Token from your Facebook setup. Enter only the Instagram Business Account ID in the byJood dashboard.",
+    "tiktokTitle": "TikTok",
+    "tiktokDesc": "Create a TikTok Developer app, enable Login Kit and Content Posting API, configure OAuth, complete sandbox testing, and submit for production audit.",
+    "tiktokArticle": "TikTok has the most involved setup process because it requires a production audit before you can post to real accounts. The process involves creating a developer app, configuring OAuth, testing in sandbox mode, and submitting for approval.\n\n### Create a TikTok Developer App\n\nGo to developers.tiktok.com and register using a TikTok for Business account. From your dashboard, click Create App. You will be asked which products your app needs — select Login Kit (for user authentication) and Content Posting API (for uploading videos). These two products give your app the ability to authenticate users and publish content on their behalf.\n\n### Configure OAuth and Scopes\n\nIn your app settings, configure the OAuth redirect URI — this is the URL where users are sent after they authorize your app. It must use HTTPS. Under scopes, request only what your app genuinely needs: user.info.basic (to read the user's display name), video.upload (to upload video files), and video.publish (to publish videos to their profile). Requesting unnecessary scopes can cause your audit to be rejected.\n\n### Get Your Client Key and Secret\n\nFrom your app dashboard, copy the Client Key (which functions as your App ID) and Client Secret. The Client Secret is used for server-side token exchange and must be stored securely. Never expose it in client-side code.\n\n### Sandbox Testing and Production Audit\n\nTikTok requires all apps to pass a production audit before they can publish to real accounts. Enable Sandbox Mode in your app settings and add up to 5 test TikTok accounts. Complete the full OAuth flow with a test account and verify that your app can upload and publish videos (content remains private in sandbox mode). When everything works, submit your app for TikTok's production audit. You will need to provide a demo video showing your app in action and a privacy policy URL. The audit typically takes a few business days.",
+    "threadsTitle": "Threads",
+    "threadsDesc": "Add the Threads use case to your Meta app, configure OAuth, and connect your Threads account to obtain your access credentials.",
+    "threadsArticle": "Threads uses Meta's infrastructure, so you will work in the same Meta for Developers portal used for Facebook and Instagram. The Threads API is newer and uses a two-step container flow for publishing.\n\n### Add Threads to Your Meta App\n\nGo to developers.facebook.com and either create a new app (select Other as your app type) or use an existing Meta app. From the dashboard, click Add Product, find Threads, and click Set Up. This enables the Threads API capabilities for your app. Unlike Pages API, the Threads product is straightforward — there are no sub-products to configure.\n\n### Configure OAuth\n\nThreads uses OAuth 2.0 for authentication. In the Threads settings, register your OAuth redirect URI — this must be an HTTPS endpoint where users will be redirected after they authorize your app. Make sure this URI matches exactly what you send in the authorization request. Common scopes include threads_content_publish (to create and publish threads) and threads_read (to read thread data).\n\n### Get Your App ID and Secret\n\nNavigate to Settings → Basic in your app dashboard. Copy your App ID and App Secret. Note that the Threads API uses graph.threads.net as its base URL, which differs from the main Facebook Graph API. Your Meta app credentials are the same, but the API endpoint changes.\n\n### Connect and Publish\n\nThe Threads API uses a two-step publishing flow. First, you make a POST request to /v1.0/threads to create a container with your content. This request returns a container ID. Second, you make a POST request to /v1.0/threads_publish with that container ID to publish the thread. This two-step approach allows you to prepare content and review it before publishing. The OAuth flow will give you an access token and the Threads user ID — both are needed to interact with the API.",
+    "websiteTitle": "Website",
+    "websiteDesc": "Create an API endpoint on your website that accepts POST requests with post content, implement authentication, and connect it to the dashboard.",
+    "websiteArticle": "The Website integration is the most flexible option — it lets byJood send posts to any custom endpoint you control. This is useful for content management systems, custom blogs, or any platform with an HTTP API.\n\n### Create an API Endpoint\n\nOn your website server, create an endpoint that accepts HTTP POST requests. The endpoint should parse incoming JSON with fields like content (the post text), media_urls (optional array of image URLs), and scheduled_at (the timestamp when the post is due). Your endpoint should return a JSON response indicating success along with a unique post ID that byJood can store for reference.\n\n### Add Authentication\n\nSecurity is important — you do not want unauthenticated requests hitting your endpoint. Generate a secure random API key (a 32-character hex string works well) and store it on your server. In your endpoint code, read the Authorization header from incoming requests and validate it against your stored key. Reject requests that do not provide a valid key with a 401 Unauthorized response.\n\n### Configure in the Dashboard\n\nIn the byJood dashboard under Manage Pages, add a new Website page. Enter your full website URL (including https://), the API endpoint path (e.g., /api/posts), and the API key you generated. When a scheduled post is due, byJood will send a POST request to the full URL combining your website URL and endpoint path, with the Authorization header set to your API key.\n\n### Test the Connection\n\nSchedule a sample post from the dashboard to your website. Then check your server logs to verify the POST request arrived with the correct content and headers. If your endpoint returns a 200 status with a success body, the connection is working. You are now ready to schedule posts to your website."
+  },
   "footer": {
     "brand": "byJood",
     "tagline": "Schedule and publish to every platform from one place.",
@@ -121,7 +141,7 @@
   },
   "dashboard": {
     "sidebar": {
-      "brandSub": "Social Poster / Control Room",
+      "brandSub": "byJood / Control Room",
       "status": "Supabase • Connected",
       "navConnections": "Manage Pages",
       "navSchedule": "Schedule Posts",

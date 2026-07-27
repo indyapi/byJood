@@ -13,7 +13,8 @@
     "controlRoom": "คอนโทรลรูม",
     "signIn": "เข้าสู่ระบบ",
     "signUp": "สมัครสมาชิก",
-    "signOut": "ออกจากระบบ"
+    "signOut": "ออกจากระบบ",
+    "profile": "โปรไฟล์"
   },
   "hero": {
     "badge": "v0.1 — Cloudflare + Supabase",
@@ -85,6 +86,11 @@
     "passwordMismatch": "รหัสผ่านไม่ตรงกัน",
     "passwordTooShort": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
     "checkEmail": "ตรวจสอบอีเมลของคุณเพื่อยืนยันการสมัคร"
+  },
+  "profile": {
+    "noName": "ไม่มีชื่อ",
+    "email": "อีเมล",
+    "loginMethod": "เข้าสู่ระบบด้วย"
   },
   "footer": {
     "text": "Social Poster — สร้างด้วย Next.js + Cloudflare Workers + Supabase"

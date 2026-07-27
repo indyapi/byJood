@@ -7,7 +7,7 @@ import { useTranslation } from "@/lib/TranslationsProvider";
 import {
   Plus, X, Eye, EyeOff, Trash2, ChevronLeft, ChevronRight, Clock,
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
-  Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal,
+  Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal, User,
 } from "lucide-react";
 import { createClientSupabase } from "@/lib/supabase-client";
 
@@ -1299,6 +1299,9 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             <n.icon size={16} /> {n.label}
           </button>
         ))}
+        <button className="nav-item profile-btn" onClick={() => router.push("/profile")}>
+          <User size={16} /> {t("nav.profile")}
+        </button>
         <div className="sidebar-foot"><span className="status-dot" /> Supabase • Connected</div>
         <div className="sidebar-lang"><LangSwitcher /></div>
       </aside>

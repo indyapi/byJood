@@ -60,7 +60,27 @@ create table post_logs (
   created_at timestamptz default now()
 );
 
--- 5. เก็บ state ชั่วคราวตอนทำ OAuth กัน CSRF (ลบทิ้งทันทีหลัง callback สำเร็จ)
+-- 5a. Post Groups — folders that group scheduled_posts into a single batch
+create table post_groups (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) not null,
+  name text not null,
+  scheduled_at timestamptz not null,
+  created_at timestamptz default now()
+);
+
+-- Add missing column that the consumer already writes to
+alter table scheduled_posts add column if not exists external_post_id text;
+-- Add group_id linking each post to its group folder
+alter table scheduled_posts add column if not exists group_id uuid references post_groups(id) on delete set null;
+
+alter table post_groups enable row level security;
+create policy "user manages own post_groups" on post_groups
+  for all using (auth.uid() = user_id);
+
+create index idx_post_groups_date on post_groups (user_id, scheduled_at);
+
+-- 5b. เก็บ state ชั่วคราวตอนทำ OAuth กัน CSRF (ลบทิ้งทันทีหลัง callback สำเร็จ)
 create table oauth_states (
   state text primary key,
   user_id uuid references auth.users(id),

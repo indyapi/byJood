@@ -360,6 +360,26 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   const [editPost, setEditPost] = useState(null);
   const [changeTimePost, setChangeTimePost] = useState(null);
   const [deletePost, setDeletePost] = useState(null);
+  const [activeGroupMenu, setActiveGroupMenu] = useState(null);
+  const [openedGroup, setOpenedGroup] = useState(null);
+  const [groupPosts, setGroupPosts] = useState([]);
+  const [editGroup, setEditGroup] = useState(null);
+  const [changeGroupTime, setChangeGroupTime] = useState(null);
+  const [deleteGroup, setDeleteGroup] = useState(null);
+  const [groupRename, setGroupRename] = useState("");
+  const [groupDeleteConfirm, setGroupDeleteConfirm] = useState("");
+  const [groups, setGroups] = useState([]);
+
+  useEffect(() => { fetchGroups(); }, []);
+
+  async function fetchGroups() {
+    const res = await fetch("/api/post-groups");
+    if (res.status === 401) { router.replace("/sign-in"); return; }
+    if (res.ok) {
+      const data = await res.json();
+      setGroups(data.map(groupFromDb));
+    }
+  }
 
   useEffect(() => {
     if (!onRefresh) return;
@@ -369,9 +389,10 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
 
   useEffect(() => {
     function handleClick(e) {
-      if (activeMenu && !e.target.closest(".post-actions")) {
+      if (activeMenu && !e.target.closest(".post-actions") && !e.target.closest(".group-actions")) {
         setActiveMenu(null);
         setActiveSubmenu(null);
+        setActiveGroupMenu(null);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -379,8 +400,8 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   }, [activeMenu]);
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const countFor = (d) => posts.filter((p) => p.date === dayKey(d)).length;
-  const dayPosts = posts.filter((p) => p.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time));
+  const countFor = (d) => groups.filter((g) => g.date === dayKey(d)).length;
+  const dayGroups = groups.filter((g) => g.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time));
 
   const dayLabel = (d) =>
     d.toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { weekday: "short" }).replace(".", "");
@@ -391,8 +412,77 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     if (res.status === 401) { router.replace("/sign-in"); return; }
     if (res.ok || res.status === 204) {
       onDelete(deletePost.id);
+      setGroupPosts((prev) => prev.filter((p) => p.id !== deletePost.id));
     }
     setDeletePost(null);
+  }
+
+  async function openGroupDetail(group) {
+    setOpenedGroup(group);
+    const res = await fetch(`/api/post-groups/${group.id}`);
+    if (res.status === 401) { router.replace("/sign-in"); return; }
+    if (res.ok) {
+      const data = await res.json();
+      setGroupPosts((data.posts || []).map(postFromDb));
+    }
+  }
+
+  function closeGroupDetail() {
+    setOpenedGroup(null);
+    setGroupPosts([]);
+  }
+
+  async function handleRenameGroup() {
+    if (!editGroup || !groupRename.trim()) return;
+    const res = await fetch(`/api/post-groups/${editGroup.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: groupRename.trim() }),
+    });
+    if (res.status === 401) { router.replace("/sign-in"); return; }
+    if (res.ok) {
+      const updated = await res.json();
+      setGroups((prev) => prev.map((g) => g.id === updated.id ? groupFromDb(updated) : g));
+      if (openedGroup?.id === editGroup.id) setOpenedGroup((g) => ({ ...g, name: updated.name }));
+    }
+    setEditGroup(null);
+    setGroupRename("");
+  }
+
+  async function handleChangeGroupTime() {
+    if (!changeGroupTime) return;
+    const { date, time } = changeGroupTime;
+    const [y, m, d] = date.split("-");
+    const [h, mi] = time.split(":");
+    const scheduled_at = new Date(+y, +m - 1, +d, +h, +mi).toISOString();
+    const res = await fetch(`/api/post-groups/${changeGroupTime.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scheduled_at }),
+    });
+    if (res.status === 401) { router.replace("/sign-in"); return; }
+    if (res.ok) {
+      const updated = await res.json();
+      setGroups((prev) => prev.map((g) => g.id === updated.id ? groupFromDb(updated) : g));
+      if (openedGroup?.id === changeGroupTime.id) {
+        setOpenedGroup((g) => ({ ...g, ...groupFromDb(updated) }));
+        setGroupPosts([]);
+      }
+    }
+    setChangeGroupTime(null);
+  }
+
+  async function handleDeleteGroupConfirmed() {
+    if (!deleteGroup || groupDeleteConfirm !== deleteGroup.name) return;
+    const res = await fetch(`/api/post-groups/${deleteGroup.id}`, { method: "DELETE" });
+    if (res.status === 401) { router.replace("/sign-in"); return; }
+    if (res.ok || res.status === 204) {
+      setGroups((prev) => prev.filter((g) => g.id !== deleteGroup.id));
+      if (openedGroup?.id === deleteGroup.id) closeGroupDetail();
+      if (onRefresh) onRefresh();
+    }
+    setDeleteGroup(null);
+    setGroupDeleteConfirm("");
   }
 
   function getPostUrl(post) {
@@ -471,124 +561,203 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
         <button className="icon-btn" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight size={16} /></button>
       </div>
 
-      {dayPosts.length === 0 ? (
+      {openedGroup ? (
+        <>
+          <div className="group-detail-head">
+            <button className="link-btn" onClick={closeGroupDetail}>
+              <ChevronLeft size={14} /> {t("dashboard.schedule.backToGroups")}
+            </button>
+            <h2 className="group-detail-title">{openedGroup.name}</h2>
+            <div className="group-detail-meta">
+              <Clock size={13} />
+              <span>{openedGroup.date} {openedGroup.time}</span>
+              <span className="group-detail-sep">·</span>
+              <span>{openedGroup.total} {t("dashboard.schedule.pagesSuffix")}</span>
+            </div>
+          </div>
+          {groupPosts.length === 0 ? (
+            <div className="empty">
+              <CalendarClock size={28} />
+              <p>{t("dashboard.schedule.empty")}</p>
+            </div>
+          ) : (
+            <div className="post-list">
+              {groupPosts.map((p) => {
+                const page = pages.find((pg) => pg.id === p.pageId);
+                const isPosted = p.status === "posted";
+                return (
+                  <div className={"post-row" + (activeMenu === p.id ? " menu-open" : "")} key={p.id}>
+                    <div className="post-time"><Clock size={13} />{p.time}</div>
+                    <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
+                    <div className="post-body">
+                      <div className="post-page">
+                        {p.pageName || page?.label || t("dashboard.schedule.pageNotFound")}
+                      </div>
+                      <div className="post-content">{p.content}</div>
+                    </div>
+                    <StatusPipeline status={p.status} t={t} />
+                    <div className="post-actions">
+                      <button className="icon-btn" onClick={() => setActiveMenu(activeMenu === p.id ? null : p.id)}>
+                        <MoreHorizontal size={14} />
+                      </button>
+                      {activeMenu === p.id && (
+                        <div className="action-menu">
+                          <div className="menu-item-group">
+                            <div className="menu-has-submenu"
+                              onMouseEnter={() => setActiveSubmenu("view")}
+                              onMouseLeave={() => setActiveSubmenu(null)}
+                            >
+                              <button className="menu-item menu-trigger">
+                                <Eye size={14} />
+                                <span>{t("dashboard.schedule.viewAction")}</span>
+                                <ChevronRight size={12} className="sub-arrow" />
+                              </button>
+                              {activeSubmenu === "view" && (
+                                <div className="submenu">
+                                  <button onClick={() => { setActiveMenu(null); setActiveSubmenu(null); setViewPost(p); }}>
+                                    {t("dashboard.schedule.detailAction")}
+                                  </button>
+                                  <button
+                                    onClick={() => { setActiveMenu(null); setActiveSubmenu(null); window.open(getPostUrl(p), "_blank", "noopener"); }}
+                                    disabled={!p.external_post_id}
+                                  >
+                                    {t("dashboard.schedule.viewPostAction")}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            <button className="menu-item" onClick={() => { setActiveMenu(null); setEditPost(p); }} disabled={isPosted}>
+                              <Edit3 size={14} /> {t("dashboard.schedule.editAction")}
+                            </button>
+
+                            <button className="menu-item" onClick={() => { setActiveMenu(null); setChangeTimePost(p); }} disabled={isPosted}>
+                              <Clock size={14} /> {t("dashboard.schedule.changeTimeAction")}
+                            </button>
+                          </div>
+
+                          <div className="menu-divider" />
+
+                          <div className="menu-share">
+                            <span className="menu-share-label">{t("dashboard.schedule.shareLabel")}</span>
+                            <div className="share-icons">
+                              {SHARE_PLATFORMS.map((sp) => (
+                                <button
+                                  key={sp.id}
+                                  className="share-icon-btn"
+                                  style={{ "--share-color": sp.color }}
+                                  onClick={() => { setActiveMenu(null); handleShare(p, page, sp.id); }}
+                                  disabled={!p.external_post_id}
+                                  title={sp.label}
+                                >
+                                  {sp.id === "facebook" && (
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                  )}
+                                  {sp.id === "line" && (
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.364 10.254a7.65 7.65 0 0 0-1.188-.419c-.38-.112-.78-.17-1.19-.17-.411 0-.81.058-1.19.17-.38.113-.74.268-1.074.465-.335.197-.633.428-.89.693-.258.265-.462.564-.606.895-.145.332-.22.69-.22 1.073 0 .382.075.74.22 1.073.144.331.348.637.607.902.257.265.555.496.89.693.334.197.693.352 1.073.465.38.112.78.17 1.19.17.412 0 .812-.058 1.192-.17.38-.113.74-.268 1.074-.465.335-.197.633-.428.89-.693.258-.265.462-.564.607-.895.144-.332.22-.69.22-1.073 0-.383-.076-.741-.22-1.073-.145-.331-.349-.637-.607-.902a4.595 4.595 0 0 0-.89-.693 4.21 4.21 0 0 0-.465-.243zm-6.473 3.582H11.01v-2.889a.515.515 0 0 0-.515-.515.515.515 0 0 0-.516.515v2.89H8.1a.515.515 0 0 0-.516.515c0 .284.232.515.516.515h4.79a.515.515 0 0 0 .516-.515.515.515 0 0 0-.516-.516zm2.507-2.576v-.313a.515.515 0 0 0-.515-.516.515.515 0 0 0-.516.515v5.076a.515.515 0 0 0 .516.515.515.515 0 0 0 .515-.515v-2.077h.72l1.112 1.876a.516.516 0 0 0 .44.257h.58a.518.518 0 0 0 .454-.758l-1.158-1.948c.5-.309.832-.845.832-1.46v-.315a1.73 1.73 0 0 0-1.728-1.727h-1.782zm5.608 5.473c-.23 0-.417.186-.417.416 0 .23.186.417.417.417h1.54c.23 0 .416-.186.416-.417a.416.416 0 0 0-.416-.416h-1.54zM24 11.975c0 5.955-5.546 10.784-12.384 10.784-1.19 0-2.342-.15-3.436-.43-1.065.718-2.523 1.263-4.087 1.263-.416 0-.825-.033-1.222-.092.877-.61 1.558-1.488 1.89-2.565C2.366 18.85 0 15.624 0 11.975 0 6.02 5.546 1.19 12.384 1.19 19.222 1.19 24 6.02 24 11.975zm-9.554-2.646a.515.515 0 0 0-.515-.516H9.33a.515.515 0 0 0-.516.515v5.07c0 .285.232.516.516.516h4.6a.515.515 0 0 0 .516-.515.515.515 0 0 0-.516-.516h-4.084v-1.538h3.353a.515.515 0 0 0 .515-.515.515.515 0 0 0-.515-.516h-3.353v-1.47h4.085a.515.515 0 0 0 .515-.515z"/></svg>
+                                  )}
+                                  {sp.id === "linkedin" && (
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                                  )}
+                                  {sp.id === "x" && (
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                                  )}
+                                  {sp.id === "messenger" && (
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.974 12-11.111C24 4.975 18.627 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259L10.732 8.2l3.131 3.259L19.752 8.2l-6.559 6.763z"/></svg>
+                                  )}
+                                  {sp.id === "instagram" && (
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+                                  )}
+                                </button>
+                              ))}
+                              <button
+                                className="share-icon-btn copy-btn"
+                                onClick={() => { copyPostLink(p, page); }}
+                                disabled={!p.external_post_id}
+                                title={t("dashboard.schedule.copyLink")}
+                              >
+                                <Copy size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="menu-divider" />
+
+                          <button className="menu-item danger" onClick={() => { setActiveMenu(null); setDeletePost(p); }}>
+                            <Trash2 size={14} /> {t("dashboard.schedule.deleteAction")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      ) : dayGroups.length === 0 ? (
         <div className="empty">
           <CalendarClock size={28} />
           <p>{t("dashboard.schedule.empty")}</p>
           <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}><Plus size={16} /> {t("dashboard.schedule.addBtn")}</button>
         </div>
       ) : (
-        <div className="post-list">
-          {dayPosts.map((p) => {
-            const page = pages.find((pg) => pg.id === p.pageId);
-            const isPosted = p.status === "posted";
-            return (
-              <div className={"post-row" + (activeMenu === p.id ? " menu-open" : "")} key={p.id}>
-                <div className="post-time"><Clock size={13} />{p.time}</div>
-                <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
-                <div className="post-body">
-                  <div className="post-page">
-                    {p.pageName || page?.label || t("dashboard.schedule.pageNotFound")}
+        <div className="group-grid">
+          {dayGroups.map((g) => (
+            <div className={"card group-card" + (activeGroupMenu === g.id ? " menu-open" : "")} key={g.id} onClick={() => openGroupDetail(g)}>
+              {g.total === 0 ? (
+                <div className="group-card-body">
+                  <div className="group-card-name">{g.name}</div>
+                  <div className="group-card-row">{g.date} {g.time}</div>
+                  <div className="group-card-status">
+                    <span className="group-status-zero">{t("dashboard.schedule.noPostsInGroup")}</span>
                   </div>
-                  <div className="post-content">{p.content}</div>
                 </div>
-                <StatusPipeline status={p.status} t={t} />
-                <div className="post-actions">
-                  <button className="icon-btn" onClick={() => setActiveMenu(activeMenu === p.id ? null : p.id)}>
-                    <MoreHorizontal size={14} />
-                  </button>
-                  {activeMenu === p.id && (
-                    <div className="action-menu">
-                      <div className="menu-item-group">
-                        <div className="menu-has-submenu"
-                          onMouseEnter={() => setActiveSubmenu("view")}
-                          onMouseLeave={() => setActiveSubmenu(null)}
-                        >
-                          <button className="menu-item menu-trigger">
-                            <Eye size={14} />
-                            <span>{t("dashboard.schedule.viewAction")}</span>
-                            <ChevronRight size={12} className="sub-arrow" />
-                          </button>
-                          {activeSubmenu === "view" && (
-                            <div className="submenu">
-                              <button onClick={() => { setActiveMenu(null); setActiveSubmenu(null); setViewPost(p); }}>
-                                {t("dashboard.schedule.detailAction")}
-                              </button>
-                              <button
-                                onClick={() => { setActiveMenu(null); setActiveSubmenu(null); window.open(getPostUrl(p), "_blank", "noopener"); }}
-                                disabled={!p.external_post_id}
-                              >
-                                {t("dashboard.schedule.viewPostAction")}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        <button className="menu-item" onClick={() => { setActiveMenu(null); setEditPost(p); }} disabled={isPosted}>
-                          <Edit3 size={14} /> {t("dashboard.schedule.editAction")}
-                        </button>
-
-                        <button className="menu-item" onClick={() => { setActiveMenu(null); setChangeTimePost(p); }} disabled={isPosted}>
-                          <Clock size={14} /> {t("dashboard.schedule.changeTimeAction")}
-                        </button>
-                      </div>
-
-                      <div className="menu-divider" />
-
-                      <div className="menu-share">
-                        <span className="menu-share-label">{t("dashboard.schedule.shareLabel")}</span>
-                        <div className="share-icons">
-                          {SHARE_PLATFORMS.map((sp) => (
-                            <button
-                              key={sp.id}
-                              className="share-icon-btn"
-                              style={{ "--share-color": sp.color }}
-                              onClick={() => { setActiveMenu(null); handleShare(p, page, sp.id); }}
-                              disabled={!p.external_post_id}
-                              title={sp.label}
-                            >
-                              {sp.id === "facebook" && (
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                              )}
-                              {sp.id === "line" && (
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.364 10.254a7.65 7.65 0 0 0-1.188-.419c-.38-.112-.78-.17-1.19-.17-.411 0-.81.058-1.19.17-.38.113-.74.268-1.074.465-.335.197-.633.428-.89.693-.258.265-.462.564-.606.895-.145.332-.22.69-.22 1.073 0 .382.075.74.22 1.073.144.331.348.637.607.902.257.265.555.496.89.693.334.197.693.352 1.073.465.38.112.78.17 1.19.17.412 0 .812-.058 1.192-.17.38-.113.74-.268 1.074-.465.335-.197.633-.428.89-.693.258-.265.462-.564.607-.895.144-.332.22-.69.22-1.073 0-.383-.076-.741-.22-1.073-.145-.331-.349-.637-.607-.902a4.595 4.595 0 0 0-.89-.693 4.21 4.21 0 0 0-.465-.243zm-6.473 3.582H11.01v-2.889a.515.515 0 0 0-.515-.515.515.515 0 0 0-.516.515v2.89H8.1a.515.515 0 0 0-.516.515c0 .284.232.515.516.515h4.79a.515.515 0 0 0 .516-.515.515.515 0 0 0-.516-.516zm2.507-2.576v-.313a.515.515 0 0 0-.515-.516.515.515 0 0 0-.516.515v5.076a.515.515 0 0 0 .516.515.515.515 0 0 0 .515-.515v-2.077h.72l1.112 1.876a.516.516 0 0 0 .44.257h.58a.518.518 0 0 0 .454-.758l-1.158-1.948c.5-.309.832-.845.832-1.46v-.315a1.73 1.73 0 0 0-1.728-1.727h-1.782zm5.608 5.473c-.23 0-.417.186-.417.416 0 .23.186.417.417.417h1.54c.23 0 .416-.186.416-.417a.416.416 0 0 0-.416-.416h-1.54zM24 11.975c0 5.955-5.546 10.784-12.384 10.784-1.19 0-2.342-.15-3.436-.43-1.065.718-2.523 1.263-4.087 1.263-.416 0-.825-.033-1.222-.092.877-.61 1.558-1.488 1.89-2.565C2.366 18.85 0 15.624 0 11.975 0 6.02 5.546 1.19 12.384 1.19 19.222 1.19 24 6.02 24 11.975zm-9.554-2.646a.515.515 0 0 0-.515-.516H9.33a.515.515 0 0 0-.516.515v5.07c0 .285.232.516.516.516h4.6a.515.515 0 0 0 .516-.515.515.515 0 0 0-.516-.516h-4.084v-1.538h3.353a.515.515 0 0 0 .515-.515.515.515 0 0 0-.515-.516h-3.353v-1.47h4.085a.515.515 0 0 0 .515-.515z"/></svg>
-                              )}
-                              {sp.id === "linkedin" && (
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                              )}
-                              {sp.id === "x" && (
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                              )}
-                              {sp.id === "messenger" && (
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.974 12-11.111C24 4.975 18.627 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259L10.732 8.2l3.131 3.259L19.752 8.2l-6.559 6.763z"/></svg>
-                              )}
-                              {sp.id === "instagram" && (
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-                              )}
-                            </button>
-                          ))}
-                          <button
-                            className="share-icon-btn copy-btn"
-                            onClick={() => { copyPostLink(p, page); }}
-                            disabled={!p.external_post_id}
-                            title={t("dashboard.schedule.copyLink")}
-                          >
-                            <Copy size={14} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="menu-divider" />
-
-                      <button className="menu-item danger" onClick={() => { setActiveMenu(null); setDeletePost(p); }}>
-                        <Trash2 size={14} /> {t("dashboard.schedule.deleteAction")}
-                      </button>
+              ) : (
+                <>
+                  <div className="group-card-body">
+                    <div className="group-card-name">{g.name}</div>
+                    <div className="group-card-row">
+                      <Clock size={12} />
+                      <span>{g.date} {g.time}</span>
+                      <span className="group-dot">·</span>
+                      <span>{g.total} {t("dashboard.schedule.pagesSuffix")}</span>
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                    <div className="group-card-status">
+                      {g.posted > 0 && <span className="status-dot-group success" />}
+                      {g.posted > 0 && <span className="status-count success">{g.posted} {t("dashboard.status.posted")}</span>}
+                      {g.pending > 0 && <span className="status-dot-group pending" />}
+                      {g.pending > 0 && <span className="status-count pending">{g.pending} {t("dashboard.status.pending")}</span>}
+                      {g.failed > 0 && <span className="status-dot-group failed" />}
+                      {g.failed > 0 && <span className="status-count failed">{g.failed} {t("dashboard.status.failed")}</span>}
+                    </div>
+                  </div>
+                  <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
+                    <button
+                      className="icon-btn"
+                      onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); }}
+                    >
+                      <MoreHorizontal size={14} />
+                    </button>
+                    {activeGroupMenu === g.id && (
+                      <div className="action-menu">
+                        <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setEditGroup(g); setGroupRename(g.name); }}>
+                          <Edit3 size={14} /> {t("dashboard.schedule.editGroupAction")}
+                        </button>
+                        <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setChangeGroupTime({ id: g.id, date: g.date, time: g.time }); }}>
+                          <Clock size={14} /> {t("dashboard.schedule.changeGroupTimeAction")}
+                        </button>
+                        <div className="menu-divider" />
+                        <button className="menu-item danger" onClick={() => { setActiveGroupMenu(null); setDeleteGroup(g); setGroupDeleteConfirm(""); }}>
+                          <Trash2 size={14} /> {t("dashboard.schedule.deleteGroupAction")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -597,7 +766,14 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
           pages={pages}
           defaultDate={selectedDate}
           onClose={() => setModalOpen(false)}
-          onAdd={onAdd}
+          onAdd={(result) => {
+            if (result.group && result.posts) {
+              setGroups((prev) => [groupFromDb(result.group), ...prev]);
+              onAdd(result.posts);
+            } else {
+              onAdd(result);
+            }
+          }}
           t={t}
           PLATFORMS={PLATFORMS}
         />
@@ -617,7 +793,11 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
         <EditPostModal
           post={editPost}
           onClose={() => setEditPost(null)}
-          onUpdate={(updated) => { onUpdate(updated); setEditPost(null); }}
+          onUpdate={(updated) => {
+            onUpdate(updated);
+            setGroupPosts((prev) => prev.map((p) => p.id === updated.id ? postFromDb(updated) : p));
+            setEditPost(null);
+          }}
           t={t}
         />
       )}
@@ -626,7 +806,11 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
         <ChangeTimeModal
           post={changeTimePost}
           onClose={() => setChangeTimePost(null)}
-          onUpdate={(updated) => { onUpdate(updated); setChangeTimePost(null); }}
+          onUpdate={(updated) => {
+            onUpdate(updated);
+            setGroupPosts((prev) => prev.map((p) => p.id === updated.id ? postFromDb(updated) : p));
+            setChangeTimePost(null);
+          }}
           t={t}
         />
       )}
@@ -642,6 +826,72 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => setDeletePost(null)}>{t("dashboard.schedule.cancel")}</button>
               <button className="btn btn-danger" onClick={handleDeleteConfirmed}>{t("dashboard.schedule.deleteConfirmBtn")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editGroup && (
+        <div className="modal-overlay">
+          <div className="modal modal-sm">
+            <div className="modal-head">
+              <h2>{t("dashboard.schedule.editGroupTitle")}</h2>
+              <button className="icon-btn" onClick={() => setEditGroup(null)}><X size={18} /></button>
+            </div>
+            <div className="field-group">
+              <label className="field-label">{t("dashboard.schedule.groupNameLabel")}</label>
+              <input className="input" autoFocus value={groupRename} onChange={(e) => setGroupRename(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRenameGroup()} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setEditGroup(null)}>{t("dashboard.schedule.cancel")}</button>
+              <button className="btn btn-primary" onClick={handleRenameGroup} disabled={!groupRename.trim()}>{t("common.save")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {changeGroupTime && (
+        <div className="modal-overlay">
+          <div className="modal modal-sm">
+            <div className="modal-head">
+              <h2>{t("dashboard.schedule.changeGroupTimeTitle")}</h2>
+              <button className="icon-btn" onClick={() => setChangeGroupTime(null)}><X size={18} /></button>
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleChangeGroupTime(); }}>
+              <div className="field-row">
+                <div className="field-group">
+                  <label className="field-label">{t("dashboard.fields.date")}</label>
+                  <input className="input" type="date" value={changeGroupTime.date} onChange={(e) => setChangeGroupTime((prev) => ({ ...prev, date: e.target.value }))} required />
+                </div>
+                <div className="field-group">
+                  <label className="field-label">{t("dashboard.fields.time")}</label>
+                  <input className="input" type="time" value={changeGroupTime.time} onChange={(e) => setChangeGroupTime((prev) => ({ ...prev, time: e.target.value }))} required />
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setChangeGroupTime(null)}>{t("dashboard.schedule.cancel")}</button>
+                <button type="submit" className="btn btn-primary">{t("common.save")}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {deleteGroup && (
+        <div className="modal-overlay">
+          <div className="modal modal-sm">
+            <div className="modal-head">
+              <h2>{t("dashboard.schedule.deleteGroupTitle")}</h2>
+              <button className="icon-btn" onClick={() => setDeleteGroup(null)}><X size={18} /></button>
+            </div>
+            <p className="delete-body">{t("dashboard.schedule.deleteGroupConfirm")}</p>
+            <div className="field-group">
+              <label className="field-label">{t("dashboard.schedule.typeGroupNameLabel", { name: deleteGroup.name })}</label>
+              <input className="input" autoFocus value={groupDeleteConfirm} onChange={(e) => setGroupDeleteConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleDeleteGroupConfirmed()} placeholder={deleteGroup.name} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setDeleteGroup(null)}>{t("dashboard.schedule.cancel")}</button>
+              <button className="btn btn-danger" onClick={handleDeleteGroupConfirmed} disabled={groupDeleteConfirm !== deleteGroup.name}>{t("dashboard.schedule.deleteGroupBtn")}</button>
             </div>
           </div>
         </div>
@@ -744,21 +994,16 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
     const [y, m, d] = date.split("-");
     const [h, mi] = time.split(":");
     const scheduled_at = new Date(+y, +m - 1, +d, +h, +mi).toISOString();
-    const created = [];
-    for (const pageId of selectedIds) {
-      const page = pages.find((p) => p.id === pageId);
-      const res = await fetch("/api/scheduled-posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page_id: pageId, platform: page.platform, content, scheduled_at, media_urls: mediaUrls }),
-      });
-      if (res.status === 401) { router.replace("/sign-in"); return; }
-      if (res.ok) {
-        const saved = await res.json();
-        created.push(saved);
-      }
+    const res = await fetch("/api/scheduled-posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page_ids: selectedIds, content, scheduled_at, media_urls: mediaUrls }),
+    });
+    if (res.status === 401) { router.replace("/sign-in"); return; }
+    if (res.ok) {
+      const result = await res.json();
+      onAdd(result);
     }
-    if (created.length > 0) onAdd(created);
     onClose();
   }
 
@@ -1277,9 +1522,24 @@ function postFromDb(p) {
     content: p.content,
     media_urls: p.media_urls || [],
     external_post_id: p.external_post_id || "",
+    groupId: p.group_id || null,
     date: d ? d.toLocaleDateString("sv-SE") : "",
     time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
     status: p.status,
+  };
+}
+
+function groupFromDb(g) {
+  const d = g.scheduled_at ? new Date(g.scheduled_at) : null;
+  return {
+    id: g.id,
+    name: g.name,
+    total: g.total || 0,
+    posted: g.posted || 0,
+    failed: g.failed || 0,
+    pending: g.pending || 0,
+    date: d ? d.toLocaleDateString("sv-SE") : "",
+    time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
   };
 }
 
@@ -1638,6 +1898,32 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .day-num { font-family: var(--font-display); font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 3px; }
         .today-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
         .day-count { position: absolute; top: -6px; right: -6px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; border-radius: 20px; padding: 2px 6px; }
+
+        .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+        .group-card { cursor: pointer; position: relative; transition: border-color .12s, transform .12s; }
+        .group-card:hover { border-color: var(--glass-border-accent); transform: translateY(-1px); }
+        .group-card.menu-open { z-index: 10; }
+        .group-card-body { display: flex; flex-direction: column; gap: 8px; }
+        .group-card-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+        .group-card-row { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-muted); }
+        .group-dot { color: var(--text-dim); }
+        .group-card-status { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; margin-top: 4px; }
+        .status-dot-group { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+        .status-dot-group.success { background: var(--success); }
+        .status-dot-group.pending { background: var(--warning); }
+        .status-dot-group.failed { background: var(--danger); }
+        .status-count { font-weight: 500; }
+        .status-count.success { color: var(--success); }
+        .status-count.pending { color: var(--warning); }
+        .status-count.failed { color: var(--danger); }
+        .group-status-zero { color: var(--text-dim); font-size: 11.5px; }
+        .group-actions { position: absolute; top: 12px; right: 10px; }
+        .group-actions .action-menu { right: 0; left: auto; }
+        .group-detail-head { margin-bottom: 18px; }
+        .group-detail-head .link-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; margin-bottom: 8px; }
+        .group-detail-title { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+        .group-detail-meta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); }
+        .group-detail-sep { color: var(--text-dim); }
 
         .post-list { display: flex; flex-direction: column; gap: 8px; }
         .post-row {

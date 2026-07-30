@@ -1683,7 +1683,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .menu-trigger { display: flex; align-items: center; gap: 8px; width: 100%; }
         .sub-arrow { margin-left: auto; opacity: .5; }
         .submenu {
-          position: absolute; left: calc(100% + 4px); top: 0; z-index: 60;
+          position: absolute; right: 100%; top: 0; z-index: 60; margin-right: 8px;
           background: var(--glass-bg-dark);
           backdrop-filter: blur(var(--glass-blur-lg));
           -webkit-backdrop-filter: blur(var(--glass-blur-lg));

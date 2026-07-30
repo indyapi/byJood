@@ -1,0 +1,53 @@
+[33m2cc7d85[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: Branch: renamed refs/heads/empty-main to refs/heads/main
+[33m2cc7d85[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{2}: commit (initial): Initial empty commit
+[33mc26d431[m HEAD@{3}: reset: moving to c26d431e5fbfd304d2a505ab26e6546c3ac8e0e9
+[33maa6025e[m HEAD@{4}: pull: Fast-forward
+[33mc26d431[m HEAD@{5}: reset: moving to c26d431e5fbfd304d2a505ab26e6546c3ac8e0e9
+[33maa6025e[m HEAD@{6}: commit: feat: update Dashboard styles with neumorphic design and enhanced input elements
+[33ma87fbf2[m HEAD@{7}: commit: feat: enhance modal styling with neumorphic design and overlay effects
+[33m6a7c9ba[m HEAD@{8}: commit: feat: add Cloudflare worker for handling image requests and middleware integration
+[33ma0cfdd5[m HEAD@{9}: commit: fix: include status filter in scheduled posts URL for accurate updates
+[33m45fa822[m HEAD@{10}: commit: feat: add responsive design utilities and CSS tokens
+[33m374fcae[m HEAD@{11}: commit: Add sign-up page cache file for improved performance and SEO
+[33mddd7320[m HEAD@{12}: commit: feat: implement CORS headers, enhance error handling, and add toast notifications in Dashboard component
+[33mc26d431[m HEAD@{13}: commit: feat: enhance page management with update and delete functionality
+[33m5c0a637[m HEAD@{14}: commit: refactor: update LangSwitcher and Navbar components for improved styling and functionality
+[33m40d1d39[m HEAD@{15}: commit: feat: implement theme switching functionality and update styles
+[33m8f41ecf[m HEAD@{16}: commit: Update Thai translations, add new icons, and include images for the byJood platform
+[33m95d8e8a[m HEAD@{17}: commit: feat: update footer links to point to external privacy and terms pages
+[33m06cb890[m HEAD@{18}: commit: feat: update footer layout and translations
+[33m6411c88[m HEAD@{19}: commit: feat: update Dashboard styles and translations
+[33mca14035[m HEAD@{20}: commit: fix: update route client reference manifests and improve API response sizes
+[33m8eca4fc[m HEAD@{21}: commit: feat: Add GitHub Actions workflow for deploying to Cloudflare
+[33m3e3741c[m HEAD@{22}: commit: This stable
+[33m0a3acb3[m HEAD@{23}: commit: feat: Add profile modal with avatar upload, editing capabilities, and responsive styles
+[33m953c6f0[m HEAD@{24}: commit: feat: Add avatar upload functionality and profile editing features, including display name and username updates
+[33m3fbd8f3[m HEAD@{25}: commit: feat: Enhance Dashboard and Navbar with new home button, add profile link, and update translations for navigation
+[33m2837882[m HEAD@{26}: commit: feat: Implement profile page with user authentication and data retrieval, enhance API for profile management, and update database schema for auth_provider
+[33m2d4bec2[m HEAD@{27}: commit: feat: Refactor Facebook posting logic to improve error handling and streamline media uploads
+[33m4185a4c[m HEAD@{28}: commit: feat: Add media upload support for scheduled posts and update database migration for public access
+[33md75a07d[m HEAD@{29}: commit: feat: Enhance Facebook posting functionality to support media uploads and improve error handling
+[33ma4df828[m HEAD@{30}: commit: feat: Implement CRUD operations for scheduled posts and enhance Dashboard with media upload functionality
+[33m32eafe7[m HEAD@{31}: commit: feat: Update API responses to include display names and enhance Dashboard component for better page identification
+[33ma48d0f6[m HEAD@{32}: commit: feat: Fetch real page names from platform API and update label in Dashboard component
+[33mc6c0891[m HEAD@{33}: commit: feat: Enhance POST request to resolve display name from external platform API and streamline required fields validation
+[33m29fb549[m HEAD@{34}: commit: feat: Add bug report for queued posts issue and update consumer logic to handle external page IDs
+[33mc4c1f08[m HEAD@{35}: commit: Update server configuration and routing manifests for improved performance and new routes
+[33m05469c7[m HEAD@{36}: commit: feat: Add multilingual support for dashboard components and update translations for English and Thai
+[33meda5602[m HEAD@{37}: commit: feat: Implement user profile management with Supabase integration and update UI for authentication flow
+[33ma83a13b[m HEAD@{38}: commit: feat: Implement multilingual support with translation provider and language switcher
+[33m091db27[m HEAD@{39}: commit: feat: add authentication flow with Supabase, including sign-in and sign-up pages
+[33m59b9dfc[m HEAD@{40}: commit: feat(api): add logs and scheduled posts endpoints
+[33m2369e66[m HEAD@{41}: commit: Refactor worker structure and unify entry points for Next.js and cron/queue functionality
+[33m6f89d05[m HEAD@{42}: commit: feat: update package.json for Cloudflare integration and add build/deploy scripts
+[33md19ac35[m HEAD@{43}: commit: feat: implement scheduled posts API and update Dashboard for post scheduling
+[33m0a60231[m HEAD@{44}: commit: chore: update package.json to use Next.js and add dependencies for Supabase and React
+[33md7dac11[m HEAD@{45}: commit: feat: update build script in package.json for improved dependency installation
+[33m68825de[m HEAD@{46}: commit: feat: update project name to 'byjood' in wrangler.toml
+[33m3ce844d[m HEAD@{47}: commit: feat: add CRUD operations for pages with Supabase integration
+[33mdc3c37b[m HEAD@{48}: reset: moving to dc3c37bff682d45a46bf8235083f06ce19474cbe
+[33mdc3c37b[m HEAD@{49}: reset: moving to dc3c37bff682d45a46bf8235083f06ce19474cbe
+[33mdc3c37b[m HEAD@{50}: reset: moving to dc3c37bff682d45a46bf8235083f06ce19474cbe
+[33mdc3c37b[m HEAD@{51}: reset: moving to dc3c37bff682d45a46bf8235083f06ce19474cbe
+[33mdc3c37b[m HEAD@{52}: Branch: renamed refs/heads/master to refs/heads/main
+[33mdc3c37b[m HEAD@{54}: commit (initial): feat: implement social media posting functionality with OAuth integration

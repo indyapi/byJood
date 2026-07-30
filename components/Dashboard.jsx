@@ -434,7 +434,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
             const page = pages.find((pg) => pg.id === p.pageId);
             const isPosted = p.status === "posted";
             return (
-              <div className="post-row" key={p.id}>
+              <div className={"post-row" + (activeMenu === p.id ? " menu-open" : "")} key={p.id}>
                 <div className="post-time"><Clock size={13} />{p.time}</div>
                 <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
                 <div className="post-body">
@@ -1523,10 +1523,11 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           backdrop-filter: blur(var(--glass-blur));
           -webkit-backdrop-filter: blur(var(--glass-blur));
           border: 1px solid var(--glass-border);
-          border-radius: 10px; padding: 12px 14px; position: relative;
+          border-radius: 10px; padding: 12px 14px; position: relative; z-index: 1;
           transition: border-color .12s;
         }
         .post-row:hover { border-color: var(--glass-border-accent); }
+        .post-row.menu-open { z-index: 10; }
         .post-time {
           display: flex; align-items: center; gap: 5px; font-family: var(--font-mono);
           font-size: 12px; color: var(--text-muted); width: 62px; flex-shrink: 0;

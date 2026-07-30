@@ -31,13 +31,31 @@ export async function GET(request, { params }) {
 
   // 2. แลก code เป็น access token
   const cfg = OAUTH_CONFIGS[platform];
-  const tokenData = await exchangeCodeForToken(platform, cfg, code);
+  let tokenData = await exchangeCodeForToken(platform, cfg, code);
   if (tokenData.error) {
     return Response.json({ error: tokenData.error }, { status: 400 });
   }
 
+  let accessToken = tokenData.access_token;
+  let expiresIn = tokenData.expires_in;
+
+  // 2.5 Exchange short-lived → long-lived (60 day) token for Facebook/Instagram
+  if (platform === "facebook" || platform === "instagram") {
+    const exchangeUrl = `https://graph.facebook.com/v21.0/oauth/access_token?` +
+      `grant_type=fb_exchange_token` +
+      `&client_id=${cfg.clientId}` +
+      `&client_secret=${cfg.clientSecret}` +
+      `&fb_exchange_token=${accessToken}`;
+    const exchangeRes = await fetch(exchangeUrl);
+    const exchangeData = await exchangeRes.json();
+    if (exchangeData.access_token) {
+      accessToken = exchangeData.access_token;
+      expiresIn = exchangeData.expires_in;
+    }
+  }
+
   // 3. ดึงรายชื่อเพจ/บัญชีที่ user คนนี้ manage อยู่ (แต่ละแพลตฟอร์มมี endpoint ต่างกัน)
-  const accounts = await fetchManagedAccounts(platform, tokenData.access_token);
+  const accounts = await fetchManagedAccounts(platform, accessToken);
 
   // 4. บันทึกลง Supabase: 1 บัญชี = 1 แถวใน pages + page_tokens
   for (const account of accounts) {
@@ -59,10 +77,12 @@ export async function GET(request, { params }) {
       {
         page_id: page.id,
         platform,
-        access_token: account.access_token ?? tokenData.access_token,
-        refresh_token: tokenData.refresh_token ?? null,
-        expires_at: tokenData.expires_in
-          ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+        access_token: account.access_token ?? accessToken,
+        refresh_token: (platform === "facebook" || platform === "instagram")
+          ? accessToken
+          : (tokenData.refresh_token ?? null),
+        expires_at: expiresIn
+          ? new Date(Date.now() + expiresIn * 1000).toISOString()
           : null,
       },
       { onConflict: "page_id,platform" }

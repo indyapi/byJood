@@ -1,0 +1,24 @@
+Task: Facebook OAuth — Exchange short-lived token for long-lived (60 day) token
+Date: 2026-07-30
+
+Files modified:
+  app/api/auth/[platform]/callback/route.js
+    - After code exchange, added fb_exchange_token call for Facebook/Instagram
+    - Saves long-lived user token as refresh_token for periodic refresh
+    - Uses long-lived token to fetch pages (page tokens never expire this way)
+
+  src/refresh-tokens.js
+    - Exported refreshExpiringTokens for use by main worker
+    - Fixed: no longer overwrites page access_token for Facebook/Instagram
+      (page tokens never expire; only the long-lived user refresh_token needs updating)
+
+  src/worker.js
+    - Imports refreshExpiringTokens from refresh-tokens.js
+    - Calls it during the 3 AM cron trigger
+
+  wrangler.jsonc
+    - Added "0 3 * * *" cron for daily token refresh at 3 AM
+
+Prerequisites before deploy:
+  - Set FACEBOOK_APP_ID and FACEBOOK_APP_SECRET as wrangler secrets
+  - Users must reconnect Facebook pages to get long-lived tokens

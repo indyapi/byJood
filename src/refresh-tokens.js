@@ -14,7 +14,7 @@ export default {
   },
 };
 
-async function refreshExpiringTokens(env) {
+export async function refreshExpiringTokens(env) {
   const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
   const res = await fetch(
@@ -32,6 +32,18 @@ async function refreshExpiringTokens(env) {
     try {
       const refreshed = await refreshToken(row.platform, row.refresh_token, env);
       if (refreshed.access_token) {
+        const update = {
+          refresh_token: refreshed.refresh_token ?? row.refresh_token,
+          expires_at: refreshed.expires_in
+            ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
+            : row.expires_at,
+          updated_at: new Date().toISOString(),
+        };
+        // Facebook/Instagram page tokens never expire when fetched via long-lived user token.
+        // Only update the long-lived user token (refresh_token) and its expiry.
+        if (row.platform !== "facebook" && row.platform !== "instagram") {
+          update.access_token = refreshed.access_token;
+        }
         await fetch(`${env.SUPABASE_URL}/rest/v1/page_tokens?id=eq.${row.id}`, {
           method: "PATCH",
           headers: {
@@ -39,14 +51,7 @@ async function refreshExpiringTokens(env) {
             Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            access_token: refreshed.access_token,
-            refresh_token: refreshed.refresh_token ?? row.refresh_token,
-            expires_at: refreshed.expires_in
-              ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
-              : row.expires_at,
-            updated_at: new Date().toISOString(),
-          }),
+          body: JSON.stringify(update),
         });
       }
     } catch (err) {

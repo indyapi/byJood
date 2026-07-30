@@ -1,5 +1,6 @@
 import { handleQueueBatch } from "./consumer.js";
 import { enqueueDuePosts } from "./enqueue.js";
+import { refreshExpiringTokens } from "./refresh-tokens.js";
 
 export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "../.open-next/worker.js";
 
@@ -17,6 +18,9 @@ export default {
 
   async scheduled(event, env, ctx) {
     ctx.waitUntil(enqueueDuePosts(env));
+    if (event.cron === "0 3 * * *") {
+      ctx.waitUntil(refreshExpiringTokens(env));
+    }
   },
 
   async queue(batch, env, ctx) {

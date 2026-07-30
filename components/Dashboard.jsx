@@ -354,6 +354,8 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   const [weekStart, setWeekStart] = useState(addDays(today, -1));
   const [modalOpen, setModalOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
+  const [activeSubmenu, setActiveSubmenu] = useState(null);
+  const [toast, setToast] = useState(null);
   const [viewPost, setViewPost] = useState(null);
   const [editPost, setEditPost] = useState(null);
   const [changeTimePost, setChangeTimePost] = useState(null);
@@ -369,6 +371,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     function handleClick(e) {
       if (activeMenu && !e.target.closest(".post-actions")) {
         setActiveMenu(null);
+        setActiveSubmenu(null);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -390,6 +393,52 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
       onDelete(deletePost.id);
     }
     setDeletePost(null);
+  }
+
+  function getPostUrl(post) {
+    if (!post.external_post_id) return null;
+    return `https://facebook.com/${post.external_post_id}`;
+  }
+
+  function getShareText(post, page) {
+    const pageName = post.pageName || page?.label || "";
+    const url = getPostUrl(post) || "";
+    return `${pageName}(จาก pages) เผยแพร่เนื้อหาใหม่แล้ว!\n\nรับชมเนื้อหาใหม่ของฉันที่นี่: ${url}\n\nขอบคุณค่ะ!`;
+  }
+
+  async function copyPostLink(post, page) {
+    const text = getShareText(post, page);
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast("คัดลอกแล้ว!");
+      setTimeout(() => setToast(null), 2000);
+    } catch {}
+  }
+
+  const SHARE_PLATFORMS = [
+    { id: "facebook", label: "Facebook", color: "#1877F2" },
+    { id: "line", label: "Line", color: "#06C755" },
+    { id: "linkedin", label: "LinkedIn", color: "#0A66C2" },
+    { id: "x", label: "X", color: "#000000" },
+    { id: "messenger", label: "Messenger", color: "#0099FF" },
+    { id: "instagram", label: "Instagram", color: "#E4405F" },
+  ];
+
+  function handleShare(post, page, platform) {
+    const url = getPostUrl(post);
+    if (!url) return;
+    const text = encodeURIComponent(getShareText(post, page));
+    const encodedUrl = encodeURIComponent(url);
+    const shareUrls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      line: `https://social-plugins.line.me/lineit/share?url=${encodedUrl}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+      x: `https://twitter.com/intent/tweet?text=${text}&url=${encodedUrl}`,
+      messenger: `https://www.facebook.com/dialog/send?link=${encodedUrl}&app_id=&redirect_uri=${encodedUrl}`,
+      instagram: null,
+    };
+    const shareUrl = shareUrls[platform];
+    if (shareUrl) window.open(shareUrl, "_blank", "noopener");
   }
 
   return (
@@ -450,17 +499,89 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                   </button>
                   {activeMenu === p.id && (
                     <div className="action-menu">
-                      <button onClick={() => { setActiveMenu(null); setViewPost(p); }}>
-                        {t("dashboard.schedule.viewAction")}
-                      </button>
-                      <button onClick={() => { setActiveMenu(null); setEditPost(p); }} disabled={isPosted}>
-                        {t("dashboard.schedule.editAction")}
-                      </button>
-                      <button onClick={() => { setActiveMenu(null); setChangeTimePost(p); }} disabled={isPosted}>
-                        {t("dashboard.schedule.changeTimeAction")}
-                      </button>
-                      <button className="danger" onClick={() => { setActiveMenu(null); setDeletePost(p); }}>
-                        {t("dashboard.schedule.deleteAction")}
+                      <div className="menu-item-group">
+                        <div className="menu-has-submenu"
+                          onMouseEnter={() => setActiveSubmenu("view")}
+                          onMouseLeave={() => setActiveSubmenu(null)}
+                        >
+                          <button className="menu-item menu-trigger">
+                            <Eye size={14} />
+                            <span>{t("dashboard.schedule.viewAction")}</span>
+                            <ChevronRight size={12} className="sub-arrow" />
+                          </button>
+                          {activeSubmenu === "view" && (
+                            <div className="submenu">
+                              <button onClick={() => { setActiveMenu(null); setActiveSubmenu(null); setViewPost(p); }}>
+                                {t("dashboard.schedule.detailAction")}
+                              </button>
+                              <button
+                                onClick={() => { setActiveMenu(null); setActiveSubmenu(null); window.open(getPostUrl(p), "_blank", "noopener"); }}
+                                disabled={!p.external_post_id}
+                              >
+                                {t("dashboard.schedule.viewPostAction")}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <button className="menu-item" onClick={() => { setActiveMenu(null); setEditPost(p); }} disabled={isPosted}>
+                          <Edit3 size={14} /> {t("dashboard.schedule.editAction")}
+                        </button>
+
+                        <button className="menu-item" onClick={() => { setActiveMenu(null); setChangeTimePost(p); }} disabled={isPosted}>
+                          <Clock size={14} /> {t("dashboard.schedule.changeTimeAction")}
+                        </button>
+                      </div>
+
+                      <div className="menu-divider" />
+
+                      <div className="menu-share">
+                        <span className="menu-share-label">{t("dashboard.schedule.shareLabel")}</span>
+                        <div className="share-icons">
+                          {SHARE_PLATFORMS.map((sp) => (
+                            <button
+                              key={sp.id}
+                              className="share-icon-btn"
+                              style={{ "--share-color": sp.color }}
+                              onClick={() => { setActiveMenu(null); handleShare(p, page, sp.id); }}
+                              disabled={!p.external_post_id}
+                              title={sp.label}
+                            >
+                              {sp.id === "facebook" && (
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                              )}
+                              {sp.id === "line" && (
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.364 10.254a7.65 7.65 0 0 0-1.188-.419c-.38-.112-.78-.17-1.19-.17-.411 0-.81.058-1.19.17-.38.113-.74.268-1.074.465-.335.197-.633.428-.89.693-.258.265-.462.564-.606.895-.145.332-.22.69-.22 1.073 0 .382.075.74.22 1.073.144.331.348.637.607.902.257.265.555.496.89.693.334.197.693.352 1.073.465.38.112.78.17 1.19.17.412 0 .812-.058 1.192-.17.38-.113.74-.268 1.074-.465.335-.197.633-.428.89-.693.258-.265.462-.564.607-.895.144-.332.22-.69.22-1.073 0-.383-.076-.741-.22-1.073-.145-.331-.349-.637-.607-.902a4.595 4.595 0 0 0-.89-.693 4.21 4.21 0 0 0-.465-.243zm-6.473 3.582H11.01v-2.889a.515.515 0 0 0-.515-.515.515.515 0 0 0-.516.515v2.89H8.1a.515.515 0 0 0-.516.515c0 .284.232.515.516.515h4.79a.515.515 0 0 0 .516-.515.515.515 0 0 0-.516-.516zm2.507-2.576v-.313a.515.515 0 0 0-.515-.516.515.515 0 0 0-.516.515v5.076a.515.515 0 0 0 .516.515.515.515 0 0 0 .515-.515v-2.077h.72l1.112 1.876a.516.516 0 0 0 .44.257h.58a.518.518 0 0 0 .454-.758l-1.158-1.948c.5-.309.832-.845.832-1.46v-.315a1.73 1.73 0 0 0-1.728-1.727h-1.782zm5.608 5.473c-.23 0-.417.186-.417.416 0 .23.186.417.417.417h1.54c.23 0 .416-.186.416-.417a.416.416 0 0 0-.416-.416h-1.54zM24 11.975c0 5.955-5.546 10.784-12.384 10.784-1.19 0-2.342-.15-3.436-.43-1.065.718-2.523 1.263-4.087 1.263-.416 0-.825-.033-1.222-.092.877-.61 1.558-1.488 1.89-2.565C2.366 18.85 0 15.624 0 11.975 0 6.02 5.546 1.19 12.384 1.19 19.222 1.19 24 6.02 24 11.975zm-9.554-2.646a.515.515 0 0 0-.515-.516H9.33a.515.515 0 0 0-.516.515v5.07c0 .285.232.516.516.516h4.6a.515.515 0 0 0 .516-.515.515.515 0 0 0-.516-.516h-4.084v-1.538h3.353a.515.515 0 0 0 .515-.515.515.515 0 0 0-.515-.516h-3.353v-1.47h4.085a.515.515 0 0 0 .515-.515z"/></svg>
+                              )}
+                              {sp.id === "linkedin" && (
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                              )}
+                              {sp.id === "x" && (
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                              )}
+                              {sp.id === "messenger" && (
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.974 12-11.111C24 4.975 18.627 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259L10.732 8.2l3.131 3.259L19.752 8.2l-6.559 6.763z"/></svg>
+                              )}
+                              {sp.id === "instagram" && (
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+                              )}
+                            </button>
+                          ))}
+                          <button
+                            className="share-icon-btn copy-btn"
+                            onClick={() => { copyPostLink(p, page); }}
+                            disabled={!p.external_post_id}
+                            title={t("dashboard.schedule.copyLink")}
+                          >
+                            <Copy size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="menu-divider" />
+
+                      <button className="menu-item danger" onClick={() => { setActiveMenu(null); setDeletePost(p); }}>
+                        <Trash2 size={14} /> {t("dashboard.schedule.deleteAction")}
                       </button>
                     </div>
                   )}
@@ -525,6 +646,8 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
           </div>
         </div>
       )}
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
@@ -1543,16 +1666,62 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           backdrop-filter: blur(var(--glass-blur-lg));
           -webkit-backdrop-filter: blur(var(--glass-blur-lg));
           border: 1px solid var(--glass-border);
-          border-radius: 10px; padding: 4px; z-index: 30;
-          min-width: 170px;
+          border-radius: 10px; padding: 4px; z-index: 50;
+          min-width: 210px;
         }
-        .action-menu button {
+        .menu-item-group { display: flex; flex-direction: column; }
+        .menu-item {
+          display: flex; align-items: center; gap: 8px; width: 100%;
+          background: none; border: none; color: var(--text);
+          font-size: 12.5px; padding: 9px 12px; border-radius: 6px; cursor: pointer;
+        }
+        .menu-item:hover { background: var(--glass-bg); }
+        .menu-item.danger { color: var(--danger); }
+        .menu-item:disabled { opacity: .35; cursor: not-allowed; }
+
+        .menu-has-submenu { position: relative; }
+        .menu-trigger { display: flex; align-items: center; gap: 8px; width: 100%; }
+        .sub-arrow { margin-left: auto; opacity: .5; }
+        .submenu {
+          position: absolute; left: calc(100% + 4px); top: 0; z-index: 60;
+          background: var(--glass-bg-dark);
+          backdrop-filter: blur(var(--glass-blur-lg));
+          -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+          border: 1px solid var(--glass-border);
+          border-radius: 10px; padding: 4px; min-width: 140px;
+          white-space: nowrap;
+        }
+        .submenu button {
           display: block; width: 100%; text-align: left; background: none; border: none;
-          color: var(--text); font-size: 12.5px; padding: 9px 12px; border-radius: 6px; cursor: pointer;
+          color: var(--text); font-size: 12px; padding: 8px 12px; border-radius: 6px; cursor: pointer;
         }
-        .action-menu button:hover { background: var(--glass-bg); }
-        .action-menu button.danger { color: var(--danger); }
-        .action-menu button:disabled { opacity: .35; cursor: not-allowed; }
+        .submenu button:hover { background: var(--glass-bg); }
+        .submenu button:disabled { opacity: .35; cursor: not-allowed; }
+
+        .menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+        .menu-share { padding: 8px 12px; }
+        .menu-share-label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 6px; }
+
+        .share-icons { display: flex; gap: 3px; flex-wrap: wrap; }
+        .share-icon-btn {
+          display: flex; align-items: center; justify-content: center;
+          width: 26px; height: 26px; border-radius: 6px; border: none;
+          background: var(--glass-bg); cursor: pointer; transition: background .12s, color .12s;
+          color: var(--text-muted);
+        }
+        .share-icon-btn:hover { background: var(--glass-bg-light); color: var(--share-color, var(--text)); }
+        .share-icon-btn:disabled { opacity: .25; cursor: not-allowed; }
+        .share-icon-btn svg { width: 13px; height: 13px; }
+        .share-icon-btn.copy-btn:hover { color: var(--accent); }
+
+        .toast {
+          position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 999;
+          background: var(--accent); color: #fff; padding: 10px 20px;
+          border-radius: 8px; font-size: 13px; pointer-events: none;
+          animation: toast-in .2s ease;
+        }
+        @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; } }
 
         .modal-detail { max-width: 500px; }
         .detail-media { margin-bottom: 14px; }

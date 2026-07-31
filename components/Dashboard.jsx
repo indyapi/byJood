@@ -36,10 +36,6 @@ function useConnectionFields(t) {
   ];
 }
 
-const today = new Date();
-const dayKey = (d) => d.toISOString().slice(0, 10);
-const addDays = (d, n) => { const c = new Date(d); c.setDate(c.getDate() + n); return c; };
-
 /* ---------------------------------------------------------
    Small building blocks
 --------------------------------------------------------- */
@@ -381,8 +377,8 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
 --------------------------------------------------------- */
 function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, authed, t, PLATFORMS, locale }) {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState(dayKey(today));
-  const [weekStart, setWeekStart] = useState(addDays(today, -1));
+  const [filterMonth, setFilterMonth] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
@@ -430,12 +426,49 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     return () => document.removeEventListener("mousedown", handleClick);
   }, [activeMenu]);
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const countFor = (d) => groups.filter((g) => g.date === dayKey(d)).length;
-  const dayGroups = groups.filter((g) => g.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time));
+  // Dynamic badge filters: months (layer 1) and active days (layer 2) with post counts.
+  const monthCounts = useMemo(() => {
+    const m = {};
+    groups.forEach((g) => {
+      const key = g.date.slice(0, 7);
+      m[key] = (m[key] || 0) + 1;
+    });
+    return m;
+  }, [groups]);
+  const months = useMemo(() => Object.keys(monthCounts).sort(), [monthCounts]);
 
-  const dayLabel = (d) =>
-    d.toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { weekday: "short" }).replace(".", "");
+  const dayCounts = useMemo(() => {
+    const d = {};
+    groups.forEach((g) => {
+      if (filterMonth && g.date.slice(0, 7) !== filterMonth) return;
+      d[g.date] = (d[g.date] || 0) + 1;
+    });
+    return d;
+  }, [groups, filterMonth]);
+  const activeDays = useMemo(() => Object.keys(dayCounts).sort(), [dayCounts]);
+
+  // Effective date: null means "all days of the selected month / all posts".
+  const effectiveDate = selectedDate && dayCounts[selectedDate] ? selectedDate : null;
+  const displayGroups = groups
+    .filter((g) => {
+      if (effectiveDate && g.date !== effectiveDate) return false;
+      if (!effectiveDate && filterMonth && g.date.slice(0, 7) !== filterMonth) return false;
+      return true;
+    })
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+  const monthLabel = (key) => {
+    const [y, m] = key.split("-").map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { month: "long" });
+  };
+  const dayTabLabel = (key) => {
+    const [y, m, d] = key.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    const loc = locale === "th" ? "th-TH" : "en-US";
+    const wd = dt.toLocaleDateString(loc, { weekday: "short" }).replace(".", "");
+    const mn = dt.toLocaleDateString(loc, { month: "short" }).replace(".", "");
+    return `${wd}. ${d} ${mn}.`;
+  };
 
   async function handleDeleteConfirmed() {
     if (!deletePost) return;
@@ -575,21 +608,44 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
         </button>
       </div>
 
-      <div className="week-strip">
-        <button className="icon-btn" onClick={() => setWeekStart(addDays(weekStart, -7))}><ChevronLeft size={16} /></button>
-        {days.map((d) => {
-          const key = dayKey(d);
-          const active = key === selectedDate;
-          const isToday = key === dayKey(today);
-          return (
-            <button key={key} className={`day-pill ${active ? "active" : ""}`} onClick={() => setSelectedDate(key)}>
-              <span className="day-name">{dayLabel(d)}</span>
-              <span className="day-num">{d.getDate()}{isToday && <span className="today-dot" />}</span>
-              {countFor(d) > 0 && <span className="day-count">{countFor(d)}</span>}
+      <div className="schedule-filters">
+        <div className="filter-row">
+          <span className="filter-label">{t("dashboard.schedule.monthLabel")}</span>
+          <div className="filter-pills">
+            <button
+              className={`filter-pill ${filterMonth === null ? "active" : ""}`}
+              onClick={() => { setFilterMonth(null); setSelectedDate(null); }}
+            >
+              {t("dashboard.schedule.allMonths")}
             </button>
-          );
-        })}
-        <button className="icon-btn" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight size={16} /></button>
+            {months.map((mk) => (
+              <button
+                key={mk}
+                className={`filter-pill ${filterMonth === mk ? "active" : ""}`}
+                onClick={() => { setFilterMonth(mk); setSelectedDate(null); }}
+              >
+                {monthLabel(mk)} <span className="pill-count">({monthCounts[mk]})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeDays.length > 0 && (
+          <div className="filter-row">
+            <span className="filter-label">{t("dashboard.schedule.weekdayLabel")}</span>
+            <div className="filter-pills">
+              {activeDays.map((dk) => (
+                <button
+                  key={dk}
+                  className={`filter-pill ${selectedDate === dk ? "active" : ""}`}
+                  onClick={() => { setSelectedDate(dk); setFilterMonth(dk.slice(0, 7)); }}
+                >
+                  {dayTabLabel(dk)} <span className="pill-count">({dayCounts[dk]})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {openedGroup ? (
@@ -726,7 +782,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
             </div>
           )}
         </>
-      ) : dayGroups.length === 0 ? (
+      ) : displayGroups.length === 0 ? (
         <div className="empty">
           <CalendarClock size={28} />
           <p>{t("dashboard.schedule.empty")}</p>
@@ -734,7 +790,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
         </div>
       ) : (
         <div className="group-grid">
-          {dayGroups.map((g) => (
+          {displayGroups.map((g) => (
             <div className={"card group-card" + (activeGroupMenu === g.id ? " menu-open" : "")} key={g.id} onClick={() => openGroupDetail(g)}>
               {g.total === 0 ? (
                 <div className="group-card-body">
@@ -795,7 +851,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
       {modalOpen && (
         <AddPostModal
           pages={pages}
-          defaultDate={selectedDate}
+          defaultDate={selectedDate || new Date().toISOString().slice(0, 10)}
           onClose={() => setModalOpen(false)}
           onAdd={(result) => {
             if (result.group && result.posts) {
@@ -1919,23 +1975,23 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         .empty.small { padding: 26px; }
 
-        .week-strip { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; overflow-x: auto; padding: 8px 4px 6px; }
-        .day-pill {
-          position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+        .schedule-filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+        .filter-row { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+        .filter-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; padding-top: 8px; min-width: 40px; }
+        .filter-pills { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+        .filter-pill {
+          display: inline-flex; align-items: center; gap: 5px;
           background: var(--glass-bg);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
           border: 1px solid var(--glass-border);
-          border-radius: 10px;
-          padding: 10px 16px; cursor: pointer; min-width: 56px; color: var(--text-muted); flex-shrink: 0;
-          transition: border-color .12s;
+          border-radius: 999px;
+          padding: 7px 14px; cursor: pointer; color: var(--text-muted); flex-shrink: 0;
+          transition: border-color .12s, color .12s, background .12s;
         }
-        .day-pill:hover { border-color: var(--glass-border-light); }
-        .day-pill.active { color: var(--accent); border-color: var(--glass-border-accent); background: var(--accent-soft); }
-        .day-name { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
-        .day-num { font-family: var(--font-display); font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 3px; }
-        .today-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
-        .day-count { position: absolute; top: -4px; right: -4px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; line-height: 1; border-radius: 20px; padding: 3px 6px; pointer-events: none; z-index: 2; }
+        .filter-pill:hover { border-color: var(--glass-border-light); }
+        .filter-pill.active { color: var(--accent); border-color: var(--glass-border-accent); background: var(--accent-soft); }
+        .filter-pill .pill-count { font-weight: 700; white-space: nowrap; }
 
         .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
         .group-card { cursor: pointer; position: relative; transition: border-color .12s, transform .12s; }

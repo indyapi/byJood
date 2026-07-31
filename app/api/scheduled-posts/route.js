@@ -74,5 +74,5 @@ export async function POST(request) {
     posts.push(post);
   }
 
-  return Response.json({ group, posts }, { status: 201 });
+  return Response.json({ group: { ...group, thumbnail: media_urls?.[0] || null }, posts }, { status: 201 });
 }

@@ -8,7 +8,7 @@ import {
   Plus, X, Eye, EyeOff, Trash2, ChevronLeft, ChevronRight, Clock,
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
   Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal, User,
-  Mail, Shield, Edit3, Camera, Check, LogOut, Menu,
+  Mail, Shield, Edit3, Camera, Check, LogOut, Menu, Folder,
 } from "lucide-react";
 import Breadcrumb from "./Breadcrumb";
 import { createClientSupabase } from "@/lib/supabase-client";
@@ -74,6 +74,21 @@ function StatusPipeline({ status, t }) {
       ))}
       <span className="pipe-label">{meta.label}</span>
     </div>
+  );
+}
+
+function MediaThumb({ src, size = 44, icon = "image" }) {
+  if (!src) {
+    return (
+      <span className="thumb thumb-fallback" style={{ width: size, height: size }}>
+        {icon === "folder" ? <Folder size={Math.round(size * 0.45)} /> : <ImageIcon size={Math.round(size * 0.45)} />}
+      </span>
+    );
+  }
+  return (
+    <span className="thumb" style={{ width: size, height: size }}>
+      <img src={src} alt="" className="thumb-img" loading="lazy" />
+    </span>
   );
 }
 
@@ -654,7 +669,10 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
             <button className="link-btn" onClick={closeGroupDetail}>
               <ChevronLeft size={14} /> {t("dashboard.schedule.backToGroups")}
             </button>
-            <h2 className="group-detail-title">{openedGroup.name}</h2>
+            <div className="group-detail-title-row">
+              <MediaThumb src={openedGroup.thumbnail} icon="folder" />
+              <h2 className="group-detail-title">{openedGroup.name}</h2>
+            </div>
             <div className="group-detail-meta">
               <Clock size={13} />
               <span>{openedGroup.date} {openedGroup.time}</span>
@@ -675,6 +693,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                 return (
                   <div className={"post-row" + (activeMenu === p.id ? " menu-open" : "")} key={p.id}>
                     <div className="post-time"><Clock size={13} />{p.time}</div>
+                    <MediaThumb src={p.media_urls?.[0]} size={40} />
                     <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
                     <div className="post-body">
                       <div className="post-page">
@@ -794,8 +813,13 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
             <div className={"card group-card" + (activeGroupMenu === g.id ? " menu-open" : "")} key={g.id} onClick={() => openGroupDetail(g)}>
               {g.total === 0 ? (
                 <div className="group-card-body">
-                  <div className="group-card-name">{g.name}</div>
-                  <div className="group-card-row">{g.date} {g.time}</div>
+                  <div className="group-card-head">
+                    <MediaThumb src={g.thumbnail} />
+                    <div className="group-card-title">
+                      <div className="group-card-name">{g.name}</div>
+                      <div className="group-card-row">{g.date} {g.time}</div>
+                    </div>
+                  </div>
                   <div className="group-card-status">
                     <span className="group-status-zero">{t("dashboard.schedule.noPostsInGroup")}</span>
                   </div>
@@ -803,12 +827,17 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
               ) : (
                 <>
                   <div className="group-card-body">
-                    <div className="group-card-name">{g.name}</div>
-                    <div className="group-card-row">
-                      <Clock size={12} />
-                      <span>{g.date} {g.time}</span>
-                      <span className="group-dot">·</span>
-                      <span>{g.total} {t("dashboard.schedule.pagesSuffix")}</span>
+                    <div className="group-card-head">
+                      <MediaThumb src={g.thumbnail} />
+                      <div className="group-card-title">
+                        <div className="group-card-name">{g.name}</div>
+                        <div className="group-card-row">
+                          <Clock size={12} />
+                          <span>{g.date} {g.time}</span>
+                          <span className="group-dot">·</span>
+                          <span>{g.total} {t("dashboard.schedule.pagesSuffix")}</span>
+                        </div>
+                      </div>
                     </div>
                     <div className="group-card-status">
                       {g.posted > 0 && <span className="status-dot-group success" />}
@@ -1626,6 +1655,7 @@ function groupFromDb(g) {
     posted: g.posted || 0,
     failed: g.failed || 0,
     pending: g.pending || 0,
+    thumbnail: g.thumbnail || null,
     date: d ? d.toLocaleDateString("sv-SE") : "",
     time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
   };
@@ -1997,7 +2027,12 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .group-card { cursor: pointer; position: relative; transition: border-color .12s, transform .12s; }
         .group-card:hover { border-color: var(--glass-border-accent); transform: translateY(-1px); }
         .group-card.menu-open { z-index: 10; }
+        .thumb { display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--glass-bg-dark); border: 1px solid var(--glass-border); }
+        .thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .thumb-fallback { color: var(--text-dim); }
         .group-card-body { display: flex; flex-direction: column; gap: 8px; }
+        .group-card-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .group-card-title { flex: 1; min-width: 0; }
         .group-card-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
         .group-card-row { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-muted); }
         .group-dot { color: var(--text-dim); }
@@ -2016,6 +2051,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .group-detail-head { margin-bottom: 18px; }
         .group-detail-head .link-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; margin-bottom: 8px; }
         .group-detail-title { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+        .group-detail-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .group-detail-title-row .group-detail-title { margin: 0; }
         .group-detail-meta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); }
         .group-detail-sep { color: var(--text-dim); }
 

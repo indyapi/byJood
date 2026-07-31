@@ -280,12 +280,13 @@ export default function Navbar() {
         }
         .gl-btn:hover { border-color: var(--glass-border-light); }
         .gl-btn-primary {
-          background: var(--accent);
+          background: var(--gradient-btn);
           color: #fff;
-          border-color: var(--accent);
+          border-color: transparent;
           margin-left: 4px;
+          box-shadow: 0 4px 16px rgba(86,49,209,.28);
         }
-        .gl-btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .gl-btn-primary:hover { background: var(--gradient-btn); filter: brightness(1.08); border-color: transparent; }
 
         .gl-theme-group { position: relative; margin-left: 6px; }
         .gl-icon-btn {

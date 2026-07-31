@@ -72,11 +72,7 @@ function StatusPipeline({ status, t }) {
           />
         </React.Fragment>
       ))}
-      {meta.failed ? (
-        <span className="pipe-label failed">{meta.label}</span>
-      ) : (
-        <span className="pipe-label">{meta.label}</span>
-      )}
+      <span className={`pipe-label pipe-label-${status}`}>{meta.label}</span>
     </div>
   );
 }
@@ -1118,7 +1114,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                                         {clickable ? (
                                           <ExternalLink size={12} className="submenu-page-link" />
                                         ) : (
-                                          <span className="submenu-page-status">{t(`dashboard.status.${post.status}`)}</span>
+                                          <span className={`submenu-page-status submenu-page-status-${post.status}`}>{t(`dashboard.status.${post.status}`)}</span>
                                         )}
                                       </span>
                                     </button>
@@ -2218,17 +2214,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     <div className="shell">
       <style>{`
         :root {
-          --bg: transparent;
           --panel: var(--glass-bg);
           --panel-alt: var(--glass-bg-dark);
           --border: var(--glass-border);
-          --text: var(--text);
           --text-muted: var(--text-secondary);
-          --text-dim: #38333F;
-          --accent: var(--accent);
           --accent-soft: var(--accent-dim);
-          --warning-soft: rgba(242,184,75,.18);
-          --danger-soft: rgba(242,121,92,.15);
+          --warning-soft: rgba(248,195,74,.16);
+          --danger-soft: rgba(255,107,129,.14);
           --overlay: var(--modal-overlay);
           --radius: var(--radius-sm);
         }
@@ -2236,7 +2228,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .shell {
           display: flex;
           height: 100dvh;
-          background: var(--glass-bg-dark);
+          background:
+            radial-gradient(circle at 85% -10%, var(--glow-accent), transparent 55%),
+            radial-gradient(circle at -10% 110%, rgba(86,49,209,.12), transparent 50%),
+            var(--glass-bg-dark);
           backdrop-filter: blur(var(--glass-blur));
           -webkit-backdrop-filter: blur(var(--glass-blur));
           color: var(--text);
@@ -2370,8 +2365,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           padding: 9px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
           cursor: pointer; border: none; font-family: var(--font); transition: opacity .15s;
         }
-        .btn-primary { background: var(--accent); color: #fff; border: 1px solid var(--glass-border-accent); }
-        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary { background: var(--gradient-btn); color: #fff; border: 1px solid var(--glass-border-accent); box-shadow: 0 4px 18px rgba(86,49,209,.28); }
+        .btn-primary:hover { background: var(--gradient-btn); filter: brightness(1.08); }
         .btn-ghost { background: var(--glass-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--text-muted); border: 1px solid var(--glass-border); }
         .btn-ghost:hover { color: var(--text); border-color: var(--glass-border-light); }
         .btn-danger { background: var(--danger); color: #fff; }
@@ -2394,12 +2389,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
         .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
         .card {
-          background: var(--glass-bg);
+          background: var(--glass);
           backdrop-filter: blur(var(--glass-blur));
           -webkit-backdrop-filter: blur(var(--glass-blur));
           border: 1px solid var(--glass-border);
           border-radius: var(--radius);
-          padding: 16px; transition: border-color .15s;
+          padding: 16px; transition: border-color .15s, box-shadow .15s;
+          box-shadow: var(--shadow);
         }
         .card:hover { border-color: var(--glass-border-accent); }
         .card-alert { border-color: var(--danger); }
@@ -2460,7 +2456,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
         .group-card { cursor: pointer; position: relative; transition: border-color .12s, transform .12s; }
         .group-card:hover { border-color: var(--glass-border-accent); transform: translateY(-1px); }
-        .group-card.menu-open { z-index: 10; }
+        .group-card.menu-open { z-index: 50; }
         .thumb { display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--glass-bg-dark); border: 1px solid var(--glass-border); }
         .thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .thumb-fallback { color: var(--text-dim); }
@@ -2471,25 +2467,25 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .group-card-row { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-muted); }
         .group-dot { color: var(--text-dim); }
         .group-card-status { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; margin-top: 4px; }
-        .status-dot-group { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-        .status-dot-group.success { background: var(--success); }
-        .status-dot-group.pending { background: var(--warning); }
-        .status-dot-group.failed { background: var(--danger); }
-        .status-count { font-weight: 500; }
-        .status-count.success { color: var(--success); }
-        .status-count.pending { color: var(--warning); }
-        .status-count.failed { color: var(--danger); }
+        .status-dot-group { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .status-dot-group.success { background: var(--badge-success-text); }
+        .status-dot-group.pending { background: var(--badge-pending-text); }
+        .status-dot-group.failed { background: var(--badge-failed-text); }
+        .status-count { font-weight: 600; font-size: 11px; padding: 1px 8px; border-radius: 999px; line-height: 1.6; }
+        .status-count.success { color: var(--badge-success-text); background: var(--badge-success-bg); }
+        .status-count.pending { color: var(--badge-pending-text); background: var(--badge-pending-bg); }
+        .status-count.failed { color: var(--badge-failed-text); background: var(--badge-failed-bg); }
         .group-status-zero { color: var(--text-dim); font-size: 11.5px; }
         .retry-chip {
           display: inline-flex; align-items: center; gap: 4px;
-          font-size: 11px; font-weight: 600; color: var(--danger);
-          background: var(--danger-soft); border: 1px solid var(--danger);
+          font-size: 11px; font-weight: 600; color: var(--badge-failed-text);
+          background: var(--badge-failed-bg); border: 1px solid transparent;
           border-radius: 999px; padding: 2px 9px; cursor: pointer; transition: all .12s;
         }
         .retry-chip:hover:not(:disabled) { background: var(--danger); color: #fff; }
         .retry-chip:disabled { opacity: .5; cursor: not-allowed; }
         .menu-item.retry-item { color: var(--danger); }
-        .menu-item.retry-item:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); }
+        .menu-item.retry-item:hover:not(:disabled) { background: var(--badge-failed-bg); color: var(--danger); }
         .menu-item.retry-item:disabled { opacity: .5; cursor: not-allowed; }
         .group-actions { position: absolute; top: 12px; right: 10px; }
         .group-actions .action-menu { right: 0; left: auto; }
@@ -2514,7 +2510,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           transition: border-color .12s;
         }
         .post-row:hover { border-color: var(--glass-border-accent); }
-        .post-row.menu-open { z-index: 10; }
+        .post-row.menu-open { z-index: 50; }
         .post-time {
           display: flex; align-items: center; gap: 5px; font-family: var(--font-mono);
           font-size: 12px; color: var(--text-muted); width: 62px; flex-shrink: 0;
@@ -2526,47 +2522,59 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
         .action-menu {
           position: absolute; right: 0; top: calc(100% + 6px);
-          background: var(--glass-bg-dark);
+          background: var(--surface);
           backdrop-filter: blur(var(--glass-blur-lg));
           -webkit-backdrop-filter: blur(var(--glass-blur-lg));
-          border: 1px solid var(--glass-border);
+          border: 1px solid var(--border);
           border-radius: 10px; padding: 4px; z-index: 50;
           min-width: 210px;
+          box-shadow: var(--shadow);
         }
         .menu-item-group { display: flex; flex-direction: column; }
         .menu-item {
           display: flex; align-items: center; gap: 8px; width: 100%;
           background: none; border: none; color: var(--text);
           font-size: 12.5px; padding: 9px 12px; border-radius: 6px; cursor: pointer;
+          transition: background .1s;
         }
-        .menu-item:hover { background: var(--glass-bg); }
+        .menu-item:hover { background: var(--hover-bg); }
         .menu-item.danger { color: var(--danger); }
+        .menu-item.danger:hover { background: var(--badge-failed-bg); }
         .menu-item:disabled { opacity: .35; cursor: not-allowed; }
 
-        .menu-has-submenu { position: relative; }
+        .menu-has-submenu { position: relative; z-index: 100; }
         .menu-trigger { display: flex; align-items: center; gap: 8px; width: 100%; }
         .sub-arrow { margin-left: auto; opacity: .5; }
         .submenu {
-          position: absolute; right: 100%; top: 0; z-index: 60; margin-right: 8px;
+          position: absolute; left: 100%; top: 0; z-index: 100; margin-left: 8px;
           background: var(--glass-bg-dark);
           backdrop-filter: blur(var(--glass-blur-lg));
           -webkit-backdrop-filter: blur(var(--glass-blur-lg));
-          border: 1px solid var(--glass-border);
+          border: 1px solid var(--glass-border-accent);
           border-radius: 10px; padding: 4px; min-width: 140px;
           white-space: nowrap;
+          box-shadow: 0 12px 32px rgba(0,0,0,.28), var(--shadow);
+        }
+        .group-detail-actions .submenu {
+          left: auto; right: 100%; margin-left: 0; margin-right: 8px;
         }
         .submenu button {
           display: block; width: 100%; text-align: left; background: none; border: none;
           color: var(--text); font-size: 12px; padding: 8px 12px; border-radius: 6px; cursor: pointer;
+          transition: background .1s;
         }
-        .submenu button:hover { background: var(--glass-bg); }
+        .submenu button:hover { background: var(--hover-bg); }
         .submenu button:disabled { opacity: .35; cursor: not-allowed; }
 
         .view-post-submenu { min-width: 190px; }
         .submenu-page { display: flex; align-items: center; gap: 8px; min-width: 0; }
         .submenu-page-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .submenu-page-link { color: var(--text-dim); flex-shrink: 0; }
-        .submenu-page-status { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .03em; flex-shrink: 0; }
+        .submenu-page-status { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; flex-shrink: 0; padding: 1px 7px; border-radius: 999px; }
+        .submenu-page-status-posted, .submenu-page-status-success { color: var(--badge-success-text); background: var(--badge-success-bg); }
+        .submenu-page-status-queued { color: var(--badge-queued-text); background: var(--badge-queued-bg); }
+        .submenu-page-status-pending { color: var(--badge-pending-text); background: var(--badge-pending-bg); }
+        .submenu-page-status-failed { color: var(--badge-failed-text); background: var(--badge-failed-bg); }
 
         .menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
@@ -2592,7 +2600,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           animation: toast-in .2s ease;
           max-width: 90vw; text-align: center; white-space: normal;
         }
-        .toast-success { background: #16a34a; }
+        .toast-success { background: var(--success); }
         .toast-error { background: var(--danger); }
         .toast-info { background: var(--accent); }
         @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; } }
@@ -2646,8 +2654,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           width: 20px; height: 20px; border-radius: 50%; color: #fff;
         }
         .fb-eng-like { background: var(--accent); }
-        .fb-eng-comment { background: #16a34a; }
-        .fb-eng-share { background: #7c3aed; }
+        .fb-eng-comment { background: var(--success); }
+        .fb-eng-share { background: var(--accent); }
         .fb-view-btn {
           display: inline-flex; align-items: center; gap: 5px;
           background: var(--accent); color: #fff; border: none; cursor: pointer;
@@ -2674,8 +2682,11 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .pipe-seg { width: 16px; height: 2px; background: var(--border); border-radius: 1px; }
         .pipe-seg.filled { background: var(--accent); }
         .pipe-seg.failed { background: var(--danger); }
-        .pipe-label { font-size: 11px; color: var(--text-dim); margin-left: 10px; font-family: var(--font-mono); width: 60px; }
-        .pipe-label.failed { color: var(--danger); font-weight: 700; background: var(--danger-soft); border: 1px solid var(--danger); border-radius: 999px; padding: 1px 8px; width: auto; }
+        .pipe-label { font-size: 10.5px; font-weight: 600; margin-left: 10px; font-family: var(--font-mono); width: auto; white-space: nowrap; padding: 2px 9px; border-radius: 999px; letter-spacing: .02em; }
+        .pipe-label-posted { color: var(--badge-success-text); background: var(--badge-success-bg); }
+        .pipe-label-queued { color: var(--badge-queued-text); background: var(--badge-queued-bg); }
+        .pipe-label-pending { color: var(--badge-pending-text); background: var(--badge-pending-bg); }
+        .pipe-label-failed { color: var(--badge-failed-text); background: var(--badge-failed-bg); font-weight: 700; }
 
         .reset-badge { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); background: var(--glass-bg-dark); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--glass-border); padding: 7px 14px; border-radius: 20px; }
         .stat-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -2730,12 +2741,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
         .modal-overlay { position: fixed; inset: 0; background: var(--modal-overlay); display: flex; align-items: flex-start; justify-content: center; z-index: 50; padding: 40px 20px; overflow-y: auto; backdrop-filter: blur(2px); }
         .modal {
-          background: var(--glass-bg);
+          background: var(--glass-bg-dark);
           backdrop-filter: blur(var(--glass-blur-lg));
           -webkit-backdrop-filter: blur(var(--glass-blur-lg));
           border: 1px solid var(--glass-border);
           border-radius: var(--radius);
           width: 100%; max-width: 440px; padding: 22px; box-sizing: border-box;
+          box-shadow: var(--shadow);
         }
         .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .modal-head h2 { font-family: var(--font-display); font-size: 17px; font-weight: 600; }

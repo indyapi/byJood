@@ -175,7 +175,9 @@ export default function HomePage() {
         .gl-hero::after {
           content: '';
           position: absolute; inset: 0;
-          background: linear-gradient(135deg, var(--glass-bg), var(--glass-bg-dark), var(--glass-bg), var(--bokeh-1));
+          background:
+            radial-gradient(circle at 50% 30%, var(--glow-accent), transparent 70%),
+            linear-gradient(135deg, var(--glass-bg), var(--glass-bg-dark), var(--glass-bg), var(--bokeh-1));
           background-size: 300% 300%;
           animation: heroGrad 12s ease infinite;
           z-index: 1;
@@ -231,11 +233,12 @@ export default function HomePage() {
           transition: opacity .2s;
         }
         .gl-btn-primary {
-          background: var(--accent);
+          background: var(--gradient-btn);
           color: #fff;
-          border: 1px solid var(--glass-border-accent);
+          border: 1px solid transparent;
+          box-shadow: 0 6px 22px rgba(86,49,209,.32);
         }
-        .gl-btn-primary:hover { background: var(--accent-hover); }
+        .gl-btn-primary:hover { background: var(--gradient-btn); filter: brightness(1.08); }
         .gl-btn-ghost {
           background: var(--glass-bg);
           backdrop-filter: blur(8px);
@@ -291,14 +294,15 @@ export default function HomePage() {
           max-width: 1000px; margin: 0 auto;
         }
         .gl-card {
-          background: var(--glass-bg);
+          background: var(--glass);
           backdrop-filter: blur(var(--glass-blur));
           -webkit-backdrop-filter: blur(var(--glass-blur));
           border: 1px solid var(--glass-border);
           border-radius: var(--radius);
           padding: 26px 22px;
           display: flex; flex-direction: column; gap: 12px;
-          transition: border-color .2s;
+          transition: border-color .2s, box-shadow .2s;
+          box-shadow: var(--shadow);
         }
         .gl-card:hover { border-color: var(--glass-border-accent); }
         .gl-card-icon {
@@ -369,12 +373,13 @@ export default function HomePage() {
           display: flex; align-items: center; gap: 14px;
           padding: 16px 18px;
           border-radius: var(--radius);
-          background: var(--glass-bg);
+          background: var(--glass);
           backdrop-filter: blur(var(--glass-blur));
           -webkit-backdrop-filter: blur(var(--glass-blur));
           border: 1px solid var(--glass-border);
           text-decoration: none;
-          transition: border-color .2s;
+          transition: border-color .2s, box-shadow .2s;
+          box-shadow: var(--shadow);
         }
         .gl-guide-card:hover { border-color: var(--glass-border-accent); }
         .gl-guide-icon {

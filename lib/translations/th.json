@@ -242,6 +242,7 @@
       "changeGroupTimeTitle": "เปลี่ยนวันเวลา",
       "deleteGroupTitle": "ลบกลุ่ม",
       "deleteGroupConfirm": "พิมพ์ชื่อกลุ่มเพื่อยืนยันการลบ โพสต์ทั้งหมดในกลุ่มนี้จะถูกลบด้วย",
+      "typeDeleteToConfirm": "พิมพ์ \"delete\" เพื่อยืนยัน:",
       "typeGroupNameLabel": "พิมพ์ \"{name}\" เพื่อยืนยัน:",
       "deleteGroupBtn": "ลบกลุ่ม",
       "viewTitle": "รายละเอียดโพสต์",

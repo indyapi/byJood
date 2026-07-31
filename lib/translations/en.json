@@ -242,6 +242,7 @@
       "changeGroupTimeTitle": "Change Schedule Time",
       "deleteGroupTitle": "Delete Group",
       "deleteGroupConfirm": "Type the group name to confirm deletion. All posts in this group will also be deleted.",
+      "typeDeleteToConfirm": "Type \"delete\" to confirm:",
       "typeGroupNameLabel": "Type \"{name}\" to confirm:",
       "deleteGroupBtn": "Delete Group",
       "viewTitle": "Post Details",

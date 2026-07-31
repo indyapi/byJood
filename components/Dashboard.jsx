@@ -488,7 +488,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   }
 
   async function handleDeleteGroupConfirmed() {
-    if (!deleteGroup || groupDeleteConfirm !== deleteGroup.name) return;
+    if (!deleteGroup || groupDeleteConfirm.toLowerCase().trim() !== "delete") return;
     const res = await fetch(`/api/post-groups/${deleteGroup.id}`, { method: "DELETE" });
     if (res.status === 401) { router.replace("/sign-in"); return; }
     if (res.ok || res.status === 204) {
@@ -901,12 +901,12 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
             </div>
             <p className="delete-body">{t("dashboard.schedule.deleteGroupConfirm")}</p>
             <div className="field-group">
-              <label className="field-label">{t("dashboard.schedule.typeGroupNameLabel", { name: deleteGroup.name })}</label>
-              <input className="input" autoFocus value={groupDeleteConfirm} onChange={(e) => setGroupDeleteConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleDeleteGroupConfirmed()} placeholder={deleteGroup.name} />
+              <label className="field-label">{t("dashboard.schedule.typeDeleteToConfirm")}</label>
+              <input className="input" autoFocus value={groupDeleteConfirm} onChange={(e) => setGroupDeleteConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleDeleteGroupConfirmed()} placeholder="delete" />
             </div>
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => setDeleteGroup(null)}>{t("dashboard.schedule.cancel")}</button>
-              <button className="btn btn-danger" onClick={handleDeleteGroupConfirmed} disabled={groupDeleteConfirm !== deleteGroup.name}>{t("dashboard.schedule.deleteGroupBtn")}</button>
+              <button className="btn btn-danger" onClick={handleDeleteGroupConfirmed} disabled={groupDeleteConfirm.toLowerCase().trim() !== "delete"}>{t("dashboard.schedule.deleteGroupBtn")}</button>
             </div>
           </div>
         </div>

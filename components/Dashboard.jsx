@@ -1902,15 +1902,15 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         .empty.small { padding: 26px; }
 
-        .week-strip { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; overflow-x: auto; padding-bottom: 4px; }
+        .week-strip { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; overflow-x: auto; padding: 8px 4px 6px; }
         .day-pill {
-          position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px;
+          position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
           background: var(--glass-bg);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
           border: 1px solid var(--glass-border);
           border-radius: 10px;
-          padding: 10px 16px; cursor: pointer; min-width: 56px; color: var(--text-muted);
+          padding: 10px 16px; cursor: pointer; min-width: 56px; color: var(--text-muted); flex-shrink: 0;
           transition: border-color .12s;
         }
         .day-pill:hover { border-color: var(--glass-border-light); }
@@ -1918,7 +1918,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .day-name { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
         .day-num { font-family: var(--font-display); font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 3px; }
         .today-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
-        .day-count { position: absolute; top: -6px; right: -6px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; border-radius: 20px; padding: 2px 6px; }
+        .day-count { position: absolute; top: -4px; right: -4px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; line-height: 1; border-radius: 20px; padding: 3px 6px; pointer-events: none; z-index: 2; }
 
         .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
         .group-card { cursor: pointer; position: relative; transition: border-color .12s, transform .12s; }

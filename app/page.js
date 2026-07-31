@@ -121,7 +121,10 @@ export default function HomePage() {
       <footer className="gl-footer">
         <div className="gl-footer-top">
           <div className="gl-footer-brand">
-            <div className="gl-footer-logo">bJ</div>
+            <div className="gl-footer-logo">
+              <img src="/logo_white.png" alt="byJood Logo" className="gl-footer-logo-dark" />
+              <img src="/logo_black.png" alt="byJood Logo" className="gl-footer-logo-light" />
+            </div>
             <p className="gl-footer-tagline">{t("footer.tagline")}</p>
           </div>
           <div className="gl-footer-links">
@@ -417,17 +420,23 @@ export default function HomePage() {
           display: flex; gap: 48px;
         }
         .gl-footer-logo {
-          width: 36px; height: 36px;
-          border-radius: var(--radius-sm);
-          background: var(--glass-bg);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          border: 1px solid var(--glass-border-accent);
-          color: var(--accent);
-          font-family: var(--font-display);
-          font-weight: 700; font-size: 14px;
-          display: flex; align-items: center; justify-content: center;
+          display: flex;
+          align-items: center;
           margin-bottom: 10px;
+        }
+        .gl-footer-logo img {
+          height: 30px;
+          width: auto;
+          display: block;
+        }
+        .gl-footer-logo img.gl-footer-logo-light { display: none; }
+        @media (min-width: 721px) {
+          [data-desktop-theme="light"] .gl-footer-logo img.gl-footer-logo-dark { display: none; }
+          [data-desktop-theme="light"] .gl-footer-logo img.gl-footer-logo-light { display: block; }
+        }
+        @media (max-width: 720px) {
+          [data-mobile-theme="light"] .gl-footer-logo img.gl-footer-logo-dark { display: none; }
+          [data-mobile-theme="light"] .gl-footer-logo img.gl-footer-logo-light { display: block; }
         }
         .gl-footer-tagline {
           color: var(--text-muted);

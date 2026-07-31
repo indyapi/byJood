@@ -49,17 +49,15 @@ export default function Navbar() {
   const isActive = (href) => pathname === href;
   const dtIcon = desktopTheme === "dark" ? Moon : Sun;
   const mtIcon = mobileTheme === "dark" ? Moon : Sun;
+  const desktopLogo = desktopTheme === "dark" ? "/logo_white.png" : "/logo_black.png";
+  const mobileLogo = mobileTheme === "dark" ? "/logo_white.png" : "/logo_black.png";
 
   return (
     <>
       <nav className="gl-nav">
         <div className="gl-nav-inner">
           <Link href="/" className="gl-logo">
-            <span className="gl-logo-glass">bJ</span>
-            <div className="gl-logo-text">
-              <span className="gl-logo-title">byJood</span>
-              <span className="gl-logo-sub">Social Poster</span>
-            </div>
+            <img src={desktopLogo} alt="byJood Logo" className="gl-logo-img" />
           </Link>
 
           <div className="gl-nav-links">
@@ -118,7 +116,7 @@ export default function Navbar() {
 
       <nav className="gl-mobile-top">
         <Link href="/" className="gl-mob-logo">
-          <span className="gl-logo-glass">bJ</span>
+          <img src={mobileLogo} alt="byJood Logo" className="gl-mob-logo-img" />
         </Link>
         <div className="gl-mob-top-right">
           <button
@@ -143,11 +141,7 @@ export default function Navbar() {
       <div className={`gl-mob-drawer ${showMobileMore ? "open" : ""}`} ref={moreRef}>
         <div className="gl-mob-drawer-head">
           <Link href="/" className="gl-logo" onClick={() => setShowMobileMore(false)}>
-            <span className="gl-logo-glass">bJ</span>
-            <div className="gl-logo-text">
-              <span className="gl-logo-title">byJood</span>
-              <span className="gl-logo-sub">Social Poster</span>
-            </div>
+            <img src={mobileLogo} alt="byJood Logo" className="gl-logo-img" />
           </Link>
         </div>
         <div className="gl-mob-drawer-body">
@@ -213,34 +207,10 @@ export default function Navbar() {
           justify-content: space-between;
         }
         .gl-logo { display: flex; align-items: center; gap: 10px; }
-        .gl-logo-glass {
-          width: 32px; height: 32px;
-          border-radius: var(--radius-sm);
-          background: var(--glass-bg);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          border: 1px solid var(--glass-border-accent);
-          color: var(--accent);
-          font-family: var(--font-display);
-          font-weight: 700;
-          font-size: 13px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .gl-logo-text { display: flex; flex-direction: column; line-height: 1.15; }
-        .gl-logo-title {
-          font-family: var(--font-display);
-          font-weight: 700;
-          font-size: 15px;
-          color: var(--text-heading);
-        }
-        .gl-logo-sub {
-          font-family: var(--font-mono);
-          font-size: 7.5px;
-          letter-spacing: .12em;
-          color: var(--text-muted);
-          text-transform: uppercase;
+        .gl-logo-img {
+          height: 32px;
+          width: auto;
+          display: block;
         }
 
         .gl-nav-links { display: flex; align-items: center; gap: 4px; }
@@ -367,6 +337,11 @@ export default function Navbar() {
             border-bottom: 1px solid var(--glass-border);
           }
           .gl-mob-logo { display: flex; align-items: center; }
+          .gl-mob-logo-img {
+            height: 32px;
+            width: auto;
+            display: block;
+          }
           .gl-mob-top-right { display: flex; align-items: center; gap: 6px; }
           .gl-hamburger {
             width: 38px; height: 38px;

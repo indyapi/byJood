@@ -92,16 +92,16 @@ export default function Navbar() {
                 <div className="gl-theme-pop">
                   <div className="gl-theme-row">
                     <Monitor size={13} />
-                    <span>Desktop</span>
+                    <span>{t("nav.themeDesktop")}</span>
                     <button className="gl-theme-chip" onClick={toggleDesktopTheme}>
-                      {desktopTheme === "dark" ? "Dark Pastel" : "Light Pastel"}
+                      {desktopTheme === "dark" ? t("nav.themeDark") : t("nav.themeLight")}
                     </button>
                   </div>
                   <div className="gl-theme-row">
                     <Smartphone size={13} />
-                    <span>Mobile</span>
+                    <span>{t("nav.themeMobile")}</span>
                     <button className="gl-theme-chip" onClick={toggleMobileTheme}>
-                      {mobileTheme === "dark" ? "Dark Pastel" : "Light Pastel"}
+                      {mobileTheme === "dark" ? t("nav.themeDark") : t("nav.themeLight")}
                     </button>
                   </div>
                 </div>
@@ -165,17 +165,17 @@ export default function Navbar() {
           </Link>
         </div>
         <div className="gl-mob-drawer-foot">
-          <div className="gl-mob-drawer-label">Theme</div>
+          <div className="gl-mob-drawer-label">{t("nav.theme")}</div>
           <div className="gl-mob-drawer-row">
-            <span>Desktop</span>
+            <span>{t("nav.themeDesktop")}</span>
             <button className="gl-theme-chip" onClick={toggleDesktopTheme}>
-              {desktopTheme === "dark" ? "Dark Pastel" : "Light Pastel"}
+              {desktopTheme === "dark" ? t("nav.themeDark") : t("nav.themeLight")}
             </button>
           </div>
           <div className="gl-mob-drawer-row">
-            <span>Mobile</span>
+            <span>{t("nav.themeMobile")}</span>
             <button className="gl-theme-chip" onClick={toggleMobileTheme}>
-              {mobileTheme === "dark" ? "Dark Pastel" : "Light Pastel"}
+              {mobileTheme === "dark" ? t("nav.themeDark") : t("nav.themeLight")}
             </button>
           </div>
           <div className="gl-mob-drawer-div" />

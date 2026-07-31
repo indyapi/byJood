@@ -6,7 +6,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
-    "back": "Back"
+    "back": "Back",
+    "backHome": "Back to Home"
   },
   "nav": {
     "about": "ABOUT",
@@ -15,7 +16,12 @@
     "signIn": "SIGN IN",
     "signUp": "SIGN UP",
     "signOut": "SIGN OUT",
-    "profile": "Profile"
+    "profile": "Profile",
+    "theme": "Theme",
+    "themeDesktop": "Desktop",
+    "themeMobile": "Mobile",
+    "themeDark": "Dark Pastel",
+    "themeLight": "Light Pastel"
   },
   "hero": {
     "badge": "byJood v0.2 | Auto-post to multiple platforms",
@@ -42,6 +48,7 @@
   "about": {
     "title": "What is byJood?",
     "body": "byJood is an automated cross-platform posting system for businesses and Content Creators who need to manage multiple pages across multiple social media platforms simultaneously.",
+    "eyebrow": "ABOUT",
     "card1Title": "Problem Solved",
     "card1Desc": "Posting page by page takes time, and looping all pages in one function causes timeouts. byJood uses Fan-Out Pattern — 1 page = 1 independent Queue job.",
     "card2Title": "Architecture",
@@ -52,6 +59,7 @@
   "controlRoom": {
     "title": "Dashboard — Everything in One Place",
     "subtitle": "Manage connected pages, schedule posts, and view real-time post history.",
+    "eyebrow": "CONTROL ROOM",
     "card1Title": "Connect Pages",
     "card1Desc": "Add Access Tokens or connect via OAuth for Facebook, Instagram, TikTok, Threads, Website",
     "card2Title": "Schedule Posts",
@@ -105,6 +113,9 @@
     "title": "Setup Guide",
     "subtitle": "Step-by-step instructions to connect each platform.",
     "readMore": "Read more",
+    "notFound": "Platform not found",
+    "readyToConnect": "Ready to connect?",
+    "goToDashboard": "Go to Dashboard",
     "facebookTitle": "Facebook",
     "facebookDesc": "Create a Meta app, enable Pages API, and obtain your App ID, App Secret, Page Access Token, and Page ID to connect your Facebook Page.",
     "facebookArticle": "To connect your Facebook Page to byJood, you need to create a Meta for Developers app — this acts as the bridge between byJood and Facebook's APIs. Start by visiting developers.facebook.com and logging in with your Facebook account. Navigate to My Apps and select Create App, choosing Business as the app type. Give your app a name and provide your contact email, then complete the creation process.\n\n### Create the Meta App\n\nOnce your app is created, you will land on its dashboard. This is your control center for managing API access. The first thing you need to do is add the Pages API product. Go to the Add Products section, find Pages API, and click Set Up. This grants your app permission to read from and publish to Facebook Pages — without this, your app cannot interact with any page.\n\n### Gather Your Credentials\n\nWith the Pages API enabled, head to Settings → Basic in your app dashboard. Here you will find two critical pieces of information: your App ID and App Secret. The App ID is a public identifier for your app. The App Secret must be kept confidential — it is used to authenticate your app on the server side. Copy both values and store them securely.\n\n### Generate a Page Access Token\n\nNext, you need a Page Access Token. This token tells Facebook that your app has permission to act on behalf of a specific page. Open the Graph API Explorer at developers.facebook.com/tools/explorer. Select your app from the dropdown in the top-left corner. In the User or Page dropdown, choose your Facebook Page. Under Permissions, add the following scopes: pages_manage_posts (to create posts), pages_read_engagement (to view post performance), and pages_show_list (to list your pages). Click Generate Access Token, then copy the resulting token.\n\n### Find Your Page ID\n\nFinally, you need your Facebook Page ID. Open your Facebook Page in a browser, click About below the cover photo, and scroll down to the Page Transparency section. Your Page ID is a long numeric string — copy it. This ID tells byJood which Facebook Page to publish to.\n\nOnce you have your App ID, App Secret, Page Access Token, and Page ID, enter them in the byJood dashboard under Manage Pages. Your Facebook Page is now connected.",

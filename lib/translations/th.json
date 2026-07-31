@@ -6,7 +6,8 @@
     "save": "บันทึก",
     "cancel": "ยกเลิก",
     "delete": "ลบ",
-    "back": "กลับ"
+    "back": "กลับ",
+    "backHome": "กลับหน้าแรก"
   },
   "nav": {
     "about": "เกี่ยวกับ",
@@ -15,7 +16,12 @@
     "signIn": "เข้าสู่ระบบ",
     "signUp": "สมัครสมาชิก",
     "signOut": "ออกจากระบบ",
-    "profile": "โปรไฟล์"
+    "profile": "โปรไฟล์",
+    "theme": "ธีม",
+    "themeDesktop": "เดสก์ท็อป",
+    "themeMobile": "มือถือ",
+    "themeDark": "ดาร์กพาสเทล",
+    "themeLight": "ไลต์พาสเทล"
   },
   "hero": {
     "badge": "byJood v0.2 | Auto-post to multiple platforms",
@@ -42,6 +48,7 @@
   "about": {
     "title": "byJood คืออะไร?",
     "body": "byJood เป็นระบบโพสต์อัตโนมัติข้ามแพลตฟอร์ม สำหรับธุรกิจหรือ Content Creator ที่ต้องจัดการหลายเพจในหลาย Social Media พร้อมกัน",
+    "eyebrow": "ABOUT",
     "card1Title": "ปัญหาที่แก้",
     "card1Desc": "เดิมทีการโพสต์ทีละเพจใช้เวลามาก และถ้าใช้ฟังก์ชัน loop โพสต์ทุกเพจพร้อมกันจะเจอ timeout ยิ่งเพจมาก ยิ่งพัง byJood ใช้ Fan-Out Pattern แยก 1 เพจ = 1 Job ใน Queue — แต่ละ job อิสระต่อกัน",
     "card2Title": "สถาปัตยกรรม",
@@ -52,6 +59,7 @@
   "controlRoom": {
     "title": "Dashboard จัดการทุกอย่าง",
     "subtitle": "จัดการเพจที่เชื่อมต่อ ตั้งเวลาโพสต์ และดูประวัติการโพสต์แบบ Real-time",
+    "eyebrow": "CONTROL ROOM",
     "card1Title": "เชื่อมต่อเพจ",
     "card1Desc": "เพิ่ม Access Token หรือเชื่อมต่อผ่าน OAuth สำหรับ Facebook, Instagram, TikTok, Threads, Website",
     "card2Title": "ตั้งเวลาโพสต์",
@@ -105,6 +113,9 @@
     "title": "วิธีการเชื่อมต่อ",
     "subtitle": "คำแนะนำทีละขั้นตอนในการเชื่อมต่อแต่ละแพลตฟอร์ม",
     "readMore": "อ่านเพิ่มเติม",
+    "notFound": "ไม่พบแพลตฟอร์ม",
+    "readyToConnect": "พร้อมเชื่อมต่อหรือยัง?",
+    "goToDashboard": "ไปที่ Dashboard",
     "facebookTitle": "Facebook",
     "facebookDesc": "สร้างแอป Meta เปิดใช้งาน Pages API และรับ App ID, App Secret, Page Access Token และ Page ID เพื่อเชื่อมต่อ Facebook Page ของคุณ",
     "facebookArticle": "การเชื่อมต่อ Facebook Page ของคุณกับ byJood คุณต้องสร้างแอปบน Meta for Developers — ซึ่งทำหน้าที่เป็นสะพานเชื่อมระหว่าง byJood กับ API ของ Facebook เริ่มต้นโดยไปที่ developers.facebook.com และเข้าสู่ระบบด้วยบัญชี Facebook ของคุณ ไปที่ My Apps และเลือก Create App โดยเลือก Business เป็นประเภทแอป ตั้งชื่อแอปและระบุอีเมลติดต่อ จากนั้นทำการสร้างให้เสร็จสมบูรณ์\n\n### สร้าง Meta App\n\nเมื่อแอปของคุณถูกสร้างขึ้นแล้ว คุณจะเข้าสู่หน้าแดชบอร์ดของแอป ซึ่งเป็นศูนย์ควบคุมสำหรับการจัดการการเข้าถึง API สิ่งแรกที่คุณต้องทำคือเพิ่ม Pages API ไปที่ Add Products หา Pages API แล้วคลิก Set Up การดำเนินการนี้จะให้สิทธิ์แอปของคุณในการอ่านและเผยแพร่ไปยัง Facebook Pages — หากไม่มีขั้นตอนนี้ แอปของคุณจะไม่สามารถโต้ตอบกับเพจใด ๆ ได้\n\n### เก็บข้อมูลรับรองของคุณ\n\nเมื่อเปิดใช้งาน Pages API แล้ว ไปที่ Settings → Basic ในแดชบอร์ดแอปของคุณ ที่นี่คุณจะพบข้อมูลสำคัญสองส่วน: App ID และ App Secret App ID เป็นตัวระบุสาธารณะสำหรับแอปของคุณ ส่วน App Secret ต้องเก็บเป็นความลับ — ใช้สำหรับยืนยันตัวตนแอปของคุณฝั่งเซิร์ฟเวอร์ คัดลอกทั้งสองค่าและเก็บไว้อย่างปลอดภัย\n\n### สร้าง Page Access Token\n\nขั้นตอนถัดไป คุณต้องมี Page Access Token Token นี้บอก Facebook ว่าแอปของคุณมีสิทธิ์ดำเนินการในนามของเพจที่ระบุ เปิด Graph API Explorer ที่ developers.facebook.com/tools/explorer เลือกแอปของคุณจาก dropdown มุมซ้ายบน ใน dropdown User or Page เลือก Facebook Page ของคุณ ภายใต้ Permissions เพิ่ม scopes ต่อไปนี้: pages_manage_posts (เพื่อสร้างโพสต์), pages_read_engagement (เพื่อดูประสิทธิภาพโพสต์), และ pages_show_list (เพื่อแสดงรายการเพจของคุณ) คลิก Generate Access Token แล้วคัดลอก Token ที่ได้\n\n### ค้นหา Page ID\n\nสุดท้าย คุณต้องหา Facebook Page ID เปิด Facebook Page ของคุณในเบราว์เซอร์ คลิก About ใต้รูปปก เลื่อนลงไปที่ส่วน Page Transparency Page ID ของคุณคือตัวเลขยาว — คัดลอกไว้ ID นี้จะบอก byJood ว่าให้เผยแพร่ไปยัง Facebook Page ใด\n\nเมื่อคุณมี App ID, App Secret, Page Access Token และ Page ID แล้ว กรอกข้อมูลเหล่านี้ในแดชบอร์ด byJood ภายใต้ Manage Pages Facebook Page ของคุณก็พร้อมเชื่อมต่อแล้ว",

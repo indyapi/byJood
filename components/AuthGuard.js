@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClientSupabase } from "@/lib/supabase-client";
+import { useTranslation } from "@/lib/TranslationsProvider";
 
 export default function AuthGuard({ children }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function AuthGuard({ children }) {
         fontFamily: "var(--font)",
         fontSize: "14px",
       }}>
-        <span style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.08em" }}>LOADING...</span>
+        <span style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.08em" }}>{t("common.loading").toUpperCase()}</span>
       </div>
     );
   }

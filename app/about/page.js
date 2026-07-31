@@ -15,7 +15,7 @@ export default function AboutPage() {
         <Link href="/" className="gl-back">
           <ArrowLeft size={15} /> {t("common.back")}
         </Link>
-        <span className="gl-badge-sm">ABOUT</span>
+        <span className="gl-badge-sm">{t("about.eyebrow")}</span>
         <h1 className="gl-about-title">{t("about.title")}</h1>
         <p className="gl-about-body">{t("about.body")}</p>
         <div className="gl-about-cards">

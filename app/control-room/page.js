@@ -13,7 +13,7 @@ export default function ControlRoomPage() {
     <main className="gl-cr">
       <div className="gl-card-lg">
         <Breadcrumb paths={[{ label: t("nav.controlRoom"), href: "/control-room" }]} />
-        <span className="gl-badge-sm">CONTROL ROOM</span>
+        <span className="gl-badge-sm">{t("controlRoom.eyebrow")}</span>
         <h1 className="gl-cr-title">{t("controlRoom.title")}</h1>
         <p className="gl-cr-sub">{t("controlRoom.subtitle")}</p>
         <div className="gl-cr-grid">

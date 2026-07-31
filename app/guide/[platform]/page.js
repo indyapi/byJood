@@ -27,8 +27,8 @@ export default function GuidePage() {
     return (
       <div className="gl-guide-wrap">
         <div className="gl-guide-box">
-          <h1>Platform not found</h1>
-          <Link href="/" className="gl-guide-back"><ArrowLeft size={16} /> Back to Home</Link>
+          <h1>{t("tutorial.notFound")}</h1>
+          <Link href="/" className="gl-guide-back"><ArrowLeft size={16} /> {t("common.backHome")}</Link>
         </div>
         <style>{guideStyles}</style>
       </div>
@@ -70,7 +70,7 @@ export default function GuidePage() {
         </div>
         <div className="gl-guide-footer">
           <CheckCircle size={16} style={{ color: "var(--accent)" }} />
-          <span>Ready to connect? <Link href="/dashboard" className="gl-guide-cta">Go to Dashboard</Link></span>
+          <span>{t("tutorial.readyToConnect")} <Link href="/dashboard" className="gl-guide-cta">{t("tutorial.goToDashboard")}</Link></span>
         </div>
       </div>
       <style>{guideStyles}</style>

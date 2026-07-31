@@ -11,7 +11,7 @@ export async function POST(request, { params }) {
 
   const { data: group, error: gErr } = await admin
     .from("post_groups")
-    .select("id, retry_count, last_retry_at, retry_window_start")
+    .select("*")
     .eq("id", params.id)
     .eq("user_id", user.id)
     .single();
@@ -49,7 +49,7 @@ export async function POST(request, { params }) {
     .update(fields)
     .eq("id", params.id)
     .eq("user_id", user.id)
-    .select("id, retry_count, last_retry_at, retry_window_start")
+    .select("*")
     .single();
 
   if (uErr) return Response.json({ error: uErr.message }, { status: 500 });

@@ -12,7 +12,7 @@ export async function POST(request, { params }) {
 
   const { data: post, error: fetchError } = await admin
     .from("scheduled_posts")
-    .select("status, retry_count, last_retry_at, retry_window_start")
+    .select("*")
     .eq("id", params.id)
     .eq("user_id", user.id)
     .single();

@@ -10,7 +10,7 @@ export async function GET() {
 
   const { data: groups, error } = await admin
     .from("post_groups")
-    .select("id, name, scheduled_at, created_at, retry_count, last_retry_at, retry_window_start")
+    .select("*")
     .eq("user_id", user.id)
     .order("scheduled_at", { ascending: true });
 

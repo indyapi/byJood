@@ -424,7 +424,12 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     if (res.status === 401) { router.replace("/sign-in"); return; }
     if (res.ok) {
       const data = await res.json();
-      setGroups(data.map(groupFromDb));
+      console.log("[Dashboard] GET /api/post-groups ->", data);
+      const mapped = (Array.isArray(data) ? data : []).map(groupFromDb).filter(Boolean);
+      console.log("[Dashboard] groups mapped ->", mapped);
+      setGroups(mapped);
+    } else {
+      console.error("[Dashboard] GET /api/post-groups failed", res.status, await res.text().catch(() => ""));
     }
   }
 
@@ -454,6 +459,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   const monthCounts = useMemo(() => {
     const m = {};
     groups.forEach((g) => {
+      if (!g.date) return;
       const key = g.date.slice(0, 7);
       m[key] = (m[key] || 0) + 1;
     });
@@ -464,6 +470,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   const dayCounts = useMemo(() => {
     const d = {};
     groups.forEach((g) => {
+      if (!g.date) return;
       if (filterMonth && g.date.slice(0, 7) !== filterMonth) return;
       d[g.date] = (d[g.date] || 0) + 1;
     });
@@ -511,7 +518,11 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     if (res.status === 401) { router.replace("/sign-in"); return; }
     if (res.ok) {
       const data = await res.json();
-      setGroupPosts((data.posts || []).map(postFromDb));
+      const mapped = (Array.isArray(data.posts) ? data.posts : []).map(postFromDb).filter(Boolean);
+      console.log("[Dashboard] group detail ->", data, "posts mapped ->", mapped);
+      setGroupPosts(mapped);
+    } else {
+      console.error("[Dashboard] GET /api/post-groups/[id] failed", res.status);
     }
   }
 
@@ -669,7 +680,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
           const r2 = await fetch(`/api/post-groups/${mapped.id}`);
           if (r2.ok) {
             const data = await r2.json();
-            setGroupPosts((data.posts || []).map(postFromDb));
+            setGroupPosts((Array.isArray(data.posts) ? data.posts : []).map(postFromDb).filter(Boolean));
           }
         }
         setToast({ kind: "success", message: t("dashboard.schedule.retrySuccess") });
@@ -842,6 +853,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
               {groupPosts.map((p) => {
                 const page = pages.find((pg) => pg.id === p.pageId);
                 const isPosted = isPublished(p);
+                const rinfo = retryInfo(p, t);
                 return (
                   <div className={"post-row" + (activeMenu === p.id ? " menu-open" : "")} key={p.id}>
                     <div className="post-time"><Clock size={13} />{p.time}</div>
@@ -878,10 +890,10 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                               <button
                                 className="menu-item retry-item"
                                 onClick={() => { setActiveMenu(null); handleRetryPost(p); }}
-                                disabled={retryInfo(p, t).disabled}
-                                title={retryInfo(p, t).disabled ? retryInfo(p, t).label : t("dashboard.schedule.retryAction")}
+                                disabled={rinfo.disabled}
+                                title={rinfo.disabled ? rinfo.label : t("dashboard.schedule.retryAction")}
                               >
-                                <RefreshCw size={14} /> {retryInfo(p, t).label}
+                                <RefreshCw size={14} /> {rinfo.label}
                               </button>
                             )}
 
@@ -961,7 +973,9 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
         </div>
       ) : (
         <div className="group-grid">
-          {displayGroups.map((g) => (
+          {displayGroups.map((g) => {
+            const ginfo = retryInfo(g, t);
+            return (
             <div className={"card group-card" + (activeGroupMenu === g.id ? " menu-open" : "")} key={g.id} onClick={() => openGroupDetail(g)}>
               {g.total === 0 ? (
                 <div className="group-card-body">
@@ -1002,10 +1016,10 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                         <button
                           className="retry-chip"
                           onClick={(e) => { e.stopPropagation(); handleRetryGroup(g); }}
-                          disabled={retryInfo(g, t).disabled}
-                          title={retryInfo(g, t).disabled ? retryInfo(g, t).label : t("dashboard.schedule.retryAction")}
+                          disabled={ginfo.disabled}
+                          title={ginfo.disabled ? ginfo.label : t("dashboard.schedule.retryAction")}
                         >
-                          <RefreshCw size={12} /> {retryInfo(g, t).label}
+                          <RefreshCw size={12} /> {ginfo.label}
                         </button>
                       )}
                     </div>
@@ -1029,10 +1043,10 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                           <button
                             className="menu-item retry-item"
                             onClick={() => { setActiveGroupMenu(null); handleRetryGroup(g); }}
-                            disabled={retryInfo(g, t).disabled}
-                            title={retryInfo(g, t).disabled ? retryInfo(g, t).label : t("dashboard.schedule.retryAction")}
+                            disabled={ginfo.disabled}
+                            title={ginfo.disabled ? ginfo.label : t("dashboard.schedule.retryAction")}
                           >
-                            <RefreshCw size={14} /> {retryInfo(g, t).label}
+                            <RefreshCw size={14} /> {ginfo.label}
                           </button>
                         )}
                         <div className="menu-divider" />
@@ -1045,14 +1059,15 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                 </>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {modalOpen && (
         <AddPostModal
           pages={pages}
-          defaultDate={selectedDate || new Date().toISOString().slice(0, 10)}
+          defaultDate={selectedDate || toDateKey(new Date())}
           onClose={() => setModalOpen(false)}
           onAdd={(result) => {
             if (result.group && result.posts) {
@@ -1894,6 +1909,20 @@ function ProfileModal({ onClose, t }) {
 /* ---------------------------------------------------------
    DB shape helpers
 --------------------------------------------------------- */
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+// Deterministic local-timezone YYYY-MM-DD / HH:mm (avoid locale/UTC drift when comparing dates)
+function toDateKey(d) {
+  if (!d || Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function toTimeKey(d) {
+  if (!d || Number.isNaN(d.getTime())) return "";
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
 function pageFromDb(p) {
   const token = p.page_tokens?.[0];
   return {
@@ -1910,20 +1939,21 @@ function pageFromDb(p) {
 }
 
 function postFromDb(p) {
+  if (!p) return null;
   const d = p.scheduled_at ? new Date(p.scheduled_at) : null;
   return {
     id: p.id,
     pageId: p.page_id,
     pageName: p.page?.display_name || "",
-    platform: p.platform,
-    content: p.content,
-    media_urls: p.media_urls || [],
+    platform: p.platform || "",
+    content: p.content || "",
+    media_urls: Array.isArray(p.media_urls) ? p.media_urls : [],
     external_post_id: p.external_post_id || "",
     permalink_url: p.permalink_url || "",
     groupId: p.group_id || null,
-    date: d ? d.toLocaleDateString("sv-SE") : "",
-    time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
-    status: p.status,
+    date: toDateKey(d),
+    time: toTimeKey(d),
+    status: p.status || "pending",
     error_message: p.error_message || "",
     failed_at: p.failed_at || null,
     retry_count: p.retry_count || 0,
@@ -1933,17 +1963,18 @@ function postFromDb(p) {
 }
 
 function groupFromDb(g) {
+  if (!g) return null;
   const d = g.scheduled_at ? new Date(g.scheduled_at) : null;
   return {
     id: g.id,
-    name: g.name,
+    name: g.name || "",
     total: g.total || 0,
     posted: g.posted || 0,
     failed: g.failed || 0,
     pending: g.pending || 0,
     thumbnail: g.thumbnail || null,
-    date: d ? d.toLocaleDateString("sv-SE") : "",
-    time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
+    date: toDateKey(d),
+    time: toTimeKey(d),
     retry_count: g.retry_count || 0,
     last_retry_at: g.last_retry_at || null,
     retry_window_start: g.retry_window_start || null,
@@ -2030,7 +2061,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
   const [tab, setTab] = useState("connections");
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [pages, setPages] = useState(initialPages.map(pageFromDb));
-  const [posts, setPosts] = useState(initialPosts.map(postFromDb));
+  const [posts, setPosts] = useState(initialPosts.map(postFromDb).filter(Boolean));
   const [logs, setLogs] = useState(initialLogs.map(logFromDb));
 
   const refreshPages = useCallback(async () => {
@@ -2045,7 +2076,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     const res = await authedFetch("/api/scheduled-posts");
     if (res?.ok) {
       const data = await res.json();
-      setPosts(data.map(postFromDb));
+      console.log("[Dashboard] GET /api/scheduled-posts ->", data);
+      setPosts((Array.isArray(data) ? data : []).map(postFromDb).filter(Boolean));
+    } else {
+      console.error("[Dashboard] GET /api/scheduled-posts failed", res?.status);
     }
   }, []);
 

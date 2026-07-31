@@ -2229,9 +2229,9 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           display: flex;
           height: 100dvh;
           background:
-            radial-gradient(circle at 85% -10%, var(--glow-accent), transparent 55%),
-            radial-gradient(circle at -10% 110%, rgba(86,49,209,.12), transparent 50%),
-            var(--glass-bg-dark);
+            radial-gradient(circle at 20% 20%, rgba(158,131,255,.14), transparent 40%),
+            radial-gradient(circle at 80% 70%, rgba(96,165,250,.10), transparent 35%),
+            var(--bg);
           backdrop-filter: blur(var(--glass-blur));
           -webkit-backdrop-filter: blur(var(--glass-blur));
           color: var(--text);

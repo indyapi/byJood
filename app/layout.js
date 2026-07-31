@@ -119,115 +119,117 @@ export default function RootLayout({ children }) {
 
               /* ── Light (desktop) ── */
               [data-desktop-theme="light"] {
-                /* Background — neutral light gray */
-                --bg: #F8FAFC;
-                --bg-secondary: #F1F5F9;
-                /* Glass — white, clean */
-                --glass: rgba(255,255,255,.80);
-                --glass-border: #E2E8F0;
-                /* Surface — pure white */
+                /* Background — true white */
+                --bg: #FFFFFF;
+                --bg-secondary: #FAFAFC;
+                /* Glass — clean white glass */
+                --glass: rgba(255,255,255,.72);
+                --glass-hover: rgba(255,255,255,.82);
+                --glass-border: rgba(255,255,255,.65);
+                /* Surface */
                 --surface: #FFFFFF;
-                --surface-hover: #F1F5F9;
-                /* Primary */
+                --surface-hover: #F7F7F9;
+                /* Primary — purple as accent only */
                 --primary: #5631D1;
-                --primary-hover: #6946DC;
-                --primary-active: #4525B4;
-                /* Text — dark slate for readability */
-                --text: #0F172A;
-                --text-secondary: #334155;
-                --text-muted: #64748B;
+                --primary-hover: #6845E2;
+                --primary-active: #4325B5;
+                /* Text — warm-neutral, Linear-like */
+                --text: #171717;
+                --text-secondary: #5F5F6B;
+                --text-muted: #8F8F99;
                 /* Border / State */
-                --border: #E2E8F0;
-                --success: #15803D;
-                --warning: #A16207;
-                --error: #B91C1C;
-                --info: #2563EB;
-                /* Shadow — subtle soft */
-                --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+                --border: #ECECF3;
+                --success: #2DBE7F;
+                --warning: #F4B740;
+                --error: #EB5757;
+                --info: #3B82F6;
+                /* Shadow — soft, diffused */
+                --shadow: 0 10px 35px rgba(20,20,20,.08);
 
-                /* Badges (soft bg + dark text) */
-                --hover-bg: #F1F5F9;
-                --badge-success-bg: #DCFCE7;
-                --badge-success-text: #15803D;
-                --badge-failed-bg: #FEE2E2;
-                --badge-failed-text: #B91C1C;
-                --badge-pending-bg: #FEF9C3;
-                --badge-pending-text: #A16207;
-                --badge-queued-bg: #DBEAFE;
-                --badge-queued-text: #1D4ED8;
+                /* Badges (soft tint + saturated text) */
+                --hover-bg: #F7F7F9;
+                --badge-success-bg: rgba(45,190,127,.12);
+                --badge-success-text: #1E9E67;
+                --badge-failed-bg: rgba(235,87,87,.12);
+                --badge-failed-text: #D64545;
+                --badge-pending-bg: rgba(244,183,64,.16);
+                --badge-pending-text: #B9850A;
+                --badge-queued-bg: rgba(86,49,209,.10);
+                --badge-queued-text: #5631D1;
 
                 /* Legacy aliases */
                 --glass-bg: var(--glass);
-                --glass-bg-light: rgba(255,255,255,.55);
+                --glass-bg-light: rgba(255,255,255,.72);
                 --glass-bg-dark: rgba(255,255,255,.92);
-                --glass-border-light: #CBD5E1;
-                --glass-border-accent: rgba(86,49,209,.22);
+                --glass-border-light: rgba(255,255,255,.65);
+                --glass-border-accent: rgba(86,49,209,.18);
                 --glass-shadow: var(--shadow);
                 --bokeh-1: #C9BDFF;
                 --bokeh-2: #A58CFF;
                 --bokeh-3: #E4DCFE;
                 --bokeh-4: #67E8F9;
                 --bokeh-5: #FFC9EC;
-                --text-heading: #0F172A;
-                --text-dim: #64748B;
+                --text-heading: #171717;
+                --text-dim: #8F8F99;
                 --accent: var(--primary);
                 --accent-dim: rgba(86,49,209,.08);
                 --accent-hover: var(--primary-hover);
                 --danger: var(--error);
-                --modal-overlay: rgba(15,23,42,.25);
-                --overlay: rgba(255,255,255,.55);
+                --modal-overlay: rgba(23,23,23,.22);
+                --overlay: rgba(255,255,255,.50);
                 --bg-body: var(--bg);
               }
 
               /* ── Mobile theme override ── */
               @media (max-width: 720px) {
                 [data-mobile-theme="light"] {
-                  --bg: #F8FAFC;
-                  --bg-secondary: #F1F5F9;
-                  --glass: rgba(255,255,255,.80);
-                  --glass-border: #E2E8F0;
+                  --bg: #FFFFFF;
+                  --bg-secondary: #FAFAFC;
+                  --glass: rgba(255,255,255,.72);
+                  --glass-hover: rgba(255,255,255,.82);
+                  --glass-border: rgba(255,255,255,.65);
                   --surface: #FFFFFF;
-                  --surface-hover: #F1F5F9;
+                  --surface-hover: #F7F7F9;
                   --primary: #5631D1;
-                  --primary-hover: #6946DC;
-                  --primary-active: #4525B4;
-                  --text: #0F172A;
-                  --text-secondary: #334155;
-                  --text-muted: #64748B;
-                  --border: #E2E8F0;
-                  --success: #15803D;
-                  --warning: #A16207;
-                  --error: #B91C1C;
-                  --info: #2563EB;
-                  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-                  --hover-bg: #F1F5F9;
-                  --badge-success-bg: #DCFCE7;
-                  --badge-success-text: #15803D;
-                  --badge-failed-bg: #FEE2E2;
-                  --badge-failed-text: #B91C1C;
-                  --badge-pending-bg: #FEF9C3;
-                  --badge-pending-text: #A16207;
-                  --badge-queued-bg: #DBEAFE;
-                  --badge-queued-text: #1D4ED8;
+                  --primary-hover: #6845E2;
+                  --primary-active: #4325B5;
+                  --text: #171717;
+                  --text-secondary: #5F5F6B;
+                  --text-muted: #8F8F99;
+                  --border: #ECECF3;
+                  --success: #2DBE7F;
+                  --warning: #F4B740;
+                  --error: #EB5757;
+                  --info: #3B82F6;
+                  --shadow: 0 10px 35px rgba(20,20,20,.08);
+                  --hover-bg: #F7F7F9;
+                  --badge-success-bg: rgba(45,190,127,.12);
+                  --badge-success-text: #1E9E67;
+                  --badge-failed-bg: rgba(235,87,87,.12);
+                  --badge-failed-text: #D64545;
+                  --badge-pending-bg: rgba(244,183,64,.16);
+                  --badge-pending-text: #B9850A;
+                  --badge-queued-bg: rgba(86,49,209,.10);
+                  --badge-queued-text: #5631D1;
                   --glass-bg: var(--glass);
-                  --glass-bg-light: rgba(255,255,255,.55);
+                  --glass-bg-light: rgba(255,255,255,.72);
                   --glass-bg-dark: rgba(255,255,255,.92);
-                  --glass-border-light: #CBD5E1;
-                  --glass-border-accent: rgba(86,49,209,.22);
+                  --glass-border-light: rgba(255,255,255,.65);
+                  --glass-border-accent: rgba(86,49,209,.18);
                   --glass-shadow: var(--shadow);
                   --bokeh-1: #C9BDFF;
                   --bokeh-2: #A58CFF;
                   --bokeh-3: #E4DCFE;
                   --bokeh-4: #67E8F9;
                   --bokeh-5: #FFC9EC;
-                  --text-heading: #0F172A;
-                  --text-dim: #64748B;
+                  --text-heading: #171717;
+                  --text-dim: #8F8F99;
                   --accent: var(--primary);
                   --accent-dim: rgba(86,49,209,.08);
                   --accent-hover: var(--primary-hover);
                   --danger: var(--error);
-                  --modal-overlay: rgba(15,23,42,.25);
-                  --overlay: rgba(255,255,255,.55);
+                  --modal-overlay: rgba(23,23,23,.22);
+                  --overlay: rgba(255,255,255,.50);
                   --bg-body: var(--bg);
                 }
                 [data-mobile-theme="dark"][data-desktop-theme="light"] {

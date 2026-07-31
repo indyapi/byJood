@@ -407,6 +407,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   const [changeTimePost, setChangeTimePost] = useState(null);
   const [deletePost, setDeletePost] = useState(null);
   const [activeGroupMenu, setActiveGroupMenu] = useState(null);
+  const [viewGroupPosts, setViewGroupPosts] = useState(null);
   const [detailMenu, setDetailMenu] = useState(false);
   const [openedGroup, setOpenedGroup] = useState(null);
   const [groupPosts, setGroupPosts] = useState([]);
@@ -445,6 +446,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
         setActiveMenu(null);
         setActiveSubmenu(null);
         setActiveGroupMenu(null);
+        setViewGroupPosts(null);
       }
       if (detailMenu && !e.target.closest(".group-detail-actions")) {
         setDetailMenu(false);
@@ -524,6 +526,40 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     } else {
       console.error("[Dashboard] GET /api/post-groups/[id] failed", res.status);
     }
+  }
+
+  async function fetchGroupPosts(group) {
+    const res = await fetch(`/api/post-groups/${group.id}`);
+    if (res.status === 401) { router.replace("/sign-in"); return []; }
+    if (!res.ok) { console.error("[Dashboard] GET /api/post-groups/[id] failed", res.status); return []; }
+    const data = await res.json();
+    return (Array.isArray(data.posts) ? data.posts : []).map(postFromDb).filter(Boolean);
+  }
+
+  function groupPageEntries(posts) {
+    const seen = {};
+    const entries = [];
+    for (const p of posts) {
+      if (!p.pageId || seen[p.pageId]) continue;
+      seen[p.pageId] = true;
+      const page = pages.find((pg) => pg.id === p.pageId);
+      entries.push({ page, post: p, name: p.pageName || page?.label || "" });
+    }
+    return entries;
+  }
+
+  async function handleViewGroupPost(group, fromClick = false) {
+    const posts = viewGroupPosts?.groupId === group.id ? viewGroupPosts.posts : await fetchGroupPosts(group);
+    if (posts.length === 0) return;
+    const entries = groupPageEntries(posts);
+    const clickable = entries.filter((e) => isPublished(e.post) && getPostUrl(e.post));
+    if (fromClick && clickable.length === 1 && entries.length === 1) {
+      setActiveGroupMenu(null);
+      setViewGroupPosts(null);
+      window.open(getPostUrl(clickable[0].post), "_blank", "noopener,noreferrer");
+      return;
+    }
+    setViewGroupPosts({ groupId: group.id, posts, entries });
   }
 
   function closeGroupDetail() {
@@ -1027,7 +1063,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                   <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
                     <button
                       className="icon-btn"
-                      onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); }}
+                      onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); if (activeGroupMenu !== g.id) setViewGroupPosts(null); }}
                     >
                       <MoreHorizontal size={14} />
                     </button>
@@ -1048,6 +1084,49 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                           >
                             <RefreshCw size={14} /> {ginfo.label}
                           </button>
+                        )}
+                        {g.posted > 0 && (
+                          <div
+                            className="menu-has-submenu"
+                            onMouseEnter={() => handleViewGroupPost(g)}
+                            onMouseLeave={() => setViewGroupPosts(null)}
+                          >
+                            <button className="menu-item menu-trigger" onClick={() => handleViewGroupPost(g, true)}>
+                              <ExternalLink size={14} />
+                              <span>{t("dashboard.schedule.viewPostAction")}</span>
+                              <ChevronRight size={12} className="sub-arrow" />
+                            </button>
+                            {viewGroupPosts?.groupId === g.id && viewGroupPosts.entries.length > 1 && (
+                              <div className="submenu view-post-submenu">
+                                {viewGroupPosts.entries.map(({ post, name }) => {
+                                  const url = getPostUrl(post);
+                                  const clickable = isPublished(post) && url;
+                                  return (
+                                    <button
+                                      key={post.id}
+                                      disabled={!clickable}
+                                      onClick={() => {
+                                        if (!url) return;
+                                        setActiveGroupMenu(null);
+                                        setViewGroupPosts(null);
+                                        window.open(url, "_blank", "noopener,noreferrer");
+                                      }}
+                                    >
+                                      <span className="submenu-page">
+                                        <PlatformChip platform={post.platform} size="sm" PLATFORMS={PLATFORMS} />
+                                        <span className="submenu-page-name">{name || t("dashboard.schedule.pageNotFound")}</span>
+                                        {clickable ? (
+                                          <ExternalLink size={12} className="submenu-page-link" />
+                                        ) : (
+                                          <span className="submenu-page-status">{t(`dashboard.status.${post.status}`)}</span>
+                                        )}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         )}
                         <div className="menu-divider" />
                         <button className="menu-item danger" onClick={() => { setActiveGroupMenu(null); setDeleteGroup(g); setGroupDeleteConfirm(""); }}>
@@ -2482,6 +2561,12 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         .submenu button:hover { background: var(--glass-bg); }
         .submenu button:disabled { opacity: .35; cursor: not-allowed; }
+
+        .view-post-submenu { min-width: 190px; }
+        .submenu-page { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .submenu-page-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .submenu-page-link { color: var(--text-dim); flex-shrink: 0; }
+        .submenu-page-status { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .03em; flex-shrink: 0; }
 
         .menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
 

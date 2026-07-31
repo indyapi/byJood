@@ -186,6 +186,7 @@
     },
     "postComments": "Comments",
     "postShares": "Shares",
+    "postLikes": "Likes",
     "postEngagementNA": "Engagement not available",
     "connectionStatus": {
       "active": "Active",
@@ -252,6 +253,9 @@
       "typeGroupNameLabel": "Type \"{name}\" to confirm:",
       "deleteGroupBtn": "Delete Group",
       "viewTitle": "Post Details",
+      "viewPostAction": "View Post",
+      "readMore": "Read More",
+      "showLess": "Show Less",
       "editTitle": "Edit Post",
       "changeTimeTitle": "Change Schedule Time",
       "deleteTitle": "Delete Post",

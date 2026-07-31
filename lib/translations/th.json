@@ -186,6 +186,7 @@
     },
     "postComments": "ความคิดเห็น",
     "postShares": "แชร์",
+    "postLikes": "ไลก์",
     "postEngagementNA": "ไม่พบข้อมูลการมีส่วนร่วม",
     "connectionStatus": {
       "active": "ใช้งานได้",
@@ -253,6 +254,9 @@
       "typeGroupNameLabel": "พิมพ์ \"{name}\" เพื่อยืนยัน:",
       "deleteGroupBtn": "ลบกลุ่ม",
       "viewTitle": "รายละเอียดโพสต์",
+      "viewPostAction": "ดูโพสต์",
+      "readMore": "อ่านเพิ่มเติม",
+      "showLess": "แสดงน้อยลง",
       "editTitle": "แก้ไขโพสต์",
       "changeTimeTitle": "เปลี่ยนวันเวลา",
       "deleteTitle": "ลบโพสต์",

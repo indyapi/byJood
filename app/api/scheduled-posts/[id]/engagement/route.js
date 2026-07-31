@@ -23,12 +23,17 @@ export async function GET(request, { params }) {
     .eq("id", post.page_id)
     .single();
 
+  const pagePicture = page?.external_page_id
+    ? `https://graph.facebook.com/v25.0/${encodeURIComponent(page.external_page_id)}/picture?type=large`
+    : null;
+  const fallbackPermalink = post.external_post_id
+    ? `https://facebook.com/${post.external_post_id}`
+    : null;
+
   if (!post.external_post_id || !["facebook", "instagram", "threads"].includes(post.platform)) {
     return Response.json({
-      reactions: null, comments: null, shares: null,
-      page_picture: page?.external_page_id
-        ? `https://graph.facebook.com/v25.0/${encodeURIComponent(page.external_page_id)}/picture?type=large`
-        : null,
+      reactions: null, comments: null, shares: null, permalink_url: fallbackPermalink,
+      page_picture: pagePicture,
     });
   }
 
@@ -41,39 +46,32 @@ export async function GET(request, { params }) {
 
   if (!tokenRow?.access_token) {
     return Response.json({
-      reactions: null, comments: null, shares: null,
-      page_picture: page?.external_page_id
-        ? `https://graph.facebook.com/v25.0/${encodeURIComponent(page.external_page_id)}/picture?type=large`
-        : null,
+      reactions: null, comments: null, shares: null, permalink_url: fallbackPermalink,
+      page_picture: pagePicture,
     });
   }
 
   try {
-    const url = `https://graph.facebook.com/v25.0/${encodeURIComponent(post.external_post_id)}?fields=reactions.summary(true),comments.summary(true),shares&access_token=${encodeURIComponent(tokenRow.access_token)}`;
+    const url = `https://graph.facebook.com/v25.0/${encodeURIComponent(post.external_post_id)}?fields=reactions.summary(true),comments.summary(true),shares,permalink_url&access_token=${encodeURIComponent(tokenRow.access_token)}`;
     const res = await fetch(url);
     const data = await res.json();
     if (data?.error) {
       return Response.json({
-        reactions: null, comments: null, shares: null, error: data.error.message,
-        page_picture: page?.external_page_id
-          ? `https://graph.facebook.com/v25.0/${encodeURIComponent(page.external_page_id)}/picture?type=large`
-          : null,
+        reactions: null, comments: null, shares: null, permalink_url: fallbackPermalink, error: data.error.message,
+        page_picture: pagePicture,
       });
     }
     return Response.json({
       reactions: data?.reactions?.summary?.total_count ?? null,
       comments: data?.comments?.summary?.total_count ?? null,
       shares: data?.shares?.count ?? null,
-      page_picture: page?.external_page_id
-        ? `https://graph.facebook.com/v25.0/${encodeURIComponent(page.external_page_id)}/picture?type=large`
-        : null,
+      permalink_url: data?.permalink_url ?? fallbackPermalink,
+      page_picture: pagePicture,
     });
   } catch {
     return Response.json({
-      reactions: null, comments: null, shares: null,
-      page_picture: page?.external_page_id
-        ? `https://graph.facebook.com/v25.0/${encodeURIComponent(page.external_page_id)}/picture?type=large`
-        : null,
+      reactions: null, comments: null, shares: null, permalink_url: fallbackPermalink,
+      page_picture: pagePicture,
     });
   }
 }

@@ -936,8 +936,8 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
 
       {viewPost && (
         <ViewDetailModal
-          posts={groupPosts.length ? groupPosts : [viewPost]}
-          pages={pages}
+          post={viewPost}
+          page={pages.find((pg) => pg.id === viewPost.pageId)}
           onClose={() => setViewPost(null)}
           t={t}
           PLATFORMS={PLATFORMS}
@@ -1239,27 +1239,22 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
 /* ---------------------------------------------------------
    View Detail Modal (Facebook-style post)
 --------------------------------------------------------- */
-function ViewDetailModal({ posts, pages, onClose, t, PLATFORMS }) {
-  const [engagements, setEngagements] = useState({});
-  const [expanded, setExpanded] = useState({});
+function ViewDetailModal({ post, page, onClose, t, PLATFORMS }) {
+  const [engagement, setEngagement] = useState(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    if (!posts?.length) return;
+    if (!post?.id) return;
     let active = true;
-    setEngagements({});
-    const map = {};
-    Promise.all(
-      posts.map((p) =>
-        fetch(`/api/scheduled-posts/${p.id}/engagement`)
-          .then((res) => res.json())
-          .then((data) => { map[p.id] = data; })
-          .catch(() => {})
-      )
-    ).then(() => { if (active) setEngagements(map); });
+    setEngagement(null);
+    fetch(`/api/scheduled-posts/${post.id}/engagement`)
+      .then((res) => res.json())
+      .then((data) => { if (active) setEngagement(data); })
+      .catch(() => {});
     return () => { active = false; };
-  }, [posts]);
+  }, [post?.id]);
 
-  if (!posts?.length) return null;
+  if (!post) return null;
 
   const fmt = (n) => {
     if (n === null || n === undefined) return "0";
@@ -1268,7 +1263,19 @@ function ViewDetailModal({ posts, pages, onClose, t, PLATFORMS }) {
     return String(n);
   };
 
-  const toggleExpand = (id) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  const pageName = page?.label || post.pageName || t("dashboard.schedule.pageNotFound");
+  const picture = engagement?.page_picture || null;
+  const postedAt = post.date && post.time ? `${post.date} ${post.time}` : "";
+  const isPosted = post.status === "posted" || post.status === "success";
+  const permalink = engagement?.permalink_url || (post.external_post_id ? `https://facebook.com/${post.external_post_id}` : null);
+
+  const content = post.content || "";
+  const needsToggle = content.length > 200;
+  const shownContent = expanded || !needsToggle ? content : content.slice(0, 200) + "…";
+
+  const likes = engagement?.reactions ?? 0;
+  const comments = engagement?.comments ?? 0;
+  const shares = engagement?.shares ?? 0;
 
   return (
     <div className="modal-overlay">
@@ -1278,90 +1285,67 @@ function ViewDetailModal({ posts, pages, onClose, t, PLATFORMS }) {
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
         </div>
 
-        <div className="fb-list">
-          {posts.map((post) => {
-            const page = pages.find((pg) => pg.id === post.pageId);
-            const engagement = engagements[post.id] || {};
-            const pageName = page?.label || post.pageName || t("dashboard.schedule.pageNotFound");
-            const picture = engagement.page_picture || null;
-            const postedAt = post.date && post.time ? `${post.date} ${post.time}` : "";
-            const isPosted = post.status === "posted";
-            const permalink = engagement.permalink_url || (post.external_post_id ? `https://facebook.com/${post.external_post_id}` : null);
-
-            const content = post.content || "";
-            const isExpanded = !!expanded[post.id];
-            const needsToggle = content.length > 200;
-            const shownContent = isExpanded || !needsToggle ? content : content.slice(0, 200) + "…";
-
-            const likes = engagement.reactions ?? 0;
-            const comments = engagement.comments ?? 0;
-            const shares = engagement.shares ?? 0;
-
-            return (
-              <div className="fb-post" key={post.id}>
-                <div className="fb-header">
-                  <div className="fb-avatar">
-                    {picture ? (
-                      <img src={picture} alt="" className="fb-avatar-img" />
-                    ) : (
-                      <PlatformChip platform={post.platform} PLATFORMS={PLATFORMS} />
-                    )}
-                  </div>
-                  <div className="fb-meta">
-                    <div className="fb-page-name">{pageName}</div>
-                    <div className="fb-sub">
-                      <span>{postedAt}</span>
-                      <span className="fb-dot">·</span>
-                      <FacebookIcon />
-                    </div>
-                  </div>
-                  <StatusPipeline status={post.status} t={t} />
-                  {isPosted && permalink && (
-                    <button className="fb-view-btn" onClick={() => window.open(permalink, "_blank", "noopener")}>
-                      <ExternalLink size={13} /> {t("dashboard.schedule.viewPostAction")}
-                    </button>
-                  )}
-                </div>
-
-                <div className="fb-body">
-                  <p className="fb-text">{shownContent}</p>
-                  {needsToggle && (
-                    <button className="fb-toggle" onClick={() => toggleExpand(post.id)}>
-                      {isExpanded ? t("dashboard.schedule.showLess") : t("dashboard.schedule.readMore")}
-                    </button>
-                  )}
-                  {post.media_urls?.length > 0 && (
-                    <div className="fb-media">
-                      {post.media_urls.map((url, i) => (
-                        <img key={i} src={url} alt="" className="fb-img" />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="fb-engagement">
-                  <span className="fb-eng-item">
-                    <span className="fb-eng-icon fb-eng-like">
-                      <ThumbsUp size={13} fill="currentColor" />
-                    </span>
-                    {fmt(likes)} {t("dashboard.postLikes")}
-                  </span>
-                  <span className="fb-eng-item">
-                    <span className="fb-eng-icon fb-eng-comment">
-                      <MessageCircle size={13} />
-                    </span>
-                    {fmt(comments)} {t("dashboard.postComments")}
-                  </span>
-                  <span className="fb-eng-item">
-                    <span className="fb-eng-icon fb-eng-share">
-                      <Share2 size={13} />
-                    </span>
-                    {fmt(shares)} {t("dashboard.postShares")}
-                  </span>
-                </div>
+        <div className="fb-post">
+          <div className="fb-header">
+            <div className="fb-avatar">
+              {picture ? (
+                <img src={picture} alt="" className="fb-avatar-img" />
+              ) : (
+                <PlatformChip platform={post.platform} PLATFORMS={PLATFORMS} />
+              )}
+            </div>
+            <div className="fb-meta">
+              <div className="fb-page-name">{pageName}</div>
+              <div className="fb-sub">
+                <span>{postedAt}</span>
+                <span className="fb-dot">·</span>
+                <FacebookIcon />
               </div>
-            );
-          })}
+            </div>
+            <StatusPipeline status={post.status} t={t} />
+            {isPosted && permalink && (
+              <button className="fb-view-btn" onClick={() => window.open(permalink, "_blank", "noopener")}>
+                <ExternalLink size={13} /> {t("dashboard.schedule.viewPostAction")}
+              </button>
+            )}
+          </div>
+
+          <div className="fb-body">
+            <p className="fb-text">{shownContent}</p>
+            {needsToggle && (
+              <button className="fb-toggle" onClick={() => setExpanded(!expanded)}>
+                {expanded ? t("dashboard.schedule.showLess") : t("dashboard.schedule.readMore")}
+              </button>
+            )}
+            {post.media_urls?.length > 0 && (
+              <div className="fb-media">
+                {post.media_urls.map((url, i) => (
+                  <img key={i} src={url} alt="" className="fb-img" />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="fb-engagement">
+            <span className="fb-eng-item">
+              <span className="fb-eng-icon fb-eng-like">
+                <ThumbsUp size={13} fill="currentColor" />
+              </span>
+              {fmt(likes)} {t("dashboard.postLikes")}
+            </span>
+            <span className="fb-eng-item">
+              <span className="fb-eng-icon fb-eng-comment">
+                <MessageCircle size={13} />
+              </span>
+              {fmt(comments)} {t("dashboard.postComments")}
+            </span>
+            <span className="fb-eng-item">
+              <span className="fb-eng-icon fb-eng-share">
+                <Share2 size={13} />
+              </span>
+              {fmt(shares)} {t("dashboard.postShares")}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -2278,8 +2262,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; } }
 
-        .fb-modal { max-width: 896px; width: 100%; }
-        .fb-list { display: flex; flex-direction: column; gap: 16px; }
+        .fb-modal { max-width: 768px; width: 100%; max-height: 85vh; overflow-y: auto; }
         .fb-post {
           display: flex; flex-direction: column; gap: 14px;
           border: 1px solid var(--glass-border); border-radius: var(--radius); overflow: hidden;

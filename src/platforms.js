@@ -69,19 +69,37 @@ export async function postToFacebook(job) {
   }
 
   // 2. โพสต์หลายรูป: Step 1 อัปโหลดรูปแบบ unpublished เพื่อเก็บ photo_id
-  const photoIds = [];
-  for (const url of media_urls) {
-    const photoRes = await fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
+  //    ใช้ Promise.all โดย map ผลลัพธ์กลับไปที่ index เดิมของ media_urls เพื่อคงลำดับรูป
+  const uploads = media_urls.map((url, index) =>
+    fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url, access_token, published: false }),
-    });
-    const photoData = await photoRes.json();
-    if (!photoRes.ok) return { success: false, error: `อัปโหลดรูปไม่สำเร็จ: ${photoData.error?.message}` };
-    photoIds.push(photoData.id);
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          return { index, ok: false, error: data.error?.message ?? "Unknown FB upload error" };
+        }
+        return { index, ok: true, id: data.id };
+      })
+      .catch(() => ({ index, ok: false, error: "Network error while uploading photo" }))
+  );
+
+  const results = await Promise.all(uploads);
+  const failed = results.find((r) => !r.ok);
+  if (failed) {
+    return { success: false, error: `อัปโหลดรูปไม่สำเร็จ: ${failed.error}` };
   }
 
-  // 2. Step 2 สร้าง Feed Post โดยแนบ photo_id ทั้งหมด แล้วเผยแพร่
+  // เรียง photo_id ตาม index เดิมของ media_urls (รูปที่ 1 = cover)
+  const orderedPhotoIds = results
+    .sort((a, b) => a.index - b.index)
+    .map((r) => r.id);
+
+  // 2. Step 2 สร้าง Feed Post โดยแนบ attached_media ตามลำดับที่ผู้ใช้จัดไว้ แล้วเผยแพร่
+  const attachedMedia = orderedPhotoIds.map((media_fbid) => ({ media_fbid }));
+
   const feedRes = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -89,7 +107,7 @@ export async function postToFacebook(job) {
       message: content,
       access_token,
       published: true,
-      attached_media: photoIds.map((id) => ({ media_fbid: id })),
+      attached_media: attachedMedia,
     }),
   });
   const feedData = await feedRes.json();

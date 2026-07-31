@@ -253,6 +253,7 @@
       "typeGroupNameLabel": "Type \"{name}\" to confirm:",
       "deleteGroupBtn": "Delete Group",
       "viewTitle": "Post Details",
+      "targetPages": "Target Pages",
       "viewPostAction": "View Post",
       "readMore": "Read More",
       "showLess": "Show Less",

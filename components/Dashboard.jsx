@@ -937,7 +937,8 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
       {viewPost && (
         <ViewDetailModal
           post={viewPost}
-          page={pages.find((pg) => pg.id === viewPost.pageId)}
+          posts={groupPosts.length ? groupPosts : [viewPost]}
+          pages={pages}
           onClose={() => setViewPost(null)}
           t={t}
           PLATFORMS={PLATFORMS}
@@ -1239,18 +1240,29 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
 /* ---------------------------------------------------------
    View Detail Modal (Facebook-style post)
 --------------------------------------------------------- */
-function ViewDetailModal({ post, page, onClose, t, PLATFORMS }) {
-  const [engagement, setEngagement] = useState(null);
+function ViewDetailModal({ post, posts, pages, onClose, t, PLATFORMS }) {
+  const [engagements, setEngagements] = useState({});
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
 
+  const list = posts && posts.length ? posts : [post];
+
   useEffect(() => {
-    if (!post?.id) return;
+    if (!list.length) return;
     let active = true;
-    setEngagement(null);
-    fetch(`/api/scheduled-posts/${post.id}/engagement`)
-      .then((res) => res.json())
-      .then((data) => { if (active) setEngagement(data); })
-      .catch(() => {});
+    setLoading(true);
+    setEngagements({});
+    const map = {};
+    Promise.all(
+      list.map((p) =>
+        fetch(`/api/scheduled-posts/${p.id}/engagement`)
+          .then((res) => res.json())
+          .then((data) => { map[p.id] = data; })
+          .catch(() => {})
+      )
+    ).then(() => {
+      if (active) { setEngagements(map); setLoading(false); }
+    });
     return () => { active = false; };
   }, [post?.id]);
 
@@ -1263,19 +1275,9 @@ function ViewDetailModal({ post, page, onClose, t, PLATFORMS }) {
     return String(n);
   };
 
-  const pageName = page?.label || post.pageName || t("dashboard.schedule.pageNotFound");
-  const picture = engagement?.page_picture || null;
-  const postedAt = post.date && post.time ? `${post.date} ${post.time}` : "";
-  const isPosted = post.status === "posted" || post.status === "success";
-  const permalink = engagement?.permalink_url || (post.external_post_id ? `https://facebook.com/${post.external_post_id}` : null);
-
   const content = post.content || "";
   const needsToggle = content.length > 200;
   const shownContent = expanded || !needsToggle ? content : content.slice(0, 200) + "…";
-
-  const likes = engagement?.reactions ?? 0;
-  const comments = engagement?.comments ?? 0;
-  const shares = engagement?.shares ?? 0;
 
   return (
     <div className="modal-overlay">
@@ -1286,30 +1288,6 @@ function ViewDetailModal({ post, page, onClose, t, PLATFORMS }) {
         </div>
 
         <div className="fb-post">
-          <div className="fb-header">
-            <div className="fb-avatar">
-              {picture ? (
-                <img src={picture} alt="" className="fb-avatar-img" />
-              ) : (
-                <PlatformChip platform={post.platform} PLATFORMS={PLATFORMS} />
-              )}
-            </div>
-            <div className="fb-meta">
-              <div className="fb-page-name">{pageName}</div>
-              <div className="fb-sub">
-                <span>{postedAt}</span>
-                <span className="fb-dot">·</span>
-                <FacebookIcon />
-              </div>
-            </div>
-            <StatusPipeline status={post.status} t={t} />
-            {isPosted && permalink && (
-              <button className="fb-view-btn" onClick={() => window.open(permalink, "_blank", "noopener")}>
-                <ExternalLink size={13} /> {t("dashboard.schedule.viewPostAction")}
-              </button>
-            )}
-          </div>
-
           <div className="fb-body">
             <p className="fb-text">{shownContent}</p>
             {needsToggle && (
@@ -1325,38 +1303,77 @@ function ViewDetailModal({ post, page, onClose, t, PLATFORMS }) {
               </div>
             )}
           </div>
+        </div>
 
-          <div className="fb-engagement">
-            <span className="fb-eng-item">
-              <span className="fb-eng-icon fb-eng-like">
-                <ThumbsUp size={13} fill="currentColor" />
-              </span>
-              {fmt(likes)} {t("dashboard.postLikes")}
-            </span>
-            <span className="fb-eng-item">
-              <span className="fb-eng-icon fb-eng-comment">
-                <MessageCircle size={13} />
-              </span>
-              {fmt(comments)} {t("dashboard.postComments")}
-            </span>
-            <span className="fb-eng-item">
-              <span className="fb-eng-icon fb-eng-share">
-                <Share2 size={13} />
-              </span>
-              {fmt(shares)} {t("dashboard.postShares")}
-            </span>
-          </div>
+        <div className="fb-pages">
+          <div className="fb-pages-title">{t("dashboard.schedule.targetPages")}</div>
+          {list.map((p) => {
+            const page = pages.find((pg) => pg.id === p.pageId);
+            const engagement = engagements[p.id] || null;
+            const pageName = page?.label || p.pageName || t("dashboard.schedule.pageNotFound");
+            const picture = engagement?.page_picture || null;
+            const isPosted = p.status === "posted" || p.status === "success";
+            const permalink = engagement?.permalink_url || (p.external_post_id ? `https://facebook.com/${p.external_post_id}` : null);
+            const likes = engagement?.reactions ?? 0;
+            const comments = engagement?.comments ?? 0;
+            const shares = engagement?.shares ?? 0;
+
+            return (
+              <div className="fb-page-row" key={p.id}>
+                <div className="fb-avatar fb-avatar-sm">
+                  {picture ? (
+                    <img src={picture} alt="" className="fb-avatar-img" />
+                  ) : (
+                    <PlatformChip platform={p.platform} PLATFORMS={PLATFORMS} />
+                  )}
+                </div>
+                <div className="fb-meta">
+                  <div className="fb-page-name">{pageName}</div>
+                  <div className="fb-page-status">
+                    <StatusPipeline status={p.status} t={t} />
+                  </div>
+                </div>
+                <div className="fb-row-eng">
+                  {loading ? (
+                    <div className="fb-eng-skel">
+                      <span className="skel-bar" />
+                      <span className="skel-bar" />
+                      <span className="skel-bar" />
+                    </div>
+                  ) : (
+                    <>
+                      <span className="fb-eng-item">
+                        <span className="fb-eng-icon fb-eng-like">
+                          <ThumbsUp size={13} fill="currentColor" />
+                        </span>
+                        {fmt(likes)}
+                      </span>
+                      <span className="fb-eng-item">
+                        <span className="fb-eng-icon fb-eng-comment">
+                          <MessageCircle size={13} />
+                        </span>
+                        {fmt(comments)}
+                      </span>
+                      <span className="fb-eng-item">
+                        <span className="fb-eng-icon fb-eng-share">
+                          <Share2 size={13} />
+                        </span>
+                        {fmt(shares)}
+                      </span>
+                    </>
+                  )}
+                </div>
+                {isPosted && permalink && (
+                  <a className="fb-view-btn" href={permalink} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink size={13} /> {t("dashboard.schedule.viewPostAction")}
+                  </a>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="fb-icon" fill="currentColor" aria-hidden="true">
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-    </svg>
   );
 }
 
@@ -2268,7 +2285,28 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           border: 1px solid var(--glass-border); border-radius: var(--radius); overflow: hidden;
           background: var(--glass-bg-dark); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
         }
-        .fb-header { display: flex; align-items: center; gap: 12px; padding: 16px 18px 0; }
+        .fb-pages { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+        .fb-pages-title {
+          font-size: 12px; font-weight: 600; color: var(--text-muted);
+          text-transform: uppercase; letter-spacing: .05em;
+        }
+        .fb-page-row {
+          display: flex; align-items: center; gap: 12px;
+          background: var(--glass-bg);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
+          border: 1px solid var(--glass-border);
+          border-radius: 10px; padding: 10px 12px;
+        }
+        .fb-avatar-sm { width: 36px; height: 36px; }
+        .fb-row-eng { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-shrink: 0; }
+        .fb-eng-skel { display: flex; align-items: center; gap: 8px; }
+        .skel-bar {
+          width: 34px; height: 12px; border-radius: 6px;
+          background: var(--glass-bg-dark);
+          animation: skel-pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes skel-pulse { 0%, 100% { opacity: .35; } 50% { opacity: .85; } }
         .fb-avatar {
           width: 44px; height: 44px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
@@ -2279,18 +2317,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .fb-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .fb-meta { flex: 1; min-width: 0; }
         .fb-page-name { font-weight: 600; font-size: 13.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .fb-sub { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); }
-        .fb-dot { opacity: .6; }
-        .fb-icon { width: 12px; height: 12px; color: var(--accent); flex-shrink: 0; }
         .fb-body { padding: 6px 18px 0; }
         .fb-text { font-size: 14px; line-height: 1.6; color: var(--text); white-space: pre-wrap; word-break: break-word; margin: 0 0 14px; }
         .fb-media { display: flex; flex-direction: column; gap: 8px; }
         .fb-img { width: 100%; max-height: 460px; object-fit: cover; border-radius: var(--radius-sm); display: block; }
-        .fb-engagement {
-          display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-          padding: 14px 18px 16px; border-top: 1px solid var(--glass-border);
-          font-size: 13px; color: var(--text-muted);
-        }
         .fb-eng-item { display: inline-flex; align-items: center; gap: 6px; }
         .fb-eng-icon {
           display: inline-flex; align-items: center; justify-content: center;
@@ -2476,8 +2506,9 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           .page-picker { grid-template-columns: 1fr; max-height: 200px; }
           .field-row { flex-wrap: wrap; }
           .fb-img { max-height: 300px; }
-          .fb-header { flex-wrap: wrap; }
           .fb-view-btn { margin-left: auto; }
+          .fb-page-row { flex-wrap: wrap; gap: 8px; }
+          .fb-row-eng { margin-left: 0; }
         }
 
         /* ── Profile Modal ── */

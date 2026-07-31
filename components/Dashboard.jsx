@@ -624,7 +624,10 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     try {
       const res = await fetch(`/api/scheduled-posts/${post.id}/retry`, { method: "POST" });
       if (res.status === 401) { router.replace("/sign-in"); return; }
-      if (res.ok) {
+      if (res.status === 429) {
+        const body = await res.json().catch(() => ({}));
+        setToast({ kind: "error", message: cooldownMessage(body, t) });
+      } else if (res.ok) {
         const updated = await res.json();
         setGroupPosts((prev) => prev.map((p) => (p.id === updated.id ? postFromDb(updated) : p)));
         setToast({ kind: "success", message: t("dashboard.schedule.retrySuccess") });
@@ -636,6 +639,61 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
       setToast({ kind: "error", message: t("dashboard.schedule.retryError") });
     }
     setTimeout(() => setToast(null), 3000);
+  }
+
+  async function handleRetryGroup(group) {
+    try {
+      const res = await fetch(`/api/post-groups/${group.id}/retry`, { method: "POST" });
+      if (res.status === 401) { router.replace("/sign-in"); return; }
+      if (res.status === 429) {
+        const body = await res.json().catch(() => ({}));
+        setToast({ kind: "error", message: cooldownMessage(body, t) });
+      } else if (res.ok) {
+        const updated = await res.json();
+        const mapped = groupFromDb(updated);
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.id !== mapped.id) return g;
+            return {
+              ...mapped,
+              total: g.total,
+              posted: g.posted,
+              thumbnail: g.thumbnail,
+              failed: 0,
+              pending: g.pending + g.failed,
+            };
+          })
+        );
+        if (onRefresh) onRefresh();
+        if (openedGroup?.id === mapped.id) {
+          const r2 = await fetch(`/api/post-groups/${mapped.id}`);
+          if (r2.ok) {
+            const data = await r2.json();
+            setGroupPosts((data.posts || []).map(postFromDb));
+          }
+        }
+        setToast({ kind: "success", message: t("dashboard.schedule.retrySuccess") });
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setToast({ kind: "error", message: body.error || t("dashboard.schedule.retryError") });
+      }
+    } catch {
+      setToast({ kind: "error", message: t("dashboard.schedule.retryError") });
+    }
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  function cooldownMessage(body, t) {
+    if (body?.message === "retryRateLimited" && body.cooldownUntilMs) {
+      const diffMs = Math.max(0, body.cooldownUntilMs - Date.now());
+      const minutes = Math.ceil(diffMs / 60000);
+      if (minutes >= 60) {
+        const hhmm = new Date(body.cooldownUntilMs).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false });
+        return t("dashboard.schedule.retryCooldownAt").replace("{time}", hhmm);
+      }
+      return t("dashboard.schedule.retryCooldownMin").replace("{minutes}", String(minutes));
+    }
+    return t("dashboard.schedule.retryRateLimited");
   }
 
   const SHARE_PLATFORMS = [
@@ -817,8 +875,13 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                             )}
 
                             {p.status === "failed" && (
-                              <button className="menu-item" onClick={() => { setActiveMenu(null); handleRetryPost(p); }}>
-                                <RefreshCw size={14} /> {t("dashboard.schedule.retryAction")}
+                              <button
+                                className="menu-item retry-item"
+                                onClick={() => { setActiveMenu(null); handleRetryPost(p); }}
+                                disabled={retryInfo(p, t).disabled}
+                                title={retryInfo(p, t).disabled ? retryInfo(p, t).label : t("dashboard.schedule.retryAction")}
+                              >
+                                <RefreshCw size={14} /> {retryInfo(p, t).label}
                               </button>
                             )}
 
@@ -935,6 +998,16 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                       {g.pending > 0 && <span className="status-count pending">{g.pending} {t("dashboard.status.pending")}</span>}
                       {g.failed > 0 && <span className="status-dot-group failed" />}
                       {g.failed > 0 && <span className="status-count failed">{g.failed} {t("dashboard.status.failed")}</span>}
+                      {g.failed > 0 && (
+                        <button
+                          className="retry-chip"
+                          onClick={(e) => { e.stopPropagation(); handleRetryGroup(g); }}
+                          disabled={retryInfo(g, t).disabled}
+                          title={retryInfo(g, t).disabled ? retryInfo(g, t).label : t("dashboard.schedule.retryAction")}
+                        >
+                          <RefreshCw size={12} /> {retryInfo(g, t).label}
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
@@ -952,6 +1025,16 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                         <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setChangeGroupTime({ id: g.id, date: g.date, time: g.time }); }}>
                           <Clock size={14} /> {t("dashboard.schedule.changeGroupTimeAction")}
                         </button>
+                        {g.failed > 0 && (
+                          <button
+                            className="menu-item retry-item"
+                            onClick={() => { setActiveGroupMenu(null); handleRetryGroup(g); }}
+                            disabled={retryInfo(g, t).disabled}
+                            title={retryInfo(g, t).disabled ? retryInfo(g, t).label : t("dashboard.schedule.retryAction")}
+                          >
+                            <RefreshCw size={14} /> {retryInfo(g, t).label}
+                          </button>
+                        )}
                         <div className="menu-divider" />
                         <button className="menu-item danger" onClick={() => { setActiveGroupMenu(null); setDeleteGroup(g); setGroupDeleteConfirm(""); }}>
                           <Trash2 size={14} /> {t("dashboard.schedule.deleteGroupAction")}
@@ -1843,6 +1926,9 @@ function postFromDb(p) {
     status: p.status,
     error_message: p.error_message || "",
     failed_at: p.failed_at || null,
+    retry_count: p.retry_count || 0,
+    last_retry_at: p.last_retry_at || null,
+    retry_window_start: p.retry_window_start || null,
   };
 }
 
@@ -1858,7 +1944,42 @@ function groupFromDb(g) {
     thumbnail: g.thumbnail || null,
     date: d ? d.toLocaleDateString("sv-SE") : "",
     time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
+    retry_count: g.retry_count || 0,
+    last_retry_at: g.last_retry_at || null,
+    retry_window_start: g.retry_window_start || null,
   };
+}
+
+const RETRY_MAX = 3;
+const RETRY_WINDOW_MS = 60 * 60 * 1000;
+
+function retryInfo(item, t) {
+  const count = Number(item.retry_count) || 0;
+  const start = item.retry_window_start ? Date.parse(item.retry_window_start) : 0;
+  const now = Date.now();
+  let cooldownMs = null;
+  let remaining = RETRY_MAX;
+
+  if (!start || now - start >= RETRY_WINDOW_MS) {
+    return { disabled: false, remaining, label: t("dashboard.schedule.retryAction"), title: "" };
+  }
+
+  cooldownMs = start + RETRY_WINDOW_MS;
+  remaining = Math.max(0, RETRY_MAX - count);
+  if (remaining > 0) {
+    return { disabled: false, remaining, label: t("dashboard.schedule.retryAction"), title: "" };
+  }
+
+  const diffMs = Math.max(0, cooldownMs - now);
+  const minutes = Math.ceil(diffMs / 60000);
+  let title;
+  if (minutes >= 60) {
+    const hhmm = new Date(cooldownMs).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false });
+    title = t("dashboard.schedule.retryCooldownAt").replace("{time}", hhmm);
+  } else {
+    title = t("dashboard.schedule.retryCooldownMin").replace("{minutes}", String(minutes));
+  }
+  return { disabled: true, remaining: 0, label: title, title };
 }
 
 function logFromDb(l) {
@@ -2246,6 +2367,17 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .status-count.pending { color: var(--warning); }
         .status-count.failed { color: var(--danger); }
         .group-status-zero { color: var(--text-dim); font-size: 11.5px; }
+        .retry-chip {
+          display: inline-flex; align-items: center; gap: 4px;
+          font-size: 11px; font-weight: 600; color: var(--danger);
+          background: var(--danger-soft); border: 1px solid var(--danger);
+          border-radius: 999px; padding: 2px 9px; cursor: pointer; transition: all .12s;
+        }
+        .retry-chip:hover:not(:disabled) { background: var(--danger); color: #fff; }
+        .retry-chip:disabled { opacity: .5; cursor: not-allowed; }
+        .menu-item.retry-item { color: var(--danger); }
+        .menu-item.retry-item:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); }
+        .menu-item.retry-item:disabled { opacity: .5; cursor: not-allowed; }
         .group-actions { position: absolute; top: 12px; right: 10px; }
         .group-actions .action-menu { right: 0; left: auto; }
         .group-detail-head { position: relative; margin-bottom: 18px; }

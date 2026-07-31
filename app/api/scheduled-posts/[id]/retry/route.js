@@ -1,5 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { retryState, applyRetryFields, RETRY_MAX, RETRY_WINDOW_MS } from "@/lib/retry-limit";
 
 // Re-queue a failed post: reset status to 'pending' so the next cron tick enqueues it again.
 export async function POST(request, { params }) {
@@ -11,7 +12,7 @@ export async function POST(request, { params }) {
 
   const { data: post, error: fetchError } = await admin
     .from("scheduled_posts")
-    .select("status")
+    .select("status, retry_count, last_retry_at, retry_window_start")
     .eq("id", params.id)
     .eq("user_id", user.id)
     .single();
@@ -22,13 +23,30 @@ export async function POST(request, { params }) {
     return Response.json({ error: "Only failed posts can be retried" }, { status: 400 });
   }
 
+  const state = retryState(post);
+  if (!state.allowed) {
+    return Response.json(
+      {
+        error: "rate_limited",
+        message: "retryRateLimited",
+        cooldownUntilMs: state.cooldownUntilMs,
+        remaining: state.remaining,
+      },
+      { status: 429 }
+    );
+  }
+
+  const nowIso = new Date().toISOString();
+  const fields = applyRetryFields(post, nowIso);
+
   const { data, error } = await admin
     .from("scheduled_posts")
     .update({
+      ...fields,
       status: "pending",
       error_message: null,
       failed_at: null,
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso,
     })
     .eq("id", params.id)
     .eq("user_id", user.id)
@@ -36,5 +54,14 @@ export async function POST(request, { params }) {
     .single();
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
-  return Response.json(data);
+
+  const nextState = retryState(data);
+
+  return Response.json({
+    ...data,
+    retryMax: RETRY_MAX,
+    retryWindowMs: RETRY_WINDOW_MS,
+    remaining: nextState.remaining,
+    cooldownUntilMs: nextState.cooldownUntilMs,
+  });
 }

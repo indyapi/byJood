@@ -82,12 +82,21 @@ alter table scheduled_posts add column if not exists group_id uuid references po
 -- Failure details written by the DLQ consumer when a job exhausts retries
 alter table scheduled_posts add column if not exists error_message text;
 alter table scheduled_posts add column if not exists failed_at timestamptz;
+-- Manual retry rate limit (max 3 times / 1 hour) on failed posts
+alter table scheduled_posts add column if not exists retry_count integer not null default 0;
+alter table scheduled_posts add column if not exists last_retry_at timestamptz;
+alter table scheduled_posts add column if not exists retry_window_start timestamptz;
 
 alter table post_groups enable row level security;
 create policy "user manages own post_groups" on post_groups
   for all using (auth.uid() = user_id);
 
 create index idx_post_groups_date on post_groups (user_id, scheduled_at);
+
+-- Manual retry rate limit (max 3 times / 1 hour) on failed groups
+alter table post_groups add column if not exists retry_count integer not null default 0;
+alter table post_groups add column if not exists last_retry_at timestamptz;
+alter table post_groups add column if not exists retry_window_start timestamptz;
 
 -- 5b. เก็บ state ชั่วคราวตอนทำ OAuth กัน CSRF (ลบทิ้งทันทีหลัง callback สำเร็จ)
 create table oauth_states (

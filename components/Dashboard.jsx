@@ -2726,18 +2726,34 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .search-box:focus-within { border-color: var(--accent); }
 
         .table-wrap { border: 1px solid var(--glass-border-accent); border-radius: var(--radius); overflow: hidden; }
-        .log-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .log-table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: var(--table-text); }
         .log-table th {
           text-align: left; background: var(--accent); color: #fff;
           font-weight: 600; font-size: 11px; padding: 10px 16px; text-transform: uppercase; letter-spacing: .04em;
         }
-        .log-table td { padding: 10px 16px; border-top: 1px solid var(--glass-border); vertical-align: middle; }
+        .log-table td { padding: 10px 16px; border-top: 1px solid var(--table-border); vertical-align: middle; color: var(--table-text); }
         .log-table tbody tr { transition: background .1s; }
-        .log-table tbody tr:nth-child(even) td { background: var(--panel-alt); }
-        .log-table tbody tr:hover td { background: var(--accent-soft); }
-        .msg-cell { color: var(--text-muted); max-width: 260px; }
-        .result-ok { display: inline-flex; align-items: center; gap: 5px; color: var(--success); font-weight: 500; }
-        .result-fail { display: inline-flex; align-items: center; gap: 5px; color: var(--danger); font-weight: 500; }
+        .log-table tbody tr:nth-child(even) td { background: var(--table-row-alt); }
+        .log-table tbody tr:hover td { background: var(--table-hover); }
+        .log-table .msg-cell { color: var(--table-muted); max-width: 260px; }
+        .log-table .mono.dim { color: var(--table-muted); }
+        .log-table .chip { gap: 0; }
+        .log-table .chip-code {
+          background: color-mix(in srgb, var(--chip-color) 15%, white);
+          color: var(--chip-color);
+          font-size: 10px; font-weight: 700;
+          padding: 3px 9px; border-radius: 999px;
+        }
+        .result-ok {
+          display: inline-flex; align-items: center; gap: 5px; color: var(--badge-success-text);
+          background: var(--badge-success-bg); font-weight: 600; font-size: 11px;
+          padding: 3px 10px; border-radius: 999px;
+        }
+        .result-fail {
+          display: inline-flex; align-items: center; gap: 5px; color: var(--badge-failed-text);
+          background: var(--badge-failed-bg); font-weight: 600; font-size: 11px;
+          padding: 3px 10px; border-radius: 999px;
+        }
 
         .modal-overlay { position: fixed; inset: 0; background: var(--modal-overlay); display: flex; align-items: flex-start; justify-content: center; z-index: 50; padding: 40px 20px; overflow-y: auto; backdrop-filter: blur(2px); }
         .modal {

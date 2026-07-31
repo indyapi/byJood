@@ -82,6 +82,14 @@ export default function RootLayout({ children }) {
                 --badge-queued-bg: rgba(106,168,255,.15);
                 --badge-queued-text: #6AA8FF;
 
+                /* Table (Post History) */
+                --table-bg: #17162A;
+                --table-row-alt: #1F1D38;
+                --table-hover: #262345;
+                --table-border: rgba(255,255,255,.08);
+                --table-text: #F7F6FF;
+                --table-muted: #9C96BE;
+
                 /* Gradients & glow (brand tokens) */
                 --gradient-hero: linear-gradient(135deg, #5631D1 0%, #7A5AF8 50%, #A58CFF 100%);
                 --gradient-btn: linear-gradient(180deg, #6E49E7, #5631D1);
@@ -148,14 +156,22 @@ export default function RootLayout({ children }) {
 
                 /* Badges (soft tint + saturated text) */
                 --hover-bg: #F7F7F9;
-                --badge-success-bg: rgba(45,190,127,.12);
-                --badge-success-text: #1E9E67;
-                --badge-failed-bg: rgba(235,87,87,.12);
-                --badge-failed-text: #D64545;
-                --badge-pending-bg: rgba(244,183,64,.16);
-                --badge-pending-text: #B9850A;
-                --badge-queued-bg: rgba(86,49,209,.10);
-                --badge-queued-text: #5631D1;
+                --badge-success-bg: #DCFCE7;
+                --badge-success-text: #15803D;
+                --badge-failed-bg: #FEE2E2;
+                --badge-failed-text: #B91C1C;
+                --badge-pending-bg: #FEF9C3;
+                --badge-pending-text: #A16207;
+                --badge-queued-bg: #EFF6FF;
+                --badge-queued-text: #1D4ED8;
+
+                /* Table (Post History) */
+                --table-bg: #FFFFFF;
+                --table-row-alt: #E7E5FE;
+                --table-hover: #F8FAFC;
+                --table-border: #E2E8F0;
+                --table-text: #0F172A;
+                --table-muted: #64748B;
 
                 /* Legacy aliases */
                 --glass-bg: var(--glass);
@@ -203,14 +219,20 @@ export default function RootLayout({ children }) {
                   --info: #3B82F6;
                   --shadow: 0 10px 35px rgba(20,20,20,.08);
                   --hover-bg: #F7F7F9;
-                  --badge-success-bg: rgba(45,190,127,.12);
-                  --badge-success-text: #1E9E67;
-                  --badge-failed-bg: rgba(235,87,87,.12);
-                  --badge-failed-text: #D64545;
-                  --badge-pending-bg: rgba(244,183,64,.16);
-                  --badge-pending-text: #B9850A;
-                  --badge-queued-bg: rgba(86,49,209,.10);
-                  --badge-queued-text: #5631D1;
+                  --badge-success-bg: #DCFCE7;
+                  --badge-success-text: #15803D;
+                  --badge-failed-bg: #FEE2E2;
+                  --badge-failed-text: #B91C1C;
+                  --badge-pending-bg: #FEF9C3;
+                  --badge-pending-text: #A16207;
+                  --badge-queued-bg: #EFF6FF;
+                  --badge-queued-text: #1D4ED8;
+                  --table-bg: #FFFFFF;
+                  --table-row-alt: #E7E5FE;
+                  --table-hover: #F8FAFC;
+                  --table-border: #E2E8F0;
+                  --table-text: #0F172A;
+                  --table-muted: #64748B;
                   --glass-bg: var(--glass);
                   --glass-bg-light: rgba(255,255,255,.72);
                   --glass-bg-dark: rgba(255,255,255,.92);
@@ -260,6 +282,12 @@ export default function RootLayout({ children }) {
                   --badge-pending-text: #F8C34A;
                   --badge-queued-bg: rgba(106,168,255,.15);
                   --badge-queued-text: #6AA8FF;
+                  --table-bg: #17162A;
+                  --table-row-alt: #1F1D38;
+                  --table-hover: #262345;
+                  --table-border: rgba(255,255,255,.08);
+                  --table-text: #F7F6FF;
+                  --table-muted: #9C96BE;
                   --glass-bg: var(--glass);
                   --glass-bg-light: rgba(32,30,54,.30);
                   --glass-bg-dark: rgba(20,18,36,.85);

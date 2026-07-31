@@ -97,6 +97,8 @@
     "checkEmail": "ตรวจสอบอีเมลของคุณเพื่อยืนยันการสมัคร"
   },
   "profile": {
+    "eyebrow": "โปรไฟล์",
+    "subtitle": "จัดการข้อมูลบัญชีและเพจที่เชื่อมต่อของคุณ",
     "noName": "ไม่มีชื่อ",
     "email": "อีเมล",
     "loginMethod": "เข้าสู่ระบบด้วย",
@@ -107,7 +109,10 @@
     "usernamePlaceholder": "username",
     "avatarTooLarge": "รูปต้องไม่เกิน 2 MB",
     "uploadFailed": "อัปโหลดรูปไม่สำเร็จ",
-    "saveFailed": "บันทึกไม่สำเร็จ"
+    "saveFailed": "บันทึกไม่สำเร็จ",
+    "sectionInfoEyebrow": "บัญชี",
+    "sectionInfoTitle": "ข้อมูลโปรไฟล์ส่วนตัว",
+    "sectionInfoSubtitle": "อัปเดตชื่อ ชื่อผู้ใช้ และรูปโปรไฟล์ของคุณ"
   },
   "tutorial": {
     "title": "วิธีการเชื่อมต่อ",
@@ -154,7 +159,6 @@
     "sidebar": {
       "brandSub": "byJood / Control Room",
       "status": "Supabase • เชื่อมต่อแล้ว",
-      "navConnections": "จัดการเพจ",
       "navSchedule": "ตั้งเวลาโพสต์",
       "navGallery": "แกลเลอรี",
       "navLogs": "Logs"

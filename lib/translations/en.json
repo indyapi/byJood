@@ -97,6 +97,8 @@
     "checkEmail": "Check your email to confirm your account"
   },
   "profile": {
+    "eyebrow": "PROFILE",
+    "subtitle": "Manage your account details and connected pages.",
     "noName": "No name",
     "email": "Email",
     "loginMethod": "Logged in with",
@@ -107,7 +109,10 @@
     "usernamePlaceholder": "username",
     "avatarTooLarge": "Avatar must not exceed 2 MB",
     "uploadFailed": "Avatar upload failed",
-    "saveFailed": "Save failed"
+    "saveFailed": "Save failed",
+    "sectionInfoEyebrow": "ACCOUNT",
+    "sectionInfoTitle": "Personal Profile Information",
+    "sectionInfoSubtitle": "Update your name, username, and profile picture."
   },
   "tutorial": {
     "title": "Setup Guide",
@@ -154,7 +159,6 @@
     "sidebar": {
       "brandSub": "byJood / Control Room",
       "status": "Supabase • Connected",
-      "navConnections": "Manage Pages",
       "navSchedule": "Schedule Posts",
       "navGallery": "Gallery",
       "navLogs": "Logs"

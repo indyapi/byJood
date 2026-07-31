@@ -113,23 +113,36 @@ function StatusPill({ status, t }) {
 /* ---------------------------------------------------------
    Pages (Connections) view
 --------------------------------------------------------- */
-function ConnectionsView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORMS }) {
+function ConnectionsView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORMS, embedded }) {
   const [revealed, setRevealed] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [editPage, setEditPage] = useState(null);
 
   return (
-    <div className="view">
-      <div className="view-head">
-        <div>
-          <span className="eyebrow">{t("dashboard.connections.eyebrow")}</span>
-          <h1>{t("dashboard.connections.title")}</h1>
-          <p className="sub">{t("dashboard.connections.subtitle")}</p>
+    <div className={embedded ? "profile-section" : "view"}>
+      {embedded ? (
+        <div className="profile-section-head">
+          <div>
+            <span className="eyebrow">{t("dashboard.connections.eyebrow")}</span>
+            <h2>{t("dashboard.connections.title")}</h2>
+            <p className="sub">{t("dashboard.connections.subtitle")}</p>
+          </div>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
+            <Plus size={16} /> {t("dashboard.connections.addBtn")}
+          </button>
         </div>
-        <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
-          <Plus size={16} /> {t("dashboard.connections.addBtn")}
-        </button>
-      </div>
+      ) : (
+        <div className="view-head">
+          <div>
+            <span className="eyebrow">{t("dashboard.connections.eyebrow")}</span>
+            <h1>{t("dashboard.connections.title")}</h1>
+            <p className="sub">{t("dashboard.connections.subtitle")}</p>
+          </div>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
+            <Plus size={16} /> {t("dashboard.connections.addBtn")}
+          </button>
+        </div>
+      )}
 
       <div className="notice">
         <Info size={15} />
@@ -2185,7 +2198,7 @@ const PROVIDER_ICONS = {
   google: "G", facebook: "F", github: "Gh", email: "E",
 };
 
-function ProfileModal({ onClose, t }) {
+function ProfileView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORMS }) {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -2284,7 +2297,16 @@ function ProfileModal({ onClose, t }) {
 
   if (loading) {
     return (
-      <div className="modal-overlay"><div className="modal"><p style={{ color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>{t("common.loading")}</p></div></div>
+      <div className="view">
+        <div className="view-head">
+          <div>
+            <span className="eyebrow">{t("profile.eyebrow")}</span>
+            <h1>{t("nav.profile")}</h1>
+            <p className="sub">{t("profile.subtitle")}</p>
+          </div>
+        </div>
+        <p style={{ color: "var(--text-muted)", padding: "20px 0" }}>{t("common.loading")}</p>
+      </div>
     );
   }
 
@@ -2294,59 +2316,83 @@ function ProfileModal({ onClose, t }) {
   const providerIcon = PROVIDER_ICONS[profile.auth_provider] || "E";
 
   return (
-    <div className="modal-overlay">
-      <div className="modal modal-profile">
-        <div className="modal-head">
-          <h2>{t("nav.profile")}</h2>
-          <button className="icon-btn" onClick={onClose}><X size={18} /></button>
+    <div className="view">
+      <div className="view-head">
+        <div>
+          <span className="eyebrow">{t("profile.eyebrow")}</span>
+          <h1>{t("nav.profile")}</h1>
+          <p className="sub">{t("profile.subtitle")}</p>
         </div>
+        <button className="btn btn-danger" onClick={handleSignOut}><LogOut size={16} /> {t("nav.signOut")}</button>
+      </div>
 
-        <div className="pfp-avatar-wrap">
-          {editing ? (
-            <label className="pfp-avatar-upload">
-              {avatarPreview ? <img src={avatarPreview} alt="" className="avatar" />
-              : profile.avatar_url ? <img src={profile.avatar_url} alt="" className="avatar" />
-              : <div className="avatar-fallback"><User size={28} /></div>}
-              <div className="pfp-avatar-overlay"><Camera size={16} /></div>
-              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleAvatarSelect} hidden />
-            </label>
-          ) : (
-            profile.avatar_url ? <img src={profile.avatar_url} alt="" className="avatar" />
-            : <div className="avatar-fallback"><User size={28} /></div>
+      <div className="profile-section">
+        <div className="profile-section-head">
+          <div>
+            <span className="eyebrow">{t("profile.sectionInfoEyebrow")}</span>
+            <h2>{t("profile.sectionInfoTitle")}</h2>
+            <p className="sub">{t("profile.sectionInfoSubtitle")}</p>
+          </div>
+          {!editing && (
+            <button className="btn btn-ghost" onClick={startEditing}><Edit3 size={14} /> {t("profile.edit")}</button>
           )}
         </div>
 
-        {editing ? (
-          <form onSubmit={saveProfile} className="pfp-form">
-            <div className="field-group">
-              <label className="field-label">{t("profile.displayName")}</label>
-              <input className="input" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder={t("profile.displayNamePlaceholder")} />
-            </div>
-            <div className="field-group">
-              <label className="field-label">{t("profile.username")}</label>
-              <input className="input mono" value={editUsername} onChange={(e) => setEditUsername(e.target.value)} placeholder={t("profile.usernamePlaceholder")} />
-            </div>
-            {saveError && <p className="pfp-error">{saveError}</p>}
-            <div className="pfp-edit-actions">
-              <button type="button" className="btn btn-ghost" onClick={cancelEditing} disabled={saving}>{t("common.cancel")}</button>
-              <button type="submit" className="btn btn-primary" disabled={saving}><Check size={14} /> {saving ? t("common.loading") : t("common.save")}</button>
-            </div>
-          </form>
-        ) : (
-          <div className="pfp-view">
-            <h3 className="pfp-name">{profile.display_name || profile.username || t("profile.noName")}</h3>
-            {profile.username && profile.display_name && <p className="pfp-username">@{profile.username}</p>}
-            <div className="pfp-info">
-              <div className="pfp-row"><Mail size={14} /><span>{t("profile.email")}</span><span className="pfp-val">{profile.email}</span></div>
-              <div className="pfp-row"><Shield size={14} /><span>{t("profile.loginMethod")}</span><span className="pfp-val"><span className="provider-badge"><span className="provider-icon">{providerIcon}</span>{providerLabel}</span></span></div>
-            </div>
-            <div className="pfp-actions">
-              <button className="btn btn-ghost" onClick={startEditing}><Edit3 size={14} /> {t("profile.edit")}</button>
-              <button className="btn btn-danger pfp-signout" onClick={handleSignOut}><LogOut size={14} /> {t("nav.signOut")}</button>
-            </div>
+        <div className="profile-section-body">
+          <div className="pfp-avatar-wrap">
+            {editing ? (
+              <label className="pfp-avatar-upload">
+                {avatarPreview ? <img src={avatarPreview} alt="" className="avatar" />
+                : profile.avatar_url ? <img src={profile.avatar_url} alt="" className="avatar" />
+                : <div className="avatar-fallback"><User size={28} /></div>}
+                <div className="pfp-avatar-overlay"><Camera size={16} /></div>
+                <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleAvatarSelect} hidden />
+              </label>
+            ) : (
+              profile.avatar_url ? <img src={profile.avatar_url} alt="" className="avatar" />
+              : <div className="avatar-fallback"><User size={28} /></div>
+            )}
           </div>
-        )}
+
+          {editing ? (
+            <form onSubmit={saveProfile} className="pfp-form">
+              <div className="field-group">
+                <label className="field-label">{t("profile.displayName")}</label>
+                <input className="input" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder={t("profile.displayNamePlaceholder")} />
+              </div>
+              <div className="field-group">
+                <label className="field-label">{t("profile.username")}</label>
+                <input className="input mono" value={editUsername} onChange={(e) => setEditUsername(e.target.value)} placeholder={t("profile.usernamePlaceholder")} />
+              </div>
+              {saveError && <p className="pfp-error">{saveError}</p>}
+              <div className="pfp-edit-actions">
+                <button type="button" className="btn btn-ghost" onClick={cancelEditing} disabled={saving}>{t("common.cancel")}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}><Check size={14} /> {saving ? t("common.loading") : t("common.save")}</button>
+              </div>
+            </form>
+          ) : (
+            <div className="pfp-view">
+              <h3 className="pfp-name">{profile.display_name || profile.username || t("profile.noName")}</h3>
+              {profile.username && profile.display_name && <p className="pfp-username">@{profile.username}</p>}
+              <div className="pfp-info">
+                <div className="pfp-row"><Mail size={14} /><span>{t("profile.email")}</span><span className="pfp-val">{profile.email}</span></div>
+                <div className="pfp-row"><Shield size={14} /><span>{t("profile.loginMethod")}</span><span className="pfp-val"><span className="provider-badge"><span className="provider-icon">{providerIcon}</span>{providerLabel}</span></span></div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      <ConnectionsView
+        pages={pages}
+        onAdd={onAdd}
+        onRemove={onRemove}
+        onUpdate={onUpdate}
+        authed={authed}
+        t={t}
+        PLATFORMS={PLATFORMS}
+        embedded
+      />
     </div>
   );
 }
@@ -2479,7 +2525,6 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
   const { t, locale } = useTranslation();
   const PLATFORMS = usePlatforms(t);
   const [authed, setAuthed] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [profileAvatar, setProfileAvatar] = useState(null);
 
   useEffect(() => {
@@ -2503,7 +2548,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     return res;
   }
 
-  const [tab, setTab] = useState("connections");
+  const [tab, setTab] = useState("schedule");
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [pages, setPages] = useState(initialPages.map(pageFromDb));
   const [posts, setPosts] = useState(initialPosts.map(postFromDb).filter(Boolean));
@@ -2575,10 +2620,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
   }, [refreshPages, refreshPosts, refreshLogs]);
 
   const nav = [
-    { key: "connections", label: t("dashboard.sidebar.navConnections"), icon: Link2 },
     { key: "schedule", label: t("dashboard.sidebar.navSchedule"), icon: CalendarClock },
     { key: "gallery", label: t("dashboard.sidebar.navGallery"), icon: Images },
     { key: "logs", label: t("dashboard.sidebar.navLogs"), icon: ScrollText },
+    { key: "profile", label: t("nav.profile"), icon: User },
   ];
 
   return (
@@ -2655,7 +2700,6 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
         .sidebar-lang { padding: 4px 12px 12px; display: flex; }
         .sidebar-lang .lang-switcher { border-left: none; padding-left: 0; margin-left: 0; }
-        .profile-btn { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 10px !important; }
         .sidebar-avatar { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid var(--glass-border); }
 
         .main-top { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
@@ -3424,8 +3468,23 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           .fb-row-eng { margin-left: 0; }
         }
 
-        /* ── Profile Modal ── */
-        .modal-profile { max-width: 400px; }
+        /* ── Profile Page ── */
+        .profile-section {
+          margin-top: 24px; padding-top: 24px;
+          border-top: 1px solid var(--glass-border);
+        }
+        .profile-section-head {
+          display: flex; align-items: flex-start; justify-content: space-between;
+          gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .profile-section-head h2 {
+          font-family: var(--font-display); font-size: 17px; font-weight: 600;
+          margin: 2px 0 2px; color: var(--text-heading);
+        }
+        .profile-section-body {
+          background: var(--glass-bg); border: 1px solid var(--glass-border);
+          border-radius: var(--radius); padding: 22px;
+        }
         .pfp-avatar-wrap { display: flex; justify-content: center; margin: 6px 0 14px; }
         .pfp-avatar-wrap .avatar,
         .avatar-fallback {
@@ -3467,8 +3526,6 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           font-size: 10px; font-weight: 700; color: var(--accent);
         }
         .pfp-actions { display: flex; gap: 8px; justify-content: center; }
-        .pfp-signout { background: var(--glass-bg-dark); border: 1px solid var(--glass-border); color: var(--danger); }
-        .pfp-signout:hover { border-color: var(--danger); }
         .pfp-form { text-align: left; }
         .pfp-form .mono { font-family: var(--font-mono); }
         .pfp-error { color: var(--danger); font-size: 12px; margin: 0 0 10px; text-align: center; }
@@ -3482,17 +3539,14 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         </button>
         {nav.map((n) => (
           <button key={n.key} className={`nav-item ${tab === n.key ? "active" : ""}`} onClick={() => setTab(n.key)}>
-            <n.icon size={16} /> {n.label}
+            {n.key === "profile" && profileAvatar ? (
+              <img src={profileAvatar} alt="" className="sidebar-avatar" />
+            ) : (
+              <n.icon size={16} />
+            )}
+            {n.label}
           </button>
         ))}
-        <button className="nav-item profile-btn" onClick={() => setProfileOpen(true)}>
-          {profileAvatar ? (
-            <img src={profileAvatar} alt="" className="sidebar-avatar" />
-          ) : (
-            <User size={16} />
-          )}
-          {t("nav.profile")}
-        </button>
         <div className="sidebar-foot"><span className="status-dot" /> Database • Connected</div>
         <div className="sidebar-lang"><LangSwitcher /></div>
       </aside>
@@ -3543,17 +3597,6 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           </div>
         </div>
 
-        {tab === "connections" && (
-          <ConnectionsView
-            pages={pages}
-            onAdd={handleAddPage}
-            onRemove={handleRemovePage}
-            onUpdate={handleUpdatePage}
-            authed={authed}
-            t={t}
-            PLATFORMS={PLATFORMS}
-          />
-        )}
         {tab === "schedule" && (
           <ScheduleView
             posts={posts}
@@ -3570,6 +3613,17 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         )}
         {tab === "logs" && <LogsView logs={logs} t={t} PLATFORMS={PLATFORMS} />}
         {tab === "gallery" && <GalleryView authed={authed} t={t} />}
+        {tab === "profile" && (
+          <ProfileView
+            pages={pages}
+            onAdd={handleAddPage}
+            onRemove={handleRemovePage}
+            onUpdate={handleUpdatePage}
+            authed={authed}
+            t={t}
+            PLATFORMS={PLATFORMS}
+          />
+        )}
       </main>
 
       {mobileSidebar && (
@@ -3588,28 +3642,18 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
                 className={`nav-item ${tab === n.key ? "active" : ""}`}
                 onClick={() => { setTab(n.key); setMobileSidebar(false); }}
               >
-                <n.icon size={16} /> {n.label}
+                {n.key === "profile" && profileAvatar ? (
+                  <img src={profileAvatar} alt="" className="sidebar-avatar" />
+                ) : (
+                  <n.icon size={16} />
+                )}
+                {n.label}
               </button>
             ))}
-            <button className="nav-item profile-btn" onClick={() => { setProfileOpen(true); setMobileSidebar(false); }}>
-              {profileAvatar ? (
-                <img src={profileAvatar} alt="" className="sidebar-avatar" />
-              ) : (
-                <User size={16} />
-              )}
-              {t("nav.profile")}
-            </button>
             <div className="sidebar-foot"><span className="status-dot" /> Database • Connected</div>
             <div className="sidebar-lang"><LangSwitcher /></div>
           </aside>
         </div>
-      )}
-
-      {profileOpen && (
-        <ProfileModal
-          onClose={() => setProfileOpen(false)}
-          t={t}
-        />
       )}
     </div>
   );

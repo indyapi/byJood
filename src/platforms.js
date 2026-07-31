@@ -4,31 +4,71 @@
  * job.access_token ควรถูกดึงมาจาก Supabase ก่อนเรียก (ดู consumer.js)
  */
 
+// Permissions ที่ Facebook Page Access Token ต้องมีจึงจะโพสต์และอ่าน engagement ได้
+const REQUIRED_FB_PERMS = ["pages_manage_posts", "pages_read_engagement"];
+
+/**
+ * ตรวจสอบว่า Page Access Token มีสิทธิ์ตามที่ต้องการหรือไม่
+ * ถ้าตรวจสอบไม่ได้ (network error / API error) จะไม่บล็อกการโพสต์
+ */
+async function checkFacebookPermissions(page_id, access_token) {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${page_id}?fields=perms&access_token=${encodeURIComponent(access_token)}`
+    );
+    const data = await res.json();
+    if (!res.ok || !Array.isArray(data.perms)) {
+      return { ok: true, missing: [] };
+    }
+    const missing = REQUIRED_FB_PERMS.filter((p) => !data.perms.includes(p));
+    return { ok: missing.length === 0, missing };
+  } catch {
+    return { ok: true, missing: [] };
+  }
+}
+
 export async function postToFacebook(job) {
   const { page_id, content, media_urls, access_token } = job;
+
+  // 3. ตรวจสอบสิทธิ์ของ Page Access Token ก่อนโพสต์ทุกครั้ง
+  const permCheck = await checkFacebookPermissions(page_id, access_token);
+  if (!permCheck.ok) {
+    return {
+      success: false,
+      error: `Facebook token ขาด permission: ${permCheck.missing.join(", ")}`,
+    };
+  }
 
   if (media_urls?.length === 0) {
     const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: content, access_token }),
+      body: JSON.stringify({ message: content, access_token, published: true }),
     });
     const data = await res.json();
     if (!res.ok) return { success: false, error: data.error?.message ?? "Unknown FB error" };
     return { success: true, externalPostId: data.id };
   }
 
+  // 1. โพสต์ข้อความ + รูปเดียว: ส่งไปที่ /photos พร้อม published: true
+  //    และห้ามใส่ no_story: true (ไม่งั้นรูปจะถูกอัปโหลดแต่ไม่ขึ้น Feed)
   if (media_urls.length === 1) {
     const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: media_urls[0], message: content, access_token }),
+      body: JSON.stringify({
+        url: media_urls[0],
+        message: content,
+        access_token,
+        published: true,
+      }),
     });
     const data = await res.json();
     if (!res.ok) return { success: false, error: data.error?.message ?? "Unknown FB error" };
     return { success: true, externalPostId: data.id };
   }
 
+  // 2. โพสต์หลายรูป: Step 1 อัปโหลดรูปแบบ unpublished เพื่อเก็บ photo_id
   const photoIds = [];
   for (const url of media_urls) {
     const photoRes = await fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
@@ -41,12 +81,14 @@ export async function postToFacebook(job) {
     photoIds.push(photoData.id);
   }
 
+  // 2. Step 2 สร้าง Feed Post โดยแนบ photo_id ทั้งหมด แล้วเผยแพร่
   const feedRes = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message: content,
       access_token,
+      published: true,
       attached_media: photoIds.map((id) => ({ media_fbid: id })),
     }),
   });

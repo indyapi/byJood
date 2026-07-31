@@ -29584,13 +29584,16 @@ https://supabase.com/dashboard/project/_/settings/api`);
     const [date, setDate] = (0, import_react4.useState)(defaultDate);
     const [time, setTime] = (0, import_react4.useState)("09:00");
     const [imageTab, setImageTab] = (0, import_react4.useState)("upload");
-    const [uploadFiles, setUploadFiles] = (0, import_react4.useState)([]);
+    const [selectedImages, setSelectedImages] = (0, import_react4.useState)([]);
     const [uploading, setUploading] = (0, import_react4.useState)(false);
     const [fileError, setFileError] = (0, import_react4.useState)("");
     const [galleryItems, setGalleryItems] = (0, import_react4.useState)([]);
     const [galleryLoading, setGalleryLoading] = (0, import_react4.useState)(false);
     const [galleryError, setGalleryError] = (0, import_react4.useState)("");
-    const [selectedGallery, setSelectedGallery] = (0, import_react4.useState)([]);
+    const [dragIndex, setDragIndex] = (0, import_react4.useState)(null);
+    const [dragOverIndex, setDragOverIndex] = (0, import_react4.useState)(null);
+    const uidCounter = (0, import_react4.useRef)(0);
+    const nextUid = () => `img-${++uidCounter.current}-${Date.now()}`;
     const atMax = selectedIds.length >= MAX_PAGES_PER_POST;
     function toggle(id) {
       setSelectedIds((prev) => {
@@ -29628,36 +29631,54 @@ https://supabase.com/dashboard/project/_/settings/api`);
         return;
       }
       setFileError("");
-      setUploadFiles((prev) => [
+      setSelectedImages((prev) => [
         ...prev,
-        ...files.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }))
+        ...files.map((file) => ({
+          uid: nextUid(),
+          kind: "upload",
+          file,
+          previewUrl: URL.createObjectURL(file)
+        }))
       ]);
       e.target.value = "";
     }
-    function removeFile(index) {
-      setUploadFiles((prev) => prev.filter((_, i) => i !== index));
+    function removeImage(uid) {
+      setSelectedImages((prev) => prev.filter((x) => x.uid !== uid));
     }
     function selectGalleryImage(item) {
-      setSelectedGallery((prev) => {
-        if (prev.some((x) => x.id === item.id)) return prev.filter((x) => x.id !== item.id);
-        return [...prev, item];
+      setSelectedImages((prev) => {
+        if (prev.some((x) => x.kind === "gallery" && x.item.id === item.id)) {
+          return prev.filter((x) => !(x.kind === "gallery" && x.item.id === item.id));
+        }
+        return [...prev, { uid: nextUid(), kind: "gallery", item }];
       });
     }
     function clearGallerySelection() {
-      setSelectedGallery([]);
+      setSelectedImages((prev) => prev.filter((x) => x.kind !== "gallery"));
+    }
+    function reorderImages(from, to) {
+      if (from === to || from == null) return;
+      setSelectedImages((prev) => {
+        const next = [...prev];
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        return next;
+      });
     }
     async function submit(e) {
       e.preventDefault();
       if (selectedIds.length === 0) return;
       const mediaUrls = [];
-      if (uploadFiles.length > 0) {
+      const uploadItems = selectedImages.filter((x) => x.kind === "upload");
+      if (uploadItems.length > 0) {
         setUploading(true);
         setFileError("");
         const supabase = createClientSupabase();
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
-        for (let i = 0; i < uploadFiles.length; i++) {
-          const item = uploadFiles[i];
+        const urlByUid2 = {};
+        for (let i = 0; i < uploadItems.length; i++) {
+          const item = uploadItems[i];
           const timestamp = Date.now() + i;
           const ext = item.file.name.split(".").pop();
           const safeName = `${timestamp}.${ext}`;
@@ -29670,7 +29691,7 @@ https://supabase.com/dashboard/project/_/settings/api`);
             return;
           }
           const { data: { publicUrl } } = supabase.storage.from("post-images").getPublicUrl(filePath);
-          mediaUrls.push(publicUrl);
+          urlByUid2[item.uid] = publicUrl;
           if (userId) {
             await supabase.from("media").insert({
               user_id: userId,
@@ -29684,8 +29705,9 @@ https://supabase.com/dashboard/project/_/settings/api`);
         }
         setUploading(false);
       }
-      for (const galleryItem of selectedGallery) {
-        if (galleryItem?.public_url) mediaUrls.push(galleryItem.public_url);
+      for (const img of selectedImages) {
+        if (img.kind === "upload") mediaUrls.push(urlByUid[img.uid]);
+        else if (img.item?.public_url) mediaUrls.push(img.item.public_url);
       }
       const [y, m, d] = date.split("-");
       const [h, mi] = time.split(":");
@@ -29729,7 +29751,7 @@ https://supabase.com/dashboard/project/_/settings/api`);
       /* @__PURE__ */ import_react4.default.createElement(Images, { size: 14 }),
       " ",
       t("dashboard.schedule.imageTabGallery")
-    )), imageTab === "upload" ? /* @__PURE__ */ import_react4.default.createElement(import_react4.default.Fragment, null, fileError && /* @__PURE__ */ import_react4.default.createElement("div", { className: "file-error" }, fileError), uploadFiles.length > 0 && /* @__PURE__ */ import_react4.default.createElement("div", { className: "upload-preview-grid" }, uploadFiles.map((item, i) => /* @__PURE__ */ import_react4.default.createElement("div", { key: i, className: "preview-wrap" }, /* @__PURE__ */ import_react4.default.createElement("img", { src: item.previewUrl, alt: `upload-${i + 1}`, className: "preview-img" }), /* @__PURE__ */ import_react4.default.createElement("span", { className: "upload-order-badge" }, i + 1), /* @__PURE__ */ import_react4.default.createElement("button", { type: "button", className: "remove-btn", onClick: () => removeFile(i) }, /* @__PURE__ */ import_react4.default.createElement(X, { size: 12 }), " ", t("dashboard.fields.removeImage"))))), /* @__PURE__ */ import_react4.default.createElement(
+    )), imageTab === "upload" ? /* @__PURE__ */ import_react4.default.createElement(import_react4.default.Fragment, null, fileError && /* @__PURE__ */ import_react4.default.createElement("div", { className: "file-error" }, fileError), /* @__PURE__ */ import_react4.default.createElement(
       "label",
       {
         className: "upload-dropzone",
@@ -29745,9 +29767,9 @@ https://supabase.com/dashboard/project/_/settings/api`);
       },
       /* @__PURE__ */ import_react4.default.createElement("input", { type: "file", multiple: true, accept: "image/jpeg,image/png,image/gif,image/webp", onChange: handleFileSelect, className: "file-input-hidden" }),
       /* @__PURE__ */ import_react4.default.createElement(Upload, { size: 20 }),
-      /* @__PURE__ */ import_react4.default.createElement("span", { className: "upload-dropzone-text" }, uploadFiles.length > 0 ? t("dashboard.schedule.imageAddMore") : t("dashboard.schedule.imageTabUpload"))
+      /* @__PURE__ */ import_react4.default.createElement("span", { className: "upload-dropzone-text" }, selectedImages.length > 0 ? t("dashboard.schedule.imageAddMore") : t("dashboard.schedule.imageTabUpload"))
     )) : /* @__PURE__ */ import_react4.default.createElement("div", { className: "gallery-picker" }, galleryLoading ? /* @__PURE__ */ import_react4.default.createElement("div", { className: "gallery-picker-empty" }, /* @__PURE__ */ import_react4.default.createElement(LoaderCircle, { size: 18, className: "spin" }), " ", t("dashboard.schedule.imageGalleryLoading")) : galleryError ? /* @__PURE__ */ import_react4.default.createElement("div", { className: "file-error" }, galleryError) : galleryItems.length === 0 ? /* @__PURE__ */ import_react4.default.createElement("div", { className: "gallery-picker-empty" }, /* @__PURE__ */ import_react4.default.createElement(Images, { size: 18 }), " ", t("dashboard.schedule.imageGalleryEmpty")) : /* @__PURE__ */ import_react4.default.createElement("div", { className: "gallery-picker-grid" }, galleryItems.map((m) => {
-      const selIndex = selectedGallery.findIndex((x) => x.id === m.id);
+      const selIndex = selectedImages.findIndex((x) => x.kind === "gallery" && x.item.id === m.id);
       const isSelected = selIndex !== -1;
       return /* @__PURE__ */ import_react4.default.createElement(
         "div",
@@ -29760,7 +29782,42 @@ https://supabase.com/dashboard/project/_/settings/api`);
         /* @__PURE__ */ import_react4.default.createElement("img", { src: m.public_url, alt: m.filename, loading: "lazy" }),
         isSelected && /* @__PURE__ */ import_react4.default.createElement("span", { className: "gallery-picker-check" }, selIndex + 1)
       );
-    })), selectedGallery.length > 0 && /* @__PURE__ */ import_react4.default.createElement("div", { className: "gallery-picker-selected" }, /* @__PURE__ */ import_react4.default.createElement(Images, { size: 14 }), /* @__PURE__ */ import_react4.default.createElement("span", { className: "gallery-picker-selected-name" }, t("dashboard.schedule.imageSelectedCount", { count: selectedGallery.length })), /* @__PURE__ */ import_react4.default.createElement("button", { type: "button", className: "link-btn", onClick: clearGallerySelection }, t("dashboard.schedule.imageGalleryClear"))))), /* @__PURE__ */ import_react4.default.createElement("div", { className: "field-row" }, /* @__PURE__ */ import_react4.default.createElement("div", { className: "field-group" }, /* @__PURE__ */ import_react4.default.createElement("label", { className: "field-label" }, t("dashboard.fields.date")), /* @__PURE__ */ import_react4.default.createElement("input", { className: "input", type: "date", value: date, onChange: (e) => setDate(e.target.value), required: true })), /* @__PURE__ */ import_react4.default.createElement("div", { className: "field-group" }, /* @__PURE__ */ import_react4.default.createElement("label", { className: "field-label" }, t("dashboard.fields.time")), /* @__PURE__ */ import_react4.default.createElement("input", { className: "input", type: "time", value: time, onChange: (e) => setTime(e.target.value), required: true }))), /* @__PURE__ */ import_react4.default.createElement("div", { className: "notice small" }, /* @__PURE__ */ import_react4.default.createElement(Info, { size: 13 }), /* @__PURE__ */ import_react4.default.createElement("span", null, t("dashboard.schedule.formNotice"))), /* @__PURE__ */ import_react4.default.createElement("div", { className: "modal-actions" }, /* @__PURE__ */ import_react4.default.createElement("button", { type: "button", className: "btn btn-ghost", onClick: onClose }, t("dashboard.schedule.cancel")), /* @__PURE__ */ import_react4.default.createElement("button", { type: "submit", className: "btn btn-primary", disabled: selectedIds.length === 0 || uploading }, uploading ? t("common.loading") : t("dashboard.schedule.save"), selectedIds.length > 1 && !uploading ? ` (${selectedIds.length} ${t("dashboard.schedule.batchSuffix")})` : "")))));
+    })), selectedImages.some((x) => x.kind === "gallery") && /* @__PURE__ */ import_react4.default.createElement("div", { className: "gallery-picker-selected" }, /* @__PURE__ */ import_react4.default.createElement(Images, { size: 14 }), /* @__PURE__ */ import_react4.default.createElement("span", { className: "gallery-picker-selected-name" }, t("dashboard.schedule.imageSelectedCount", { count: selectedImages.filter((x) => x.kind === "gallery").length })), /* @__PURE__ */ import_react4.default.createElement("button", { type: "button", className: "link-btn", onClick: clearGallerySelection }, t("dashboard.schedule.imageGalleryClear")))), selectedImages.length > 0 && /* @__PURE__ */ import_react4.default.createElement("div", { className: "selected-images-block" }, /* @__PURE__ */ import_react4.default.createElement("div", { className: "selected-images-head" }, /* @__PURE__ */ import_react4.default.createElement("span", null, t("dashboard.schedule.imageSelectedTitle")), /* @__PURE__ */ import_react4.default.createElement("span", { className: "selected-images-hint" }, t("dashboard.schedule.imageDragHint"))), /* @__PURE__ */ import_react4.default.createElement("div", { className: "upload-preview-grid" }, selectedImages.map((img, i) => /* @__PURE__ */ import_react4.default.createElement(
+      "div",
+      {
+        key: img.uid,
+        className: `preview-wrap drag-item ${dragIndex === i ? "dragging" : ""} ${dragOverIndex === i && dragIndex !== i ? "drag-over" : ""}`,
+        draggable: selectedImages.length > 1,
+        onDragStart: (e) => {
+          setDragIndex(i);
+          e.dataTransfer.effectAllowed = "move";
+        },
+        onDragOver: (e) => {
+          e.preventDefault();
+          if (dragIndex !== null && dragIndex !== i) setDragOverIndex(i);
+        },
+        onDrop: (e) => {
+          e.preventDefault();
+          reorderImages(dragIndex, i);
+          setDragIndex(null);
+          setDragOverIndex(null);
+        },
+        onDragEnd: () => {
+          setDragIndex(null);
+          setDragOverIndex(null);
+        }
+      },
+      /* @__PURE__ */ import_react4.default.createElement(
+        "img",
+        {
+          src: img.kind === "upload" ? img.previewUrl : img.item.public_url,
+          alt: `selected-${i + 1}`,
+          className: "preview-img"
+        }
+      ),
+      /* @__PURE__ */ import_react4.default.createElement("span", { className: "upload-order-badge" }, i + 1),
+      /* @__PURE__ */ import_react4.default.createElement("button", { type: "button", className: "remove-btn", onClick: () => removeImage(img.uid) }, /* @__PURE__ */ import_react4.default.createElement(X, { size: 12 }), " ", t("dashboard.fields.removeImage"))
+    ))))), /* @__PURE__ */ import_react4.default.createElement("div", { className: "field-row" }, /* @__PURE__ */ import_react4.default.createElement("div", { className: "field-group" }, /* @__PURE__ */ import_react4.default.createElement("label", { className: "field-label" }, t("dashboard.fields.date")), /* @__PURE__ */ import_react4.default.createElement("input", { className: "input", type: "date", value: date, onChange: (e) => setDate(e.target.value), required: true })), /* @__PURE__ */ import_react4.default.createElement("div", { className: "field-group" }, /* @__PURE__ */ import_react4.default.createElement("label", { className: "field-label" }, t("dashboard.fields.time")), /* @__PURE__ */ import_react4.default.createElement("input", { className: "input", type: "time", value: time, onChange: (e) => setTime(e.target.value), required: true }))), /* @__PURE__ */ import_react4.default.createElement("div", { className: "notice small" }, /* @__PURE__ */ import_react4.default.createElement(Info, { size: 13 }), /* @__PURE__ */ import_react4.default.createElement("span", null, t("dashboard.schedule.formNotice"))), /* @__PURE__ */ import_react4.default.createElement("div", { className: "modal-actions" }, /* @__PURE__ */ import_react4.default.createElement("button", { type: "button", className: "btn btn-ghost", onClick: onClose }, t("dashboard.schedule.cancel")), /* @__PURE__ */ import_react4.default.createElement("button", { type: "submit", className: "btn btn-primary", disabled: selectedIds.length === 0 || uploading }, uploading ? t("common.loading") : t("dashboard.schedule.save"), selectedIds.length > 1 && !uploading ? ` (${selectedIds.length} ${t("dashboard.schedule.batchSuffix")})` : "")))));
   }
   function ViewDetailModal({ post: post2, posts, pages, onClose, t, PLATFORMS }) {
     const [engagements, setEngagements] = (0, import_react4.useState)({});
@@ -30999,6 +31056,10 @@ https://supabase.com/dashboard/project/_/settings/api`);
         .upload-preview-grid .preview-wrap { margin-top: 0; aspect-ratio: 1 / 1; overflow: hidden; border-radius: var(--radius-sm); background: var(--glass-bg-dark); }
         .upload-preview-grid .preview-img { max-width: 100%; max-height: none; width: 100%; height: 100%; object-fit: cover; }
         .preview-img { max-width: 100%; max-height: 260px; border-radius: var(--radius-sm); width: 100%; object-fit: cover; }
+        .drag-item { cursor: grab; transition: opacity .12s, transform .12s; }
+        .drag-item:active { cursor: grabbing; }
+        .drag-item.dragging { opacity: 0.4; transform: scale(0.97); }
+        .drag-item.drag-over { box-shadow: 0 0 0 3px var(--accent-soft), inset 0 0 0 2px var(--accent); }
         .upload-order-badge {
           position: absolute; top: 6px; left: 6px;
           min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
@@ -31043,6 +31104,11 @@ https://supabase.com/dashboard/project/_/settings/api`);
         .upload-dropzone:hover { border-color: var(--accent); background: var(--accent-soft); }
         .file-input-hidden { display: none; }
         .upload-dropzone-text { font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
+
+        .selected-images-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--glass-border); }
+        .selected-images-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+        .selected-images-head span:first-child { font-size: 12px; font-weight: 600; color: var(--text); }
+        .selected-images-hint { font-size: 11px; color: var(--text-dim); }
 
         .gallery-picker { display: flex; flex-direction: column; gap: 10px; }
         .gallery-picker-grid {

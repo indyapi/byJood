@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import LangSwitcher from "./LangSwitcher";
 import { useTranslation } from "@/lib/TranslationsProvider";
@@ -1297,13 +1297,17 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState("09:00");
   const [imageTab, setImageTab] = useState("upload");
-  const [uploadFiles, setUploadFiles] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [fileError, setFileError] = useState("");
   const [galleryItems, setGalleryItems] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [galleryError, setGalleryError] = useState("");
-  const [selectedGallery, setSelectedGallery] = useState([]);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const uidCounter = useRef(0);
+
+  const nextUid = () => `img-${++uidCounter.current}-${Date.now()}`;
 
   const atMax = selectedIds.length >= MAX_PAGES_PER_POST;
 
@@ -1347,26 +1351,43 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
       return;
     }
     setFileError("");
-    setUploadFiles((prev) => [
+    setSelectedImages((prev) => [
       ...prev,
-      ...files.map((file) => ({ file, previewUrl: URL.createObjectURL(file) })),
+      ...files.map((file) => ({
+        uid: nextUid(),
+        kind: "upload",
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
     ]);
     e.target.value = "";
   }
 
-  function removeFile(index) {
-    setUploadFiles((prev) => prev.filter((_, i) => i !== index));
+  function removeImage(uid) {
+    setSelectedImages((prev) => prev.filter((x) => x.uid !== uid));
   }
 
   function selectGalleryImage(item) {
-    setSelectedGallery((prev) => {
-      if (prev.some((x) => x.id === item.id)) return prev.filter((x) => x.id !== item.id);
-      return [...prev, item];
+    setSelectedImages((prev) => {
+      if (prev.some((x) => x.kind === "gallery" && x.item.id === item.id)) {
+        return prev.filter((x) => !(x.kind === "gallery" && x.item.id === item.id));
+      }
+      return [...prev, { uid: nextUid(), kind: "gallery", item }];
     });
   }
 
   function clearGallerySelection() {
-    setSelectedGallery([]);
+    setSelectedImages((prev) => prev.filter((x) => x.kind !== "gallery"));
+  }
+
+  function reorderImages(from, to) {
+    if (from === to || from == null) return;
+    setSelectedImages((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
   }
 
   async function submit(e) {
@@ -1374,15 +1395,17 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
     if (selectedIds.length === 0) return;
 
     const mediaUrls = [];
-    if (uploadFiles.length > 0) {
+    const uploadItems = selectedImages.filter((x) => x.kind === "upload");
+    if (uploadItems.length > 0) {
       setUploading(true);
       setFileError("");
       const supabase = createClientSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
+      const urlByUid = {};
 
-      for (let i = 0; i < uploadFiles.length; i++) {
-        const item = uploadFiles[i];
+      for (let i = 0; i < uploadItems.length; i++) {
+        const item = uploadItems[i];
         const timestamp = Date.now() + i;
         const ext = item.file.name.split(".").pop();
         const safeName = `${timestamp}.${ext}`;
@@ -1399,7 +1422,7 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
         const { data: { publicUrl } } = supabase.storage
           .from("post-images")
           .getPublicUrl(filePath);
-        mediaUrls.push(publicUrl);
+        urlByUid[item.uid] = publicUrl;
 
         if (userId) {
           await supabase.from("media").insert({
@@ -1415,8 +1438,9 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
       setUploading(false);
     }
 
-    for (const galleryItem of selectedGallery) {
-      if (galleryItem?.public_url) mediaUrls.push(galleryItem.public_url);
+    for (const img of selectedImages) {
+      if (img.kind === "upload") mediaUrls.push(urlByUid[img.uid]);
+      else if (img.item?.public_url) mediaUrls.push(img.item.public_url);
     }
 
     const [y, m, d] = date.split("-");
@@ -1490,19 +1514,6 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
             {imageTab === "upload" ? (
               <>
                 {fileError && <div className="file-error">{fileError}</div>}
-                {uploadFiles.length > 0 && (
-                  <div className="upload-preview-grid">
-                    {uploadFiles.map((item, i) => (
-                      <div key={i} className="preview-wrap">
-                        <img src={item.previewUrl} alt={`upload-${i + 1}`} className="preview-img" />
-                        <span className="upload-order-badge">{i + 1}</span>
-                        <button type="button" className="remove-btn" onClick={() => removeFile(i)}>
-                          <X size={12} /> {t("dashboard.fields.removeImage")}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
                 <label
                   className="upload-dropzone"
                   onDragOver={(e) => e.preventDefault()}
@@ -1518,7 +1529,7 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
                   <input type="file" multiple accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleFileSelect} className="file-input-hidden" />
                   <Upload size={20} />
                   <span className="upload-dropzone-text">
-                    {uploadFiles.length > 0 ? t("dashboard.schedule.imageAddMore") : t("dashboard.schedule.imageTabUpload")}
+                    {selectedImages.length > 0 ? t("dashboard.schedule.imageAddMore") : t("dashboard.schedule.imageTabUpload")}
                   </span>
                 </label>
               </>
@@ -1537,7 +1548,7 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
                 ) : (
                   <div className="gallery-picker-grid">
                     {galleryItems.map((m) => {
-                      const selIndex = selectedGallery.findIndex((x) => x.id === m.id);
+                      const selIndex = selectedImages.findIndex((x) => x.kind === "gallery" && x.item.id === m.id);
                       const isSelected = selIndex !== -1;
                       return (
                         <div
@@ -1555,17 +1566,63 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
                     })}
                   </div>
                 )}
-                {selectedGallery.length > 0 && (
+                {selectedImages.some((x) => x.kind === "gallery") && (
                   <div className="gallery-picker-selected">
                     <Images size={14} />
                     <span className="gallery-picker-selected-name">
-                      {t("dashboard.schedule.imageSelectedCount", { count: selectedGallery.length })}
+                      {t("dashboard.schedule.imageSelectedCount", { count: selectedImages.filter((x) => x.kind === "gallery").length })}
                     </span>
                     <button type="button" className="link-btn" onClick={clearGallerySelection}>
                       {t("dashboard.schedule.imageGalleryClear")}
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {selectedImages.length > 0 && (
+              <div className="selected-images-block">
+                <div className="selected-images-head">
+                  <span>{t("dashboard.schedule.imageSelectedTitle")}</span>
+                  <span className="selected-images-hint">{t("dashboard.schedule.imageDragHint")}</span>
+                </div>
+                <div className="upload-preview-grid">
+                  {selectedImages.map((img, i) => (
+                    <div
+                      key={img.uid}
+                      className={`preview-wrap drag-item ${dragIndex === i ? "dragging" : ""} ${dragOverIndex === i && dragIndex !== i ? "drag-over" : ""}`}
+                      draggable={selectedImages.length > 1}
+                      onDragStart={(e) => {
+                        setDragIndex(i);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragIndex !== null && dragIndex !== i) setDragOverIndex(i);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        reorderImages(dragIndex, i);
+                        setDragIndex(null);
+                        setDragOverIndex(null);
+                      }}
+                      onDragEnd={() => {
+                        setDragIndex(null);
+                        setDragOverIndex(null);
+                      }}
+                    >
+                      <img
+                        src={img.kind === "upload" ? img.previewUrl : img.item.public_url}
+                        alt={`selected-${i + 1}`}
+                        className="preview-img"
+                      />
+                      <span className="upload-order-badge">{i + 1}</span>
+                      <button type="button" className="remove-btn" onClick={() => removeImage(img.uid)}>
+                        <X size={12} /> {t("dashboard.fields.removeImage")}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -3237,6 +3294,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .upload-preview-grid .preview-wrap { margin-top: 0; aspect-ratio: 1 / 1; overflow: hidden; border-radius: var(--radius-sm); background: var(--glass-bg-dark); }
         .upload-preview-grid .preview-img { max-width: 100%; max-height: none; width: 100%; height: 100%; object-fit: cover; }
         .preview-img { max-width: 100%; max-height: 260px; border-radius: var(--radius-sm); width: 100%; object-fit: cover; }
+        .drag-item { cursor: grab; transition: opacity .12s, transform .12s; }
+        .drag-item:active { cursor: grabbing; }
+        .drag-item.dragging { opacity: 0.4; transform: scale(0.97); }
+        .drag-item.drag-over { box-shadow: 0 0 0 3px var(--accent-soft), inset 0 0 0 2px var(--accent); }
         .upload-order-badge {
           position: absolute; top: 6px; left: 6px;
           min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
@@ -3281,6 +3342,11 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .upload-dropzone:hover { border-color: var(--accent); background: var(--accent-soft); }
         .file-input-hidden { display: none; }
         .upload-dropzone-text { font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
+
+        .selected-images-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--glass-border); }
+        .selected-images-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+        .selected-images-head span:first-child { font-size: 12px; font-weight: 600; color: var(--text); }
+        .selected-images-hint { font-size: 11px; color: var(--text-dim); }
 
         .gallery-picker { display: flex; flex-direction: column; gap: 10px; }
         .gallery-picker-grid {

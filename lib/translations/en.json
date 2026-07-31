@@ -266,6 +266,8 @@
       "imageGalleryClear": "Clear selection",
       "imageSelectedCount": "{count} image(s) selected",
       "imageAddMore": "Add more images",
+      "imageSelectedTitle": "Selected Images",
+      "imageDragHint": "Drag to reorder — #1 is the cover",
       "cancel": "Cancel",
       "save": "Save Schedule",
       "batchSuffix": "page(s)",

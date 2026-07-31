@@ -267,6 +267,8 @@
       "imageGalleryClear": "ล้างการเลือก",
       "imageSelectedCount": "เลือกรูปภาพ {count} รูป",
       "imageAddMore": "เพิ่มรูปภาพเพิ่มเติม",
+      "imageSelectedTitle": "รูปภาพที่เลือก",
+      "imageDragHint": "ลากเพื่อจัดลำดับ — รูปที่ 1 คือรูปปก",
       "cancel": "ยกเลิก",
       "save": "บันทึกกำหนดการ",
       "batchSuffix": "เพจ",

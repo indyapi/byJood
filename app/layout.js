@@ -346,6 +346,128 @@ export default function RootLayout({ children }) {
                 padding-bottom: 0;
               }
               .theme-root { transition: background .25s; }
+
+              /* ── Light Pastel (non-dashboard pages) — desktop ── */
+              @media (min-width: 721px) {
+                [data-desktop-theme="light"] :is(.gl-nav, .gl-mobile-top, .gl-mob-drawer, .gl-mob-overlay, .gl-hero, .gl-section, .gl-section-alt, .gl-footer, .gl-about, .gl-guide-wrap, .gl-auth-page, .gl-cr) {
+                  --bg: #F8FAFC;
+                  --bg-secondary: #F1F5F9;
+                  --glass: #FFFFFF;
+                  --glass-border: #E2E8F0;
+                  --surface: #FFFFFF;
+                  --surface-hover: #F1F5F9;
+                  --primary: #4F46E5;
+                  --primary-hover: #6366F1;
+                  --primary-active: #4338CA;
+                  --text: #0F172A;
+                  --text-secondary: #334155;
+                  --text-muted: #64748B;
+                  --border: #E2E8F0;
+                  --success: #16A34A;
+                  --warning: #F59E0B;
+                  --error: #DC2626;
+                  --info: #2563EB;
+                  --shadow: 0 1px 3px rgba(0,0,0,.05);
+                  --glass-bg: #FFFFFF;
+                  --glass-bg-light: #F1F5F9;
+                  --glass-bg-dark: #FFFFFF;
+                  --glass-border-light: #E2E8F0;
+                  --glass-border-accent: rgba(79,70,229,.20);
+                  --glass-shadow: var(--shadow);
+                  --bokeh-1: #C7D2FE;
+                  --bokeh-2: #A5B4FC;
+                  --bokeh-3: #DDD6FE;
+                  --bokeh-4: #BFDBFE;
+                  --bokeh-5: #FBCFE8;
+                  --text-heading: #0F172A;
+                  --text-dim: #64748B;
+                  --accent: #4F46E5;
+                  --accent-dim: rgba(79,70,229,.08);
+                  --accent-hover: #6366F1;
+                  --danger: #DC2626;
+                  --glow-accent: radial-gradient(circle, rgba(79,70,229,.16), transparent 70%);
+                  --modal-overlay: rgba(15,23,42,.25);
+                  --overlay: rgba(255,255,255,.60);
+                  --bg-body: #F8FAFC;
+                  --gradient-btn: linear-gradient(180deg, #6366F1, #4F46E5);
+                }
+                [data-desktop-theme="light"] .gl-nav,
+                [data-desktop-theme="light"] .gl-mobile-top,
+                [data-desktop-theme="light"] .gl-mob-drawer {
+                  background: #FFFFFF;
+                  border-color: #E2E8F0;
+                }
+                [data-desktop-theme="light"] .gl-footer {
+                  background: #F1F5F9;
+                  border-top-color: #E2E8F0;
+                }
+                [data-desktop-theme="light"] .gl-hero::after {
+                  background:
+                    radial-gradient(circle at 50% 30%, rgba(79,70,229,.12), transparent 70%),
+                    linear-gradient(135deg, #F8FAFC, #F1F5F9, #F8FAFC, #C7D2FE);
+                }
+              }
+
+              /* ── Light Pastel (non-dashboard pages) — mobile ── */
+              @media (max-width: 720px) {
+                [data-mobile-theme="light"] :is(.gl-nav, .gl-mobile-top, .gl-mob-drawer, .gl-mob-overlay, .gl-hero, .gl-section, .gl-section-alt, .gl-footer, .gl-about, .gl-guide-wrap, .gl-auth-page, .gl-cr) {
+                  --bg: #F8FAFC;
+                  --bg-secondary: #F1F5F9;
+                  --glass: #FFFFFF;
+                  --glass-border: #E2E8F0;
+                  --surface: #FFFFFF;
+                  --surface-hover: #F1F5F9;
+                  --primary: #4F46E5;
+                  --primary-hover: #6366F1;
+                  --primary-active: #4338CA;
+                  --text: #0F172A;
+                  --text-secondary: #334155;
+                  --text-muted: #64748B;
+                  --border: #E2E8F0;
+                  --success: #16A34A;
+                  --warning: #F59E0B;
+                  --error: #DC2626;
+                  --info: #2563EB;
+                  --shadow: 0 1px 3px rgba(0,0,0,.05);
+                  --glass-bg: #FFFFFF;
+                  --glass-bg-light: #F1F5F9;
+                  --glass-bg-dark: #FFFFFF;
+                  --glass-border-light: #E2E8F0;
+                  --glass-border-accent: rgba(79,70,229,.20);
+                  --glass-shadow: var(--shadow);
+                  --bokeh-1: #C7D2FE;
+                  --bokeh-2: #A5B4FC;
+                  --bokeh-3: #DDD6FE;
+                  --bokeh-4: #BFDBFE;
+                  --bokeh-5: #FBCFE8;
+                  --text-heading: #0F172A;
+                  --text-dim: #64748B;
+                  --accent: #4F46E5;
+                  --accent-dim: rgba(79,70,229,.08);
+                  --accent-hover: #6366F1;
+                  --danger: #DC2626;
+                  --glow-accent: radial-gradient(circle, rgba(79,70,229,.16), transparent 70%);
+                  --modal-overlay: rgba(15,23,42,.25);
+                  --overlay: rgba(255,255,255,.60);
+                  --bg-body: #F8FAFC;
+                  --gradient-btn: linear-gradient(180deg, #6366F1, #4F46E5);
+                }
+                [data-mobile-theme="light"] .gl-nav,
+                [data-mobile-theme="light"] .gl-mobile-top,
+                [data-mobile-theme="light"] .gl-mob-drawer {
+                  background: #FFFFFF;
+                  border-color: #E2E8F0;
+                }
+                [data-mobile-theme="light"] .gl-footer {
+                  background: #F1F5F9;
+                  border-top-color: #E2E8F0;
+                }
+                [data-mobile-theme="light"] .gl-hero::after {
+                  background:
+                    radial-gradient(circle at 50% 30%, rgba(79,70,229,.12), transparent 70%),
+                    linear-gradient(135deg, #F8FAFC, #F1F5F9, #F8FAFC, #C7D2FE);
+                }
+              }
               @media (max-width: 720px) {
                 .main-content { padding: 52px 0 0; }
               }

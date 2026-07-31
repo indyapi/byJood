@@ -9,7 +9,7 @@ import {
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
   Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal, User,
   Mail, Shield, Edit3, Camera, Check, LogOut, Menu, Folder, ThumbsUp, ExternalLink, MessageCircle, Share2,
-  Images, Loader2,
+  Images, Loader2, Upload,
 } from "lucide-react";
 import Breadcrumb from "./Breadcrumb";
 import { createClientSupabase } from "@/lib/supabase-client";
@@ -1296,10 +1296,15 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
   const [content, setContent] = useState("");
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState("09:00");
+  const [imageTab, setImageTab] = useState("upload");
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [fileError, setFileError] = useState("");
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState("");
+  const [selectedGallery, setSelectedGallery] = useState(null);
 
   const atMax = selectedIds.length >= MAX_PAGES_PER_POST;
 
@@ -1315,6 +1320,24 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
     setSelectedIds(pages.slice(0, MAX_PAGES_PER_POST).map((p) => p.id));
   }
 
+  const loadGallery = useCallback(async () => {
+    setGalleryLoading(true);
+    setGalleryError("");
+    try {
+      const res = await fetch("/api/gallery");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setGalleryItems(Array.isArray(data) ? data : []);
+    } catch {
+      setGalleryError(t("dashboard.gallery.loadError"));
+    }
+    setGalleryLoading(false);
+  }, [t]);
+
+  useEffect(() => {
+    if (imageTab === "gallery" && galleryItems.length === 0) loadGallery();
+  }, [imageTab, galleryItems.length, loadGallery]);
+
   function handleFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -1328,9 +1351,17 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
     setFileError("");
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
+    setSelectedGallery(null);
   }
 
   function removeFile() {
+    setSelectedFile(null);
+    setPreviewUrl("");
+    setFileError("");
+  }
+
+  function selectGalleryImage(item) {
+    setSelectedGallery(item);
     setSelectedFile(null);
     setPreviewUrl("");
     setFileError("");
@@ -1375,6 +1406,8 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
           public_url: publicUrl,
         });
       }
+    } else if (selectedGallery?.public_url) {
+      mediaUrls = [selectedGallery.public_url];
     }
 
     const [y, m, d] = date.split("-");
@@ -1428,14 +1461,93 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
           </div>
           <div className="field-group">
             <label className="field-label">{t("dashboard.fields.image")}</label>
-            <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleFileSelect} className="input file-input" />
-            {fileError && <div className="file-error">{fileError}</div>}
-            {previewUrl && (
-              <div className="preview-wrap">
-                <img src={previewUrl} alt="preview" className="preview-img" />
-                <button type="button" className="remove-btn" onClick={removeFile}>
-                  <X size={12} /> {t("dashboard.fields.removeImage")}
-                </button>
+            <div className="image-tabs">
+              <button
+                type="button"
+                className={`image-tab ${imageTab === "upload" ? "active" : ""}`}
+                onClick={() => setImageTab("upload")}
+              >
+                <Upload size={14} /> {t("dashboard.schedule.imageTabUpload")}
+              </button>
+              <button
+                type="button"
+                className={`image-tab ${imageTab === "gallery" ? "active" : ""}`}
+                onClick={() => setImageTab("gallery")}
+              >
+                <Images size={14} /> {t("dashboard.schedule.imageTabGallery")}
+              </button>
+            </div>
+
+            {imageTab === "upload" ? (
+              <>
+                {fileError && <div className="file-error">{fileError}</div>}
+                {previewUrl ? (
+                  <div className="preview-wrap">
+                    <img src={previewUrl} alt="preview" className="preview-img" />
+                    <button type="button" className="remove-btn" onClick={removeFile}>
+                      <X size={12} /> {t("dashboard.fields.removeImage")}
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    className="upload-dropzone"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer?.files?.[0];
+                      if (file) {
+                        const fakeEvent = { target: { files: [file] } };
+                        handleFileSelect(fakeEvent);
+                      }
+                    }}
+                  >
+                    <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleFileSelect} className="file-input-hidden" />
+                    <Upload size={20} />
+                    <span className="upload-dropzone-text">{t("dashboard.schedule.imageTabUpload")}</span>
+                  </label>
+                )}
+              </>
+            ) : (
+              <div className="gallery-picker">
+                {galleryLoading ? (
+                  <div className="gallery-picker-empty">
+                    <Loader2 size={18} className="spin" /> {t("dashboard.schedule.imageGalleryLoading")}
+                  </div>
+                ) : galleryError ? (
+                  <div className="file-error">{galleryError}</div>
+                ) : galleryItems.length === 0 ? (
+                  <div className="gallery-picker-empty">
+                    <Images size={18} /> {t("dashboard.schedule.imageGalleryEmpty")}
+                  </div>
+                ) : (
+                  <div className="gallery-picker-grid">
+                    {galleryItems.map((m) => {
+                      const isSelected = selectedGallery?.id === m.id;
+                      return (
+                        <div
+                          key={m.id}
+                          className={`gallery-picker-item ${isSelected ? "selected" : ""}`}
+                          onClick={() => selectGalleryImage(m)}
+                          title={m.filename}
+                        >
+                          <img src={m.public_url} alt={m.filename} loading="lazy" />
+                          {isSelected && (
+                            <span className="gallery-picker-check"><Check size={12} /></span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {selectedGallery && (
+                  <div className="gallery-picker-selected">
+                    <img src={selectedGallery.public_url} alt={selectedGallery.filename} />
+                    <span className="gallery-picker-selected-name">{selectedGallery.filename}</span>
+                    <button type="button" className="link-btn" onClick={() => setSelectedGallery(null)}>
+                      {t("dashboard.schedule.imageDeselect")}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -3106,6 +3218,78 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .preview-img { max-width: 100%; max-height: 260px; border-radius: var(--radius-sm); width: 100%; object-fit: cover; }
         .remove-btn { position: absolute; top: 6px; right: 6px; background: var(--glass-bg-dark); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--glass-border); color: var(--text); border-radius: var(--radius-sm); padding: 4px 8px; cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 4px; transition: border-color .15s; }
         .remove-btn:hover { border-color: var(--glass-border-light); }
+
+        /* ── AddPostModal image tabs ── */
+        .image-tabs {
+          display: flex; gap: 6px; margin-bottom: 10px;
+          background: var(--glass-bg-dark);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius-sm);
+          padding: 4px;
+        }
+        .image-tab {
+          flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+          padding: 8px 10px; border-radius: var(--radius-sm);
+          background: none; border: none; cursor: pointer;
+          color: var(--text-muted); font-size: 12px; font-weight: 500; font-family: var(--font);
+          transition: background .12s, color .12s;
+        }
+        .image-tab:hover { color: var(--text); }
+        .image-tab.active {
+          background: var(--accent-soft); color: var(--accent);
+          border: 1px solid var(--glass-border-accent);
+        }
+        .upload-dropzone {
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+          padding: 26px 16px; border-radius: var(--radius-sm); cursor: pointer;
+          background: var(--glass-bg);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1.5px dashed var(--glass-border-light);
+          color: var(--text-dim); transition: border-color .15s, background .15s;
+        }
+        .upload-dropzone:hover { border-color: var(--accent); background: var(--accent-soft); }
+        .file-input-hidden { display: none; }
+        .upload-dropzone-text { font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
+
+        .gallery-picker { display: flex; flex-direction: column; gap: 10px; }
+        .gallery-picker-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 8px;
+          max-height: 200px; overflow-y: auto; padding: 2px;
+        }
+        .gallery-picker-item {
+          position: relative; aspect-ratio: 1 / 1; border-radius: var(--radius-sm);
+          overflow: hidden; cursor: pointer; border: 2px solid transparent;
+          transition: border-color .12s; background: var(--glass-bg-dark);
+        }
+        .gallery-picker-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .gallery-picker-item:hover { border-color: var(--glass-border-light); }
+        .gallery-picker-item.selected { border-color: var(--accent); }
+        .gallery-picker-check {
+          position: absolute; top: 4px; right: 4px;
+          width: 18px; height: 18px; border-radius: 50%;
+          background: var(--accent); color: #fff;
+          display: inline-flex; align-items: center; justify-content: center;
+        }
+        .gallery-picker-empty {
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          padding: 24px 12px; border: 1px dashed var(--glass-border);
+          border-radius: var(--radius-sm); color: var(--text-dim); font-size: 12.5px;
+        }
+        .gallery-picker-selected {
+          display: flex; align-items: center; gap: 10px;
+          padding: 8px; border: 1px solid var(--glass-border-accent);
+          border-radius: var(--radius-sm); background: var(--accent-soft);
+        }
+        .gallery-picker-selected img {
+          width: 44px; height: 44px; object-fit: cover; border-radius: 6px; flex-shrink: 0;
+        }
+        .gallery-picker-selected-name {
+          flex: 1; font-size: 12px; color: var(--text);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
 
         .platform-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
         .platform-option {

@@ -9,6 +9,7 @@ import {
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
   Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal, User,
   Mail, Shield, Edit3, Camera, Check, LogOut, Menu, Folder, ThumbsUp, ExternalLink, MessageCircle, Share2,
+  Images, Loader2,
 } from "lucide-react";
 import Breadcrumb from "./Breadcrumb";
 import { createClientSupabase } from "@/lib/supabase-client";
@@ -1805,6 +1806,188 @@ function LogsView({ logs, t, PLATFORMS }) {
 }
 
 /* ---------------------------------------------------------
+   Gallery view
+--------------------------------------------------------- */
+function formatBytes(bytes) {
+  if (bytes == null || isNaN(bytes)) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function GallerySkeleton() {
+  return (
+    <div className="gallery-grid">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="gallery-skeleton">
+          <div className="gallery-skeleton-img" />
+          <div className="gallery-skeleton-line" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GalleryView({ authed, t }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [preview, setPreview] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/gallery");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch {
+      setToast({ kind: "error", message: t("dashboard.gallery.loadError") });
+    }
+    setLoading(false);
+  }, [t]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 2500);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  async function copyUrl(url) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setToast({ kind: "success", message: t("dashboard.gallery.copied") });
+    } catch {
+      setToast({ kind: "error", message: t("dashboard.gallery.deleteError") });
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/gallery/${deleteTarget.id}`, { method: "DELETE" });
+      if (res.ok || res.status === 204) {
+        setItems((prev) => prev.filter((m) => m.id !== deleteTarget.id));
+        if (preview?.id === deleteTarget.id) setPreview(null);
+        setDeleteTarget(null);
+        setToast({ kind: "success", message: t("dashboard.gallery.deleteSuccess") });
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setToast({ kind: "error", message: body.error || t("dashboard.gallery.deleteError") });
+      }
+    } catch {
+      setToast({ kind: "error", message: t("dashboard.gallery.deleteError") });
+    }
+    setDeleting(false);
+  }
+
+  return (
+    <div className="view">
+      <div className="view-head">
+        <div>
+          <span className="eyebrow">{t("dashboard.gallery.eyebrow")}</span>
+          <h1>{t("dashboard.gallery.title")}</h1>
+          <p className="sub">{t("dashboard.gallery.subtitle")}</p>
+        </div>
+        {items.length > 0 && !loading && (
+          <span className="gallery-count">{items.length}</span>
+        )}
+      </div>
+
+      {loading ? (
+        <GallerySkeleton />
+      ) : items.length === 0 ? (
+        <div className="empty">
+          <Images size={28} />
+          <p>{t("dashboard.gallery.empty")}</p>
+        </div>
+      ) : (
+        <div className="gallery-grid">
+          {items.map((m) => (
+            <div key={m.id} className="gallery-card">
+              <div className="gallery-thumb" onClick={() => setPreview(m)}>
+                <img src={m.public_url} alt={m.filename} loading="lazy" />
+                <div className="gallery-actions">
+                  <button className="gallery-action" onClick={(e) => { e.stopPropagation(); setPreview(m); }} aria-label={t("dashboard.gallery.previewAria")}>
+                    <Eye size={15} />
+                  </button>
+                  <button className="gallery-action" onClick={(e) => { e.stopPropagation(); copyUrl(m.public_url); }} aria-label={t("dashboard.gallery.copyAria")}>
+                    <Copy size={15} />
+                  </button>
+                  <button className="gallery-action danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(m); }} disabled={!authed} aria-label={t("dashboard.gallery.deleteAria")}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+              <div className="gallery-meta">
+                <span className="gallery-name" title={m.filename}>{m.filename}</span>
+                <span className="gallery-size">{formatBytes(m.size_bytes)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {preview && (
+        <div className="modal-overlay" onClick={() => setPreview(null)}>
+          <div className="modal gallery-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{t("dashboard.gallery.preview")}</h2>
+              <button className="icon-btn" onClick={() => setPreview(null)}><X size={18} /></button>
+            </div>
+            <div className="gallery-preview-wrap">
+              <img src={preview.public_url} alt={preview.filename} className="gallery-preview-img" />
+            </div>
+            <div className="gallery-preview-meta">
+              <span className="gallery-name" title={preview.filename}>{preview.filename}</span>
+              <span className="gallery-size">{formatBytes(preview.size_bytes)}</span>
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => copyUrl(preview.public_url)}>
+                <Copy size={14} /> {t("dashboard.gallery.copyUrl")}
+              </button>
+              <button className="btn btn-danger" onClick={() => { setDeleteTarget(preview); setPreview(null); }} disabled={!authed}>
+                <Trash2 size={14} /> {t("dashboard.gallery.deleteBtn")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="modal-overlay">
+          <div className="modal modal-sm">
+            <div className="modal-head">
+              <h2>{t("dashboard.gallery.deleteTitle")}</h2>
+              <button className="icon-btn" onClick={() => setDeleteTarget(null)}><X size={18} /></button>
+            </div>
+            <p className="delete-body">{t("dashboard.gallery.deleteConfirm")}</p>
+            <div className="gallery-delete-preview">
+              <img src={deleteTarget.public_url} alt={deleteTarget.filename} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)}>{t("dashboard.schedule.cancel")}</button>
+              <button className="btn btn-danger" onClick={confirmDelete} disabled={deleting}>
+                {deleting ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />} {deleting ? t("dashboard.gallery.deleting") : t("dashboard.gallery.deleteBtn")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`toast ${toast.kind ? `toast-${toast.kind}` : ""}`}>{toast.message}</div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
    Profile Modal
 --------------------------------------------------------- */
 const PROVIDER_LABELS = {
@@ -2205,9 +2388,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
   }, [refreshPages, refreshPosts, refreshLogs]);
 
   const nav = [
-    { key: "connections", label: "จัดการเพจ", icon: Link2 },
-    { key: "schedule", label: "ตั้งเวลาโพสต์", icon: CalendarClock },
-    { key: "logs", label: "Logs", icon: ScrollText },
+    { key: "connections", label: t("dashboard.sidebar.navConnections"), icon: Link2 },
+    { key: "schedule", label: t("dashboard.sidebar.navSchedule"), icon: CalendarClock },
+    { key: "gallery", label: t("dashboard.sidebar.navGallery"), icon: Images },
+    { key: "logs", label: t("dashboard.sidebar.navLogs"), icon: ScrollText },
   ];
 
   return (
@@ -2755,6 +2939,106 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           padding: 3px 10px; border-radius: 999px;
         }
 
+        /* ── Gallery ── */
+        .gallery-count {
+          font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);
+          background: var(--glass-bg-dark); border: 1px solid var(--glass-border);
+          border-radius: 999px; padding: 5px 12px;
+        }
+        .gallery-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 14px;
+        }
+        .gallery-card {
+          background: var(--glass);
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius);
+          overflow: hidden;
+          transition: border-color .15s, box-shadow .15s;
+          box-shadow: var(--shadow);
+        }
+        .gallery-card:hover { border-color: var(--glass-border-accent); }
+        .gallery-thumb {
+          position: relative;
+          aspect-ratio: 1 / 1;
+          background: var(--glass-bg-dark);
+          cursor: zoom-in;
+          overflow: hidden;
+        }
+        .gallery-thumb img {
+          width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .gallery-actions {
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          background: rgba(10,10,18,.38);
+          backdrop-filter: blur(2px);
+          -webkit-backdrop-filter: blur(2px);
+          opacity: 0; transition: opacity .18s;
+        }
+        .gallery-card:hover .gallery-actions { opacity: 1; }
+        .gallery-actions:focus-within { opacity: 1; }
+        .gallery-action {
+          width: 34px; height: 34px; border-radius: var(--radius-sm);
+          background: rgba(255,255,255,.92); border: none; cursor: pointer;
+          color: #17141f; display: inline-flex; align-items: center; justify-content: center;
+          transition: transform .12s, background .12s, color .12s;
+        }
+        .gallery-action:hover { transform: translateY(-1px); background: #fff; }
+        .gallery-action.danger:hover { background: #fee2e2; color: #b91c1c; }
+        .gallery-action:disabled { opacity: .35; cursor: not-allowed; }
+        .gallery-meta {
+          display: flex; align-items: center; justify-content: space-between; gap: 8px;
+          padding: 10px 12px;
+        }
+        .gallery-name {
+          font-size: 12.5px; font-weight: 500; color: var(--table-text);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .gallery-size {
+          font-family: var(--font-mono); font-size: 11px; color: var(--table-muted); flex-shrink: 0;
+        }
+        .gallery-skeleton {
+          background: var(--glass-bg-dark); border: 1px solid var(--glass-border);
+          border-radius: var(--radius); overflow: hidden;
+        }
+        .gallery-skeleton-img {
+          aspect-ratio: 1 / 1;
+          background: linear-gradient(100deg, var(--glass-bg) 40%, var(--glass-bg-dark) 50%, var(--glass-bg) 60%);
+          background-size: 200% 100%;
+          animation: galleryShimmer 1.4s infinite;
+        }
+        .gallery-skeleton-line {
+          height: 14px; margin: 12px;
+          border-radius: 6px;
+          background: linear-gradient(100deg, var(--glass-bg) 40%, var(--glass-bg-dark) 50%, var(--glass-bg) 60%);
+          background-size: 200% 100%;
+          animation: galleryShimmer 1.4s infinite;
+        }
+        @keyframes galleryShimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        .gallery-modal { max-width: 640px; }
+        .gallery-preview-wrap {
+          background: var(--glass-bg-dark); border: 1px solid var(--glass-border);
+          border-radius: var(--radius-sm); padding: 8px; overflow: hidden;
+        }
+        .gallery-preview-img {
+          width: 100%; max-height: 480px; object-fit: contain; display: block; border-radius: 6px;
+        }
+        .gallery-preview-meta {
+          display: flex; align-items: center; justify-content: space-between; gap: 8px;
+          margin-top: 12px;
+        }
+        .gallery-delete-preview {
+          width: 100%; height: 120px; border-radius: var(--radius-sm);
+          overflow: hidden; background: var(--glass-bg-dark); margin-bottom: 4px;
+        }
+        .gallery-delete-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .spin { animation: gallerySpin 1s linear infinite; }
+        @keyframes gallerySpin { to { transform: rotate(360deg); } }
+
         .modal-overlay { position: fixed; inset: 0; background: var(--modal-overlay); display: flex; align-items: flex-start; justify-content: center; z-index: 50; padding: 40px 20px; overflow-y: auto; backdrop-filter: blur(2px); }
         .modal {
           background: var(--glass-bg-dark);
@@ -2847,6 +3131,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           .modal { padding: 16px; }
           .modal-lg, .fb-modal, .modal-sm { max-width: 100%; width: 100%; margin: 0; }
           .grid-cards { grid-template-columns: 1fr; }
+          .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+          .gallery-actions { opacity: 1; }
           .post-row { flex-wrap: wrap; gap: 8px; }
           .post-time { width: auto; }
           .stat-row { gap: 8px; }
@@ -3004,6 +3290,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           />
         )}
         {tab === "logs" && <LogsView logs={logs} t={t} PLATFORMS={PLATFORMS} />}
+        {tab === "gallery" && <GalleryView authed={authed} t={t} />}
       </main>
 
       {mobileSidebar && (

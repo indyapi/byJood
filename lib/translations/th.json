@@ -156,6 +156,7 @@
       "status": "Supabase • เชื่อมต่อแล้ว",
       "navConnections": "จัดการเพจ",
       "navSchedule": "ตั้งเวลาโพสต์",
+      "navGallery": "แกลเลอรี",
       "navLogs": "Logs"
     },
     "platforms": {
@@ -226,6 +227,25 @@
       "save": "บันทึกการเชื่อมต่อ",
       "updated": "อัปเดตแล้ว",
       "tokenUpdated": "อัปเดตการเชื่อมต่อแล้ว — token ใช้งานได้"
+    },
+    "gallery": {
+      "eyebrow": "GALLERY",
+      "title": "แกลเลอรี",
+      "subtitle": "รูปภาพทั้งหมดที่คุณอัปโหลด",
+      "empty": "ยังไม่มีรูปภาพ รูปที่คุณอัปโหลดพร้อมกับโพสต์ที่ตั้งเวลาจะปรากฏที่นี่",
+      "copyUrl": "คัดลอก URL",
+      "copied": "คัดลอกแล้ว!",
+      "preview": "ดูตัวอย่าง",
+      "deleteTitle": "ลบรูปภาพ",
+      "deleteConfirm": "คุณต้องการลบรูปภาพนี้หรือไม่? ระบบจะลบออกจาก Storage อย่างถาวร",
+      "deleteBtn": "ลบ",
+      "deleting": "กำลังลบ...",
+      "deleteSuccess": "ลบรูปภาพแล้ว",
+      "deleteError": "ลบรูปภาพไม่สำเร็จ กรุณาลองอีกครั้ง",
+      "loadError": "โหลดแกลเลอรีไม่สำเร็จ กรุณาลองอีกครั้ง",
+      "previewAria": "ดูตัวอย่างรูปภาพ",
+      "copyAria": "คัดลอก URL รูปภาพ",
+      "deleteAria": "ลบรูปภาพ"
     },
     "schedule": {
       "eyebrow": "SCHEDULE",

@@ -24,7 +24,8 @@ export async function POST(request) {
 
   const admin = createAdminSupabase();
   const body = await request.json();
-  const { page_ids, content, scheduled_at, media_urls } = body;
+  const { page_ids, content, scheduled_at, image_urls, media_urls } = body;
+  const mediaUrls = image_urls ?? media_urls ?? [];
 
   if (!page_ids?.length || !content || !scheduled_at) {
     return Response.json({ error: "Missing required fields" }, { status: 400 });
@@ -62,7 +63,7 @@ export async function POST(request) {
       status: "pending",
       group_id: group.id,
     };
-    if (media_urls?.length > 0) insertData.media_urls = media_urls;
+    if (mediaUrls.length > 0) insertData.media_urls = mediaUrls;
 
     const { data: post, error: postErr } = await admin
       .from("scheduled_posts")
@@ -74,5 +75,5 @@ export async function POST(request) {
     posts.push(post);
   }
 
-  return Response.json({ group: { ...group, thumbnail: media_urls?.[0] || null }, posts }, { status: 201 });
+  return Response.json({ group: { ...group, thumbnail: mediaUrls[0] || null }, posts }, { status: 201 });
 }

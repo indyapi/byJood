@@ -1297,14 +1297,13 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState("09:00");
   const [imageTab, setImageTab] = useState("upload");
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [uploadFiles, setUploadFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [fileError, setFileError] = useState("");
   const [galleryItems, setGalleryItems] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [galleryError, setGalleryError] = useState("");
-  const [selectedGallery, setSelectedGallery] = useState(null);
+  const [selectedGallery, setSelectedGallery] = useState([]);
 
   const atMax = selectedIds.length >= MAX_PAGES_PER_POST;
 
@@ -1339,75 +1338,85 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
   }, [imageTab, galleryItems.length, loadGallery]);
 
   function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const tooLarge = files.find((f) => f.size > 5 * 1024 * 1024);
+    if (tooLarge) {
       setFileError(t("dashboard.fields.fileTooLarge"));
-      setSelectedFile(null);
-      setPreviewUrl("");
       e.target.value = "";
       return;
     }
     setFileError("");
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    setSelectedGallery(null);
+    setUploadFiles((prev) => [
+      ...prev,
+      ...files.map((file) => ({ file, previewUrl: URL.createObjectURL(file) })),
+    ]);
+    e.target.value = "";
   }
 
-  function removeFile() {
-    setSelectedFile(null);
-    setPreviewUrl("");
-    setFileError("");
+  function removeFile(index) {
+    setUploadFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   function selectGalleryImage(item) {
-    setSelectedGallery(item);
-    setSelectedFile(null);
-    setPreviewUrl("");
-    setFileError("");
+    setSelectedGallery((prev) => {
+      if (prev.some((x) => x.id === item.id)) return prev.filter((x) => x.id !== item.id);
+      return [...prev, item];
+    });
+  }
+
+  function clearGallerySelection() {
+    setSelectedGallery([]);
   }
 
   async function submit(e) {
     e.preventDefault();
     if (selectedIds.length === 0) return;
 
-    let mediaUrls = [];
-    if (selectedFile) {
+    const mediaUrls = [];
+    if (uploadFiles.length > 0) {
       setUploading(true);
       setFileError("");
       const supabase = createClientSupabase();
-      const timestamp = Date.now();
-      const ext = selectedFile.name.split(".").pop();
-      const safeName = `${timestamp}.${ext}`;
-      const filePath = `posts/${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("post-images")
-        .upload(filePath, selectedFile);
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        setFileError(`อัปโหลดไม่สำเร็จ: ${uploadError.message || uploadError.error || JSON.stringify(uploadError)}`);
-        setUploading(false);
-        return;
-      }
-      const { data: { publicUrl } } = supabase.storage
-        .from("post-images")
-        .getPublicUrl(filePath);
-      mediaUrls = [publicUrl];
-
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
-      if (userId) {
-        await supabase.from("media").insert({
-          user_id: userId,
-          filename: selectedFile.name,
-          mime_type: selectedFile.type,
-          size_bytes: selectedFile.size,
-          storage_path: filePath,
-          public_url: publicUrl,
-        });
+
+      for (let i = 0; i < uploadFiles.length; i++) {
+        const item = uploadFiles[i];
+        const timestamp = Date.now() + i;
+        const ext = item.file.name.split(".").pop();
+        const safeName = `${timestamp}.${ext}`;
+        const filePath = `posts/${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("post-images")
+          .upload(filePath, item.file);
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          setFileError(`อัปโหลดไม่สำเร็จ: ${uploadError.message || uploadError.error || JSON.stringify(uploadError)}`);
+          setUploading(false);
+          return;
+        }
+        const { data: { publicUrl } } = supabase.storage
+          .from("post-images")
+          .getPublicUrl(filePath);
+        mediaUrls.push(publicUrl);
+
+        if (userId) {
+          await supabase.from("media").insert({
+            user_id: userId,
+            filename: item.file.name,
+            mime_type: item.file.type,
+            size_bytes: item.file.size,
+            storage_path: filePath,
+            public_url: publicUrl,
+          });
+        }
       }
-    } else if (selectedGallery?.public_url) {
-      mediaUrls = [selectedGallery.public_url];
+      setUploading(false);
+    }
+
+    for (const galleryItem of selectedGallery) {
+      if (galleryItem?.public_url) mediaUrls.push(galleryItem.public_url);
     }
 
     const [y, m, d] = date.split("-");
@@ -1416,7 +1425,7 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
     const res = await fetch("/api/scheduled-posts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ page_ids: selectedIds, content, scheduled_at, media_urls: mediaUrls }),
+      body: JSON.stringify({ page_ids: selectedIds, content, scheduled_at, image_urls: mediaUrls }),
     });
     if (res.status === 401) { router.replace("/sign-in"); return; }
     if (res.ok) {
@@ -1481,31 +1490,37 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
             {imageTab === "upload" ? (
               <>
                 {fileError && <div className="file-error">{fileError}</div>}
-                {previewUrl ? (
-                  <div className="preview-wrap">
-                    <img src={previewUrl} alt="preview" className="preview-img" />
-                    <button type="button" className="remove-btn" onClick={removeFile}>
-                      <X size={12} /> {t("dashboard.fields.removeImage")}
-                    </button>
+                {uploadFiles.length > 0 && (
+                  <div className="upload-preview-grid">
+                    {uploadFiles.map((item, i) => (
+                      <div key={i} className="preview-wrap">
+                        <img src={item.previewUrl} alt={`upload-${i + 1}`} className="preview-img" />
+                        <span className="upload-order-badge">{i + 1}</span>
+                        <button type="button" className="remove-btn" onClick={() => removeFile(i)}>
+                          <X size={12} /> {t("dashboard.fields.removeImage")}
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  <label
-                    className="upload-dropzone"
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const file = e.dataTransfer?.files?.[0];
-                      if (file) {
-                        const fakeEvent = { target: { files: [file] } };
-                        handleFileSelect(fakeEvent);
-                      }
-                    }}
-                  >
-                    <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleFileSelect} className="file-input-hidden" />
-                    <Upload size={20} />
-                    <span className="upload-dropzone-text">{t("dashboard.schedule.imageTabUpload")}</span>
-                  </label>
                 )}
+                <label
+                  className="upload-dropzone"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const files = Array.from(e.dataTransfer?.files || []);
+                    if (files.length) {
+                      const fakeEvent = { target: { files } };
+                      handleFileSelect(fakeEvent);
+                    }
+                  }}
+                >
+                  <input type="file" multiple accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleFileSelect} className="file-input-hidden" />
+                  <Upload size={20} />
+                  <span className="upload-dropzone-text">
+                    {uploadFiles.length > 0 ? t("dashboard.schedule.imageAddMore") : t("dashboard.schedule.imageTabUpload")}
+                  </span>
+                </label>
               </>
             ) : (
               <div className="gallery-picker">
@@ -1522,7 +1537,8 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
                 ) : (
                   <div className="gallery-picker-grid">
                     {galleryItems.map((m) => {
-                      const isSelected = selectedGallery?.id === m.id;
+                      const selIndex = selectedGallery.findIndex((x) => x.id === m.id);
+                      const isSelected = selIndex !== -1;
                       return (
                         <div
                           key={m.id}
@@ -1532,19 +1548,21 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
                         >
                           <img src={m.public_url} alt={m.filename} loading="lazy" />
                           {isSelected && (
-                            <span className="gallery-picker-check"><Check size={12} /></span>
+                            <span className="gallery-picker-check">{selIndex + 1}</span>
                           )}
                         </div>
                       );
                     })}
                   </div>
                 )}
-                {selectedGallery && (
+                {selectedGallery.length > 0 && (
                   <div className="gallery-picker-selected">
-                    <img src={selectedGallery.public_url} alt={selectedGallery.filename} />
-                    <span className="gallery-picker-selected-name">{selectedGallery.filename}</span>
-                    <button type="button" className="link-btn" onClick={() => setSelectedGallery(null)}>
-                      {t("dashboard.schedule.imageDeselect")}
+                    <Images size={14} />
+                    <span className="gallery-picker-selected-name">
+                      {t("dashboard.schedule.imageSelectedCount", { count: selectedGallery.length })}
+                    </span>
+                    <button type="button" className="link-btn" onClick={clearGallerySelection}>
+                      {t("dashboard.schedule.imageGalleryClear")}
                     </button>
                   </div>
                 )}
@@ -3214,8 +3232,18 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
         .file-input { cursor: pointer; }
         .file-error { color: var(--danger); font-size: 12px; margin-top: 4px; font-weight: 600; }
+        .upload-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 10px; }
         .preview-wrap { margin-top: 8px; position: relative; display: inline-block; width: 100%; }
+        .upload-preview-grid .preview-wrap { margin-top: 0; aspect-ratio: 1 / 1; overflow: hidden; border-radius: var(--radius-sm); background: var(--glass-bg-dark); }
+        .upload-preview-grid .preview-img { max-width: 100%; max-height: none; width: 100%; height: 100%; object-fit: cover; }
         .preview-img { max-width: 100%; max-height: 260px; border-radius: var(--radius-sm); width: 100%; object-fit: cover; }
+        .upload-order-badge {
+          position: absolute; top: 6px; left: 6px;
+          min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+          background: var(--accent); color: #fff;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 11px; font-weight: 600; font-family: var(--font-mono);
+        }
         .remove-btn { position: absolute; top: 6px; right: 6px; background: var(--glass-bg-dark); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--glass-border); color: var(--text); border-radius: var(--radius-sm); padding: 4px 8px; cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 4px; transition: border-color .15s; }
         .remove-btn:hover { border-color: var(--glass-border-light); }
 
@@ -3269,9 +3297,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .gallery-picker-item.selected { border-color: var(--accent); }
         .gallery-picker-check {
           position: absolute; top: 4px; right: 4px;
-          width: 18px; height: 18px; border-radius: 50%;
+          min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
           background: var(--accent); color: #fff;
           display: inline-flex; align-items: center; justify-content: center;
+          font-size: 11px; font-weight: 600; font-family: var(--font-mono);
         }
         .gallery-picker-empty {
           display: flex; align-items: center; justify-content: center; gap: 8px;

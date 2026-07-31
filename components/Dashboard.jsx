@@ -290,6 +290,7 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
   const [appSecret, setAppSecret] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   async function submit(e) {
     e.preventDefault();
@@ -310,39 +311,52 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
     if (res.status === 401) { router.replace("/sign-in"); setSaving(false); return; }
     if (res.ok) {
       const updated = await res.json();
+      // Update the card in place (badge flips to green Active) before closing
       onUpdate(updated);
+      setSuccess(true);
+      setSaving(false);
+      setTimeout(onClose, 1400);
+      return;
     }
     setSaving(false);
-    onClose();
   }
+
+  const disabled = saving || success;
 
   return (
     <div className="modal-overlay">
       <div className="modal">
         <div className="modal-head">
           <h2>{t("dashboard.connections.editTitle") || "Update Page"}</h2>
-          <button className="icon-btn" onClick={onClose}><X size={18} /></button>
+          <button className="icon-btn" onClick={onClose} disabled={success}><X size={18} /></button>
         </div>
 
         <form onSubmit={submit}>
+          {success && (
+            <div className="notice small success">
+              <CheckCircle2 size={13} />
+              <span>{t("dashboard.connections.tokenUpdated")}</span>
+            </div>
+          )}
+
           <div className="field-group">
             <label className="field-label">{t("dashboard.fields.displayName")}</label>
-            <input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={page.label} />
+            <input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={page.label} disabled={disabled} />
           </div>
 
           <div className="field-group">
             <label className="field-label">App ID</label>
-            <input className="input mono" value={appId} onChange={(e) => setAppId(e.target.value)} placeholder="Leave empty to keep current" />
+            <input className="input mono" value={appId} onChange={(e) => setAppId(e.target.value)} placeholder="Leave empty to keep current" disabled={disabled} />
           </div>
 
           <div className="field-group">
             <label className="field-label">App Secret</label>
-            <input className="input mono" type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="Leave empty to keep current" />
+            <input className="input mono" type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="Leave empty to keep current" disabled={disabled} />
           </div>
 
           <div className="field-group">
             <label className="field-label">Access Token</label>
-            <input className="input mono" type="password" value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="Leave empty to keep current" />
+            <input className="input mono" type="password" value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="Leave empty to keep current" disabled={disabled} />
           </div>
 
           <div className="notice small">
@@ -351,8 +365,10 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
           </div>
 
           <div className="modal-actions">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>{t("dashboard.connections.cancel")}</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t("common.loading") : t("common.save")}</button>
+            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={disabled}>{t("dashboard.connections.cancel")}</button>
+            <button type="submit" className="btn btn-primary" disabled={disabled}>
+              {success ? <><Check size={16} /> {t("dashboard.connections.updated")}</> : saving ? t("common.loading") : t("common.save")}
+            </button>
           </div>
         </form>
       </div>
@@ -1854,6 +1870,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           margin-bottom: 20px; line-height: 1.5;
         }
         .notice.small { font-size: 11.5px; margin-bottom: 14px; }
+        .notice.success { border-left-color: var(--success); color: var(--success); }
 
         .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
         .card {

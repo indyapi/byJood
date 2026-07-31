@@ -26,6 +26,7 @@ create table page_tokens (
   refresh_token text,
   webhook_url text,                     -- ใช้เฉพาะ platform = 'website'
   expires_at timestamptz,
+  status text default 'active',         -- 'active' | 'expiring_soon' | 'expired' (เขียนตอนบันทึก token)
   updated_at timestamptz default now(),
   unique (page_id, platform)
 );
@@ -68,6 +69,9 @@ create table post_groups (
   scheduled_at timestamptz not null,
   created_at timestamptz default now()
 );
+
+-- Token status column added after initial deploy (idempotent for existing DBs)
+alter table page_tokens add column if not exists status text default 'active';
 
 -- Add missing column that the consumer already writes to
 alter table scheduled_posts add column if not exists external_post_id text;

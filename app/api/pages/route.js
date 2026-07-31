@@ -1,6 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { checkTokenStatus } from "@/lib/token-status";
+import { checkTokenStatus, deriveStatusFromExpiry } from "@/lib/token-status";
 
 export async function GET() {
   const supabase = await createServerSupabase();
@@ -16,7 +16,9 @@ export async function GET() {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  // Fetch real page names + token status from platform API and persist what changes
+  // Read status straight from the DB — never re-verify against the platform on
+  // every load. This prevents a freshly-updated (active) token from being
+  // wrongly flipped back to "expired" by a transient Graph API failure.
   await Promise.all(pages.map(async (page) => {
     const token = page.page_tokens?.[0];
     if (!token?.access_token) {
@@ -25,15 +27,14 @@ export async function GET() {
       return;
     }
 
-    const status = await checkTokenStatus(
-      page.platform,
-      token.access_token,
-      token.app_id,
-      token.app_secret,
-      token.expires_at
-    );
-    page.status = status.status;
-    page.expires_at = status.expires_at;
+    if (token.expires_at) {
+      const derived = deriveStatusFromExpiry(token.expires_at);
+      page.status = derived.status;
+      page.expires_at = derived.expires_at;
+    } else {
+      page.status = token.status || "active";
+      page.expires_at = null;
+    }
 
     const name = await fetchPlatformPageName(page.platform, page.external_page_id, token.access_token);
     if (name && name !== page.display_name) {
@@ -86,7 +87,7 @@ export async function POST(request) {
   if (pageError) return Response.json({ error: pageError.message }, { status: 500 });
 
   if (fields?.access_token || fields?.app_id || fields?.app_secret) {
-    const { error: tokenError } = await admin
+    const { data: tokenRow, error: tokenError } = await admin
       .from("page_tokens")
       .insert({
         page_id: page.id,
@@ -94,9 +95,33 @@ export async function POST(request) {
         app_id: fields.app_id || null,
         app_secret: fields.app_secret || null,
         access_token: fields.access_token || "",
-      });
+      })
+      .select("id")
+      .single();
 
     if (tokenError) return Response.json({ error: tokenError.message }, { status: 500 });
+
+    // Persist the freshly-checked status + expiry so GET can read it from the DB
+    const { data: fullToken } = await admin
+      .from("page_tokens")
+      .select("id, app_id, app_secret, access_token")
+      .eq("id", tokenRow.id)
+      .single();
+    const status = await checkTokenStatus(
+      platform,
+      fullToken.access_token,
+      fullToken.app_id,
+      fullToken.app_secret,
+      null
+    );
+    await admin
+      .from("page_tokens")
+      .update({
+        status: status.status,
+        expires_at: status.expires_at,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", fullToken.id);
   }
 
   const { data: fullPage } = await admin
@@ -107,15 +132,14 @@ export async function POST(request) {
 
   const token = fullPage?.page_tokens?.[0];
   if (token?.access_token) {
-    const status = await checkTokenStatus(
-      fullPage.platform,
-      token.access_token,
-      token.app_id,
-      token.app_secret,
-      token.expires_at
-    );
-    fullPage.status = status.status;
-    fullPage.expires_at = status.expires_at;
+    if (token.expires_at) {
+      const derived = deriveStatusFromExpiry(token.expires_at);
+      fullPage.status = derived.status;
+      fullPage.expires_at = derived.expires_at;
+    } else {
+      fullPage.status = token.status || "active";
+      fullPage.expires_at = null;
+    }
   } else {
     fullPage.status = "expired";
     fullPage.expires_at = null;

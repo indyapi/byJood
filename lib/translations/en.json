@@ -208,7 +208,9 @@
       "modalTitle": "Add Connection",
       "formNotice": "Values are sent to Supabase as secrets via the backend only — not stored client-side.",
       "cancel": "Cancel",
-      "save": "Save Connection"
+      "save": "Save Connection",
+      "updated": "Updated",
+      "tokenUpdated": "Connection updated — token is active."
     },
     "schedule": {
       "eyebrow": "SCHEDULE",

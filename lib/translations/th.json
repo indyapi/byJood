@@ -208,7 +208,9 @@
       "modalTitle": "เพิ่มการเชื่อมต่อ",
       "formNotice": "ค่าที่กรอกจะถูกส่งไปเก็บเป็น secret บน Supabase ผ่าน backend เท่านั้น ไม่มีการเก็บไว้ฝั่ง frontend",
       "cancel": "ยกเลิก",
-      "save": "บันทึกการเชื่อมต่อ"
+      "save": "บันทึกการเชื่อมต่อ",
+      "updated": "อัปเดตแล้ว",
+      "tokenUpdated": "อัปเดตการเชื่อมต่อแล้ว — token ใช้งานได้"
     },
     "schedule": {
       "eyebrow": "SCHEDULE",

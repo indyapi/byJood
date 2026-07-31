@@ -1,11 +1,11 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { checkTokenStatus } from "@/lib/token-status";
+import { checkTokenStatus, deriveStatusFromExpiry } from "@/lib/token-status";
 
 async function authorize(admin, id, user) {
   const { data: page } = await admin
     .from("pages")
-    .select("user_id")
+    .select("user_id, platform")
     .eq("id", id)
     .single();
   if (!page) return { error: "Not found", status: 404 };
@@ -94,6 +94,23 @@ export async function PATCH(request, { params }) {
         })
         .eq("id", existing.id);
       if (error) return Response.json({ error: error.message }, { status: 500 });
+    } else {
+      // No token row yet — create one
+      const { data: created, error } = await admin
+        .from("page_tokens")
+        .insert({
+          page_id: id,
+          platform: auth.page.platform,
+          app_id: tokenFields.app_id ?? null,
+          app_secret: tokenFields.app_secret ?? null,
+          access_token: tokenFields.access_token ?? "",
+        })
+        .select("id")
+        .single();
+      if (error) return Response.json({ error: error.message }, { status: 500 });
+      if (created?.id) {
+        existing = { id: created.id };
+      }
     }
   }
 
@@ -105,15 +122,34 @@ export async function PATCH(request, { params }) {
 
   const token = fullPage?.page_tokens?.[0];
   if (token?.access_token) {
-    const status = await checkTokenStatus(
-      fullPage.platform,
-      token.access_token,
-      token.app_id,
-      token.app_secret,
-      token.expires_at
-    );
-    fullPage.status = status.status;
-    fullPage.expires_at = status.expires_at;
+    // New token saved? Re-verify immediately and persist the result so the
+    // dashboard badge turns green without a refresh.
+    if (access_token?.trim()) {
+      const status = await checkTokenStatus(
+        fullPage.platform,
+        token.access_token,
+        token.app_id,
+        token.app_secret,
+        null
+      );
+      const persisted = {
+        status: status.status,
+        expires_at: status.expires_at,
+        updated_at: new Date().toISOString(),
+      };
+      await admin.from("page_tokens").update(persisted).eq("id", token.id);
+      fullPage.status = status.status;
+      fullPage.expires_at = status.expires_at;
+    } else {
+      // No new token — trust what the DB already knows (never revert a healthy token)
+      fullPage.status = token.status || "active";
+      fullPage.expires_at = token.expires_at || null;
+      if (token.expires_at) {
+        const derived = deriveStatusFromExpiry(token.expires_at);
+        fullPage.status = derived.status;
+        fullPage.expires_at = derived.expires_at;
+      }
+    }
   } else {
     fullPage.status = "expired";
     fullPage.expires_at = null;

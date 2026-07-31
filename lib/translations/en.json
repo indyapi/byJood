@@ -184,6 +184,9 @@
       "posted": "Posted",
       "failed": "Failed"
     },
+    "postComments": "Comments",
+    "postShares": "Shares",
+    "postEngagementNA": "Engagement not available",
     "connectionStatus": {
       "active": "Active",
       "expiring": "Expiring soon",
@@ -227,9 +230,8 @@
       "cancel": "Cancel",
       "save": "Save Schedule",
       "batchSuffix": "page(s)",
-      "viewAction": "View",
-      "detailAction": "Detail",
-      "viewPostAction": "View Post",
+      "viewContentAction": "View Content",
+      "viewFacebookAction": "View Post on Facebook",
       "shareLabel": "Share",
       "copyLink": "Copy Link",
       "editAction": "Edit",

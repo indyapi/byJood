@@ -184,6 +184,9 @@
       "posted": "โพสต์แล้ว",
       "failed": "ล้มเหลว"
     },
+    "postComments": "ความคิดเห็น",
+    "postShares": "แชร์",
+    "postEngagementNA": "ไม่พบข้อมูลการมีส่วนร่วม",
     "connectionStatus": {
       "active": "ใช้งานได้",
       "expiring": "ใกล้หมดอายุ",
@@ -228,9 +231,8 @@
       "cancel": "ยกเลิก",
       "save": "บันทึกกำหนดการ",
       "batchSuffix": "เพจ",
-      "viewAction": "ดู",
-      "detailAction": "รายละเอียด",
-      "viewPostAction": "ดูโพสต์จริง",
+      "viewContentAction": "ดูเนื้อหา",
+      "viewFacebookAction": "ดูโพสต์บน Facebook",
       "shareLabel": "แชร์",
       "copyLink": "คัดลอกลิงก์",
       "editAction": "แก้ไข",

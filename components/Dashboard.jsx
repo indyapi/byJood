@@ -558,15 +558,37 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
 
   async function handleDeleteGroupConfirmed() {
     if (!deleteGroup || groupDeleteConfirm.toLowerCase().trim() !== "delete") return;
-    const res = await fetch(`/api/post-groups/${deleteGroup.id}`, { method: "DELETE" });
-    if (res.status === 401) { router.replace("/sign-in"); return; }
-    if (res.ok || res.status === 204) {
-      setGroups((prev) => prev.filter((g) => g.id !== deleteGroup.id));
-      if (openedGroup?.id === deleteGroup.id) closeGroupDetail();
-      if (onRefresh) onRefresh();
-    }
+    const target = deleteGroup;
+    const total = target.total || 0;
     setDeleteGroup(null);
     setGroupDeleteConfirm("");
+    setToast({ kind: "info", message: t("dashboard.schedule.deletingInProgress"), progress: { current: 0, total } });
+
+    let current = 0;
+    const ticker = setInterval(() => {
+      current = Math.min(current + 1, total);
+      setToast((prev) =>
+        prev?.kind === "info" ? { ...prev, progress: { current, total } } : prev
+      );
+    }, 180);
+
+    try {
+      const res = await fetch(`/api/post-groups/${target.id}`, { method: "DELETE" });
+      clearInterval(ticker);
+      if (res.status === 401) { router.replace("/sign-in"); return; }
+      if (res.ok || res.status === 204) {
+        setGroups((prev) => prev.filter((g) => g.id !== target.id));
+        if (openedGroup?.id === target.id) closeGroupDetail();
+        if (onRefresh) onRefresh();
+        setToast({ kind: "success", message: t("dashboard.schedule.deleteGroupSuccess") });
+      } else {
+        setToast({ kind: "error", message: t("dashboard.schedule.deleteGroupError") });
+      }
+    } catch {
+      clearInterval(ticker);
+      setToast({ kind: "error", message: t("dashboard.schedule.deleteGroupError") });
+    }
+    setTimeout(() => setToast(null), 4000);
   }
 
   function getPostUrl(post) {
@@ -589,7 +611,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     const text = getShareText(post, page);
     try {
       await navigator.clipboard.writeText(text);
-      setToast("คัดลอกแล้ว!");
+      setToast({ kind: "success", message: t("dashboard.schedule.copied") });
       setTimeout(() => setToast(null), 2000);
     } catch {}
   }
@@ -1053,7 +1075,13 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
         </div>
       )}
 
-      {toast && <div className="toast">{toast}</div>}
+      {toast && (
+        <div className={`toast ${toast.kind ? `toast-${toast.kind}` : ""}`}>
+          {toast.progress
+            ? `${toast.message} (${toast.progress.current}/${toast.progress.total})`
+            : toast.message}
+        </div>
+      )}
     </div>
   );
 }
@@ -2276,7 +2304,11 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           background: var(--accent); color: #fff; padding: 10px 20px;
           border-radius: 8px; font-size: 13px; pointer-events: none;
           animation: toast-in .2s ease;
+          max-width: 90vw; text-align: center; white-space: normal;
         }
+        .toast-success { background: #16a34a; }
+        .toast-error { background: var(--danger); }
+        .toast-info { background: var(--accent); }
         @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; } }
 
         .fb-modal { max-width: 768px; width: 100%; max-height: 85vh; overflow-y: auto; }

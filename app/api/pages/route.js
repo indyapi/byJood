@@ -1,5 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { checkTokenStatus } from "@/lib/token-status";
 
 export async function GET() {
   const supabase = await createServerSupabase();
@@ -15,10 +16,25 @@ export async function GET() {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  // Fetch real page names from platform API and persist to display_name
+  // Fetch real page names + token status from platform API and persist what changes
   await Promise.all(pages.map(async (page) => {
     const token = page.page_tokens?.[0];
-    if (!token?.access_token) return;
+    if (!token?.access_token) {
+      page.status = "expired";
+      page.expires_at = null;
+      return;
+    }
+
+    const status = await checkTokenStatus(
+      page.platform,
+      token.access_token,
+      token.app_id,
+      token.app_secret,
+      token.expires_at
+    );
+    page.status = status.status;
+    page.expires_at = status.expires_at;
+
     const name = await fetchPlatformPageName(page.platform, page.external_page_id, token.access_token);
     if (name && name !== page.display_name) {
       await admin.from("pages").update({ display_name: name }).eq("id", page.id);
@@ -88,6 +104,22 @@ export async function POST(request) {
     .select("*, page_tokens(*)")
     .eq("id", page.id)
     .single();
+
+  const token = fullPage?.page_tokens?.[0];
+  if (token?.access_token) {
+    const status = await checkTokenStatus(
+      fullPage.platform,
+      token.access_token,
+      token.app_id,
+      token.app_secret,
+      token.expires_at
+    );
+    fullPage.status = status.status;
+    fullPage.expires_at = status.expires_at;
+  } else {
+    fullPage.status = "expired";
+    fullPage.expires_at = null;
+  }
 
   return Response.json(fullPage, { status: 201 });
 }

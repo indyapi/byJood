@@ -181,11 +181,19 @@ partial index `idx_scheduled_posts_due` on `scheduled_posts (status, scheduled_a
 - **Logs** — filterable log table (success/failed/all filter, search by page/message), stats row (total, success rate, failures)
 - Dark theme, responsive, inline CSS (no external CSS modules)
 
+## Known bug (ยังไม่แก้)
+
+รายละเอียดเต็มใน `note.txt` — โพสต์ค้างสถานะ "queued" เมื่อ platform API error:
+- `post-jobs-dlq` ไม่มี consumer → หลัง `max_retries=3` message หาย ไม่มีใครตั้ง `status='failed'`
+- `logResult()` ใน `src/consumer.js` (line 70-104) ตั้ง `status='posted'` เท่านั้น ไม่เคยตั้ง `failed`
+- `enqueueDuePosts()` ใน `src/enqueue.js` (line 3) ดึงเฉพาะ `status='pending'` → post ที่ค้าง `queued` ไม่ถูก retry
+
 ## สิ่งที่ยังต้องทำ (ยังไม่ได้เขียนโค้ด)
-1. **Media upload**: อัปโหลดรูป/วิดีโอเข้า Supabase Storage ก่อนโพสต์ (ต้องได้ public URL ให้ TikTok/IG ดึงไปใช้)
-2. **TikTok publish status polling**: TikTok เป็น async ต้องเช็คสถานะ publish แยกหลังจาก init
-3. **Rate limit handling**: แต่ละแพลตฟอร์มมี rate limit ต่างกัน ควรเพิ่ม backoff logic ใน `platforms.js`
-4. **Encryption**: `access_token` ใน `page_tokens` ควรเข้ารหัสด้วย Supabase Vault ก่อนเก็บจริง
-5. **Tests**: ไม่มี test runner/config
-6. **CI/CD**: ไม่มี pipeline
-7. **No TypeScript**: plain JS ทั้งโปรเจค
+1. **Fix known bug**: เพิ่ม consumer ให้ `post-jobs-dlq` แล้วตั้ง `status='failed'` (ดู `note.txt`)
+2. **Media upload**: อัปโหลดรูป/วิดีโอเข้า Supabase Storage ก่อนโพสต์ (ต้องได้ public URL ให้ TikTok/IG ดึงไปใช้)
+3. **TikTok publish status polling**: TikTok เป็น async ต้องเช็คสถานะ publish แยกหลังจาก init
+4. **Rate limit handling**: แต่ละแพลตฟอร์มมี rate limit ต่างกัน ควรเพิ่ม backoff logic ใน `platforms.js`
+5. **Encryption**: `access_token` ใน `page_tokens` ควรเข้ารหัสด้วย Supabase Vault ก่อนเก็บจริง
+6. **Tests**: ไม่มี test runner/config
+7. **CI/CD**: ไม่มี pipeline
+8. **No TypeScript**: plain JS ทั้งโปรเจค

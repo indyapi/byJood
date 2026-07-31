@@ -187,7 +187,11 @@
     "connectionStatus": {
       "active": "ใช้งานได้",
       "expiring": "ใกล้หมดอายุ",
-      "error": "มีปัญหา"
+      "expiringSoon": "ใกล้หมดอายุ",
+      "expired": "หมดอายุ",
+      "error": "มีปัญหา",
+      "expiresLabel": "หมดอายุ",
+      "reconnectBtn": "เชื่อมต่อใหม่"
     },
     "connections": {
       "eyebrow": "CONNECTIONS",

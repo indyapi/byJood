@@ -1,6 +1,9 @@
 Bug Report: Posts stuck in "queued" status, never actually posted
 ==================================================================
 
+STATUS: OPEN — re-verified against current code (2026-07-31). Not fixed.
+Line references below updated to current source.
+
 Root cause: No mechanism exists to update scheduled_posts.status to "failed"
 when all queue retries are exhausted. The consumer only ever sets status to
 "posted" on success — on failure it retries, and after max_retries=3 the
@@ -8,7 +11,7 @@ message silently drops into an unconsumed DLQ.
 
 Bug #1 — Status never transitions out of "queued" on failure
 -------------------------------------------------------------
-File: src/consumer.js, function logResult() (line 76-86)
+File: src/consumer.js, function logResult() (line 70-104)
 
   The status update to "posted" only runs when result.success = true.
   When the handler returns success=false (API error, token expired, etc.),

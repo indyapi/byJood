@@ -30,7 +30,7 @@ npm run lint          # next lint
 - `src/enqueue.js` contains the shared `enqueueDuePosts` function (fetches due posts from Supabase, fans out to queue).
 - `src/producer.js` is kept as an alternative entry point (used by `wrangler-legacy.toml` if needed).
 - **Fan-out pattern**: 1 scheduled post fans out into N queue messages (1 per page). Each message is processed independently with its own timeout and retry counter.
-- Queue config in `wrangler.jsonc`: `max_retries=3`, `dead_letter_queue=post-jobs-dlq`.
+- Queue config in `wrangler.jsonc`: `max_retries=3`, `dead_letter_queue=post-jobs-dlq`. Note: `post-jobs-dlq` currently has **no consumer** (see Known issues).
 - OAuth API routes are **dynamic** (`ƒ`) — handled by OpenNext Worker, not static export.
 
 ## Source files
@@ -66,6 +66,10 @@ Platform credentials (app_id, app_secret, access_token) are stored per-page in t
 wrangler queues create post-jobs
 wrangler queues create post-jobs-dlq
 ```
+
+## Known issues
+
+- **Posts stuck in "queued" on failure** (full report in `note.txt`): `post-jobs-dlq` has no consumer, so after `max_retries=3` the message silently drops and `scheduled_posts.status` is never set to `failed`. `logResult()` in `src/consumer.js` only PATCHes status on success, and `enqueueDuePosts()` in `src/enqueue.js` only selects `status=eq.pending`. Not yet fixed.
 
 ## What does not exist yet
 

@@ -187,7 +187,11 @@
     "connectionStatus": {
       "active": "Active",
       "expiring": "Expiring soon",
-      "error": "Error"
+      "expiringSoon": "Expiring soon",
+      "expired": "Expired",
+      "error": "Error",
+      "expiresLabel": "Expires",
+      "reconnectBtn": "Reconnect"
     },
     "connections": {
       "eyebrow": "CONNECTIONS",

@@ -84,8 +84,10 @@ function StatusPipeline({ status, t }) {
 function StatusPill({ status, t }) {
   const map = {
     active: { label: t("dashboard.connectionStatus.active"), color: "var(--success)" },
-    expiring: { label: t("dashboard.connectionStatus.expiring"), color: "var(--warning)" },
-    error: { label: t("dashboard.connectionStatus.error"), color: "var(--danger)" },
+    expiring_soon: { label: t("dashboard.connectionStatus.expiringSoon"), color: "var(--warning)" },
+    expired: { label: t("dashboard.connectionStatus.expired"), color: "var(--danger)" },
+    expiring: { label: t("dashboard.connectionStatus.expiringSoon"), color: "var(--warning)" },
+    error: { label: t("dashboard.connectionStatus.expired"), color: "var(--danger)" },
   };
   const m = map[status] ?? map.active;
   return (
@@ -131,7 +133,7 @@ function ConnectionsView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORM
       ) : (
         <div className="grid-cards">
           {pages.map((pg) => (
-            <div className="card" key={pg.id}>
+            <div className={`card${pg.status === "expired" ? " card-alert" : ""}`} key={pg.id}>
               <div className="card-top">
                 <PlatformChip platform={pg.platform} PLATFORMS={PLATFORMS} />
                 <StatusPill status={pg.status} t={t} />
@@ -154,6 +156,19 @@ function ConnectionsView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORM
                   {revealed[pg.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
+              {pg.expiresAt && pg.status !== "active" && (
+                <div className="card-row expires-row">
+                  <span className="label-dim">{t("dashboard.connectionStatus.expiresLabel")}</span>
+                  <span className="mono">{pg.expiresAt.slice(0, 10)}</span>
+                </div>
+              )}
+              {pg.status === "expired" && (
+                <div className="reconnect-row">
+                  <button className="btn btn-danger" onClick={() => setEditPage(pg)} disabled={!authed}>
+                    <RefreshCw size={14} /> {t("dashboard.connectionStatus.reconnectBtn")}
+                  </button>
+                </div>
+              )}
               <div className="card-foot">
                 <span className="label-dim">{t("dashboard.connections.addedPrefix")}{pg.addedAt}</span>
                 <div className="card-foot-actions">
@@ -1506,7 +1521,8 @@ function pageFromDb(p) {
     label: p.display_name,
     externalId: p.external_page_id,
     appId: token?.app_id || "",
-    status: "active",
+    status: p.status || "active",
+    expiresAt: p.expires_at || null,
     addedAt: p.created_at?.slice(0, 10),
     tokenPreview: token?.access_token ? token.access_token.slice(0, 6) + "••••••••" + token.access_token.slice(-4) : "—",
   };
@@ -1849,6 +1865,11 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           padding: 16px; transition: border-color .15s;
         }
         .card:hover { border-color: var(--glass-border-accent); }
+        .card-alert { border-color: var(--danger); }
+        .card-alert:hover { border-color: var(--danger); }
+        .expires-row { color: var(--warning); }
+        .reconnect-row { display: flex; gap: 8px; margin-top: 10px; }
+        .reconnect-row .btn { width: 100%; justify-content: center; font-size: 12px; padding: 8px 12px; }
         .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .card-title { font-weight: 600; font-size: 14.5px; margin-bottom: 10px; }
         .card-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; color: var(--text); }

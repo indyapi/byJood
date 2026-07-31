@@ -1,5 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { checkTokenStatus } from "@/lib/token-status";
 
 async function authorize(admin, id, user) {
   const { data: page } = await admin
@@ -101,6 +102,22 @@ export async function PATCH(request, { params }) {
     .select("*, page_tokens(*)")
     .eq("id", id)
     .single();
+
+  const token = fullPage?.page_tokens?.[0];
+  if (token?.access_token) {
+    const status = await checkTokenStatus(
+      fullPage.platform,
+      token.access_token,
+      token.app_id,
+      token.app_secret,
+      token.expires_at
+    );
+    fullPage.status = status.status;
+    fullPage.expires_at = status.expires_at;
+  } else {
+    fullPage.status = "expired";
+    fullPage.expires_at = null;
+  }
 
   return Response.json(fullPage);
 }

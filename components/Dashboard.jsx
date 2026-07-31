@@ -403,6 +403,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   const [changeTimePost, setChangeTimePost] = useState(null);
   const [deletePost, setDeletePost] = useState(null);
   const [activeGroupMenu, setActiveGroupMenu] = useState(null);
+  const [detailMenu, setDetailMenu] = useState(false);
   const [openedGroup, setOpenedGroup] = useState(null);
   const [groupPosts, setGroupPosts] = useState([]);
   const [editGroup, setEditGroup] = useState(null);
@@ -436,10 +437,14 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
         setActiveSubmenu(null);
         setActiveGroupMenu(null);
       }
+      if (detailMenu && !e.target.closest(".group-detail-actions")) {
+        setDetailMenu(false);
+        setActiveSubmenu(null);
+      }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [activeMenu]);
+  }, [activeMenu, detailMenu]);
 
   // Dynamic badge filters: months (layer 1) and active days (layer 2) with post counts.
   const monthCounts = useMemo(() => {
@@ -565,8 +570,13 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   }
 
   function getPostUrl(post) {
+    if (post.permalink_url) return post.permalink_url;
     if (!post.external_post_id) return null;
     return `https://facebook.com/${post.external_post_id}`;
+  }
+
+  function isPublished(post) {
+    return post.status === "posted" || post.status === "success";
   }
 
   function getShareText(post, page) {
@@ -679,6 +689,46 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
               <span className="group-detail-sep">·</span>
               <span>{openedGroup.total} {t("dashboard.schedule.pagesSuffix")}</span>
             </div>
+            <div className="group-detail-actions">
+              <button className="icon-btn" onClick={() => setDetailMenu(!detailMenu)}>
+                <MoreHorizontal size={16} />
+              </button>
+              {detailMenu && (
+                <div className="action-menu">
+                  {(() => {
+                    const postedPages = groupPosts.filter((x) => isPublished(x) && getPostUrl(x));
+                    if (postedPages.length === 0) return null;
+                    return (
+                      <div className="menu-has-submenu"
+                        onMouseEnter={() => setActiveSubmenu("group-view-fb")}
+                        onMouseLeave={() => setActiveSubmenu(null)}
+                      >
+                        <button className="menu-item menu-trigger">
+                          <ExternalLink size={14} />
+                          <span>{t("dashboard.schedule.viewFacebookAction")}</span>
+                          <ChevronRight size={12} className="sub-arrow" />
+                        </button>
+                        {activeSubmenu === "group-view-fb" && (
+                          <div className="submenu">
+                            {postedPages.map((x) => {
+                              const xpage = pages.find((pg) => pg.id === x.pageId);
+                              return (
+                                <button
+                                  key={x.id}
+                                  onClick={() => { setDetailMenu(false); setActiveSubmenu(null); window.open(getPostUrl(x), "_blank", "noopener"); }}
+                                >
+                                  {xpage?.label || x.pageName}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
           </div>
           {groupPosts.length === 0 ? (
             <div className="empty">
@@ -689,8 +739,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
             <div className="post-list">
               {groupPosts.map((p) => {
                 const page = pages.find((pg) => pg.id === p.pageId);
-                const isPosted = p.status === "posted";
-                const fbPostedPosts = groupPosts.filter((x) => x.status === "posted" && getPostUrl(x));
+                const isPosted = isPublished(p);
                 return (
                   <div className={"post-row" + (activeMenu === p.id ? " menu-open" : "")} key={p.id}>
                     <div className="post-time"><Clock size={13} />{p.time}</div>
@@ -715,40 +764,12 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                             </button>
 
                             {isPosted && getPostUrl(p) && (
-                              fbPostedPosts.length > 1 ? (
-                                <div className="menu-has-submenu"
-                                  onMouseEnter={() => setActiveSubmenu("view-fb")}
-                                  onMouseLeave={() => setActiveSubmenu(null)}
-                                >
-                                  <button className="menu-item menu-trigger">
-                                    <ExternalLink size={14} />
-                                    <span>{t("dashboard.schedule.viewFacebookAction")}</span>
-                                    <ChevronRight size={12} className="sub-arrow" />
-                                  </button>
-                                  {activeSubmenu === "view-fb" && (
-                                    <div className="submenu">
-                                      {fbPostedPosts.map((x) => {
-                                        const xpage = pages.find((pg) => pg.id === x.pageId);
-                                        return (
-                                          <button
-                                            key={x.id}
-                                            onClick={() => { setActiveMenu(null); setActiveSubmenu(null); window.open(getPostUrl(x), "_blank", "noopener"); }}
-                                          >
-                                            {xpage?.label || x.pageName}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <button
-                                  className="menu-item"
-                                  onClick={() => { setActiveMenu(null); window.open(getPostUrl(p), "_blank", "noopener"); }}
-                                >
-                                  <ExternalLink size={14} /> {t("dashboard.schedule.viewFacebookAction")}
-                                </button>
-                              )
+                              <button
+                                className="menu-item"
+                                onClick={() => { setActiveMenu(null); window.open(getPostUrl(p), "_blank", "noopener"); }}
+                              >
+                                <ExternalLink size={14} /> {t("dashboard.schedule.viewFacebookAction")}
+                              </button>
                             )}
 
                             <button className="menu-item" onClick={() => { setActiveMenu(null); setEditPost(p); }} disabled={isPosted}>
@@ -1753,6 +1774,7 @@ function postFromDb(p) {
     content: p.content,
     media_urls: p.media_urls || [],
     external_post_id: p.external_post_id || "",
+    permalink_url: p.permalink_url || "",
     groupId: p.group_id || null,
     date: d ? d.toLocaleDateString("sv-SE") : "",
     time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
@@ -2162,13 +2184,15 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .group-status-zero { color: var(--text-dim); font-size: 11.5px; }
         .group-actions { position: absolute; top: 12px; right: 10px; }
         .group-actions .action-menu { right: 0; left: auto; }
-        .group-detail-head { margin-bottom: 18px; }
+        .group-detail-head { position: relative; margin-bottom: 18px; }
         .group-detail-head .link-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; margin-bottom: 8px; }
         .group-detail-title { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0 0 4px; }
         .group-detail-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
         .group-detail-title-row .group-detail-title { margin: 0; }
         .group-detail-meta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); }
         .group-detail-sep { color: var(--text-dim); }
+        .group-detail-actions { position: absolute; top: 0; right: 0; }
+        .group-detail-actions .action-menu { right: 0; left: auto; }
 
         .post-list { display: flex; flex-direction: column; gap: 8px; }
         .post-row {

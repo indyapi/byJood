@@ -75,6 +75,8 @@ alter table page_tokens add column if not exists status text default 'active';
 
 -- Add missing column that the consumer already writes to
 alter table scheduled_posts add column if not exists external_post_id text;
+-- Store the real Facebook permalink after publish (optional; falls back to constructed URL)
+alter table scheduled_posts add column if not exists permalink_url text;
 -- Add group_id linking each post to its group folder
 alter table scheduled_posts add column if not exists group_id uuid references post_groups(id) on delete set null;
 

@@ -1,4 +1,5 @@
 import { handleQueueBatch } from "./consumer.js";
+import { handleDlqBatch } from "./dlq-consumer.js";
 import { enqueueDuePosts } from "./enqueue.js";
 import { refreshExpiringTokens } from "./refresh-tokens.js";
 
@@ -24,6 +25,10 @@ export default {
   },
 
   async queue(batch, env, ctx) {
-    await handleQueueBatch(batch, env);
+    if (batch.queue === "post-jobs-dlq") {
+      await handleDlqBatch(batch, env);
+    } else {
+      await handleQueueBatch(batch, env);
+    }
   },
 };

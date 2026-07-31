@@ -72,7 +72,11 @@ function StatusPipeline({ status, t }) {
           />
         </React.Fragment>
       ))}
-      <span className="pipe-label">{meta.label}</span>
+      {meta.failed ? (
+        <span className="pipe-label failed">{meta.label}</span>
+      ) : (
+        <span className="pipe-label">{meta.label}</span>
+      )}
     </div>
   );
 }
@@ -616,6 +620,24 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     } catch {}
   }
 
+  async function handleRetryPost(post) {
+    try {
+      const res = await fetch(`/api/scheduled-posts/${post.id}/retry`, { method: "POST" });
+      if (res.status === 401) { router.replace("/sign-in"); return; }
+      if (res.ok) {
+        const updated = await res.json();
+        setGroupPosts((prev) => prev.map((p) => (p.id === updated.id ? postFromDb(updated) : p)));
+        setToast({ kind: "success", message: t("dashboard.schedule.retrySuccess") });
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setToast({ kind: "error", message: body.error || t("dashboard.schedule.retryError") });
+      }
+    } catch {
+      setToast({ kind: "error", message: t("dashboard.schedule.retryError") });
+    }
+    setTimeout(() => setToast(null), 3000);
+  }
+
   const SHARE_PLATFORMS = [
     { id: "facebook", label: "Facebook", color: "#1877F2" },
     { id: "line", label: "Line", color: "#06C755" },
@@ -791,6 +813,12 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
                                 onClick={() => { setActiveMenu(null); window.open(getPostUrl(p), "_blank", "noopener"); }}
                               >
                                 <ExternalLink size={14} /> {t("dashboard.schedule.viewFacebookAction")}
+                              </button>
+                            )}
+
+                            {p.status === "failed" && (
+                              <button className="menu-item" onClick={() => { setActiveMenu(null); handleRetryPost(p); }}>
+                                <RefreshCw size={14} /> {t("dashboard.schedule.retryAction")}
                               </button>
                             )}
 
@@ -1360,6 +1388,11 @@ function ViewDetailModal({ post, posts, pages, onClose, t, PLATFORMS }) {
                   <div className="fb-page-status">
                     <StatusPipeline status={p.status} t={t} />
                   </div>
+                  {p.status === "failed" && p.error_message && (
+                    <div className="fb-error">
+                      <XCircle size={12} /> {p.error_message}
+                    </div>
+                  )}
                 </div>
                 <div className="fb-row-eng">
                   {loading ? (
@@ -1808,6 +1841,8 @@ function postFromDb(p) {
     date: d ? d.toLocaleDateString("sv-SE") : "",
     time: d ? d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
     status: p.status,
+    error_message: p.error_message || "",
+    failed_at: p.failed_at || null,
   };
 }
 
@@ -2349,6 +2384,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .fb-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .fb-meta { flex: 1; min-width: 0; }
         .fb-page-name { font-weight: 600; font-size: 13.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .fb-error { display: flex; align-items: flex-start; gap: 5px; margin-top: 4px; font-size: 12px; line-height: 1.4; color: var(--danger); word-break: break-word; }
         .fb-body { padding: 6px 18px 0; }
         .fb-text { font-size: 14px; line-height: 1.6; color: var(--text); white-space: pre-wrap; word-break: break-word; margin: 0 0 14px; }
         .fb-media { display: flex; flex-direction: column; gap: 8px; }
@@ -2388,6 +2424,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .pipe-seg.filled { background: var(--accent); }
         .pipe-seg.failed { background: var(--danger); }
         .pipe-label { font-size: 11px; color: var(--text-dim); margin-left: 10px; font-family: var(--font-mono); width: 60px; }
+        .pipe-label.failed { color: var(--danger); font-weight: 700; background: var(--danger-soft); border: 1px solid var(--danger); border-radius: 999px; padding: 1px 8px; width: auto; }
 
         .reset-badge { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); background: var(--glass-bg-dark); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--glass-border); padding: 7px 14px; border-radius: 20px; }
         .stat-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }

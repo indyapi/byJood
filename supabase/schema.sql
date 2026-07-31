@@ -79,6 +79,9 @@ alter table scheduled_posts add column if not exists external_post_id text;
 alter table scheduled_posts add column if not exists permalink_url text;
 -- Add group_id linking each post to its group folder
 alter table scheduled_posts add column if not exists group_id uuid references post_groups(id) on delete set null;
+-- Failure details written by the DLQ consumer when a job exhausts retries
+alter table scheduled_posts add column if not exists error_message text;
+alter table scheduled_posts add column if not exists failed_at timestamptz;
 
 alter table post_groups enable row level security;
 create policy "user manages own post_groups" on post_groups

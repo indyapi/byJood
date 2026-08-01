@@ -135,6 +135,24 @@ create policy "user manages own folders" on folders
   for all using (auth.uid() = user_id);
 
 -- ==========================================================
+-- 7. AI Content Assistant — provider/api key/model per user
+-- ==========================================================
+create table if not exists ai_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null unique,
+  provider text not null default 'gemini'
+    check (provider in ('gemini','openai','claude','custom')),
+  api_key text,
+  base_url text,                          -- ใช้เฉพาะ provider='custom' (OpenAI-compatible เช่น Groq, DeepSeek)
+  model_name text not null default 'gemini-2.5-flash',
+  updated_at timestamptz default now()
+);
+
+alter table ai_settings enable row level security;
+create policy "users manage own ai_settings" on ai_settings
+  for all using (auth.uid() = user_id);
+
+-- ==========================================================
 -- Row Level Security: ผู้ใช้เห็นเฉพาะข้อมูลของตัวเอง
 -- Worker ใช้ service_role key จึงข้าม RLS ได้อัตโนมัติ (ปลอดภัย เพราะรันฝั่ง server เท่านั้น)
 -- ==========================================================

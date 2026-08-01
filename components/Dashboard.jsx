@@ -10,7 +10,7 @@ import {
   Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal, User,
   Mail, Shield, Edit3, Camera, Check, LogOut, Menu, Folder, ThumbsUp, ExternalLink, MessageCircle, Share2,
   Images, Loader2, Upload, Star, Home, ChevronDown, FolderPlus, FolderOpen,
-  Timer, Sunrise, Sunset,
+  Timer, Sunrise, Sunset, Sparkles, RotateCcw, Zap, PenLine, Hash, Scissors, Flame,
 } from "lucide-react";
 import Breadcrumb from "./Breadcrumb";
 import { createClientSupabase } from "@/lib/supabase-client";
@@ -1585,6 +1585,9 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState([]);
   const [content, setContent] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiUndo, setAiUndo] = useState(null);
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState(() => roundUpTime(new Date(), 15));
   const [imageTab, setImageTab] = useState("upload");
@@ -1886,6 +1889,37 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
     }
   }
 
+  async function runAi(actionType, actionPrompt) {
+    if (aiLoading) return;
+    const prev = content;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const res = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: actionPrompt, action_type: actionType, current_content: content }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAiError(d.error || t("dashboard.schedule.aiError"));
+        return;
+      }
+      setContent(d.text || "");
+      setAiUndo(prev);
+    } catch (e) {
+      setAiError(t("dashboard.schedule.aiError"));
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  function undoAi() {
+    if (aiUndo === null) return;
+    setContent(aiUndo);
+    setAiUndo(null);
+  }
+
   async function submit(e) {
     e.preventDefault();
     if (selectedIds.length === 0) return;
@@ -2063,8 +2097,37 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
 
           <div className="post-col">
           <div className="field-group">
-            <label className="field-label">{t("dashboard.fields.content")}</label>
+            <div className="field-label-row ai-helper-head">
+              <label className="field-label">{t("dashboard.fields.content")}</label>
+              <span className="ai-helper-label"><Sparkles size={13} /> {t("dashboard.schedule.aiHelperTitle")}</span>
+            </div>
+            <div className="ai-actions-row">
+              {aiLoading ? (
+                <span className="ai-loading"><Loader2 size={14} className="spin" /> {t("dashboard.schedule.aiLoading")}</span>
+              ) : (
+                <>
+                  <button type="button" className="ai-action-btn" onClick={() => runAi("improve", t("dashboard.schedule.aiImprove"))}>
+                    <PenLine size={12} /> {t("dashboard.schedule.aiImprove")}
+                  </button>
+                  <button type="button" className="ai-action-btn" onClick={() => runAi("hashtags", t("dashboard.schedule.aiHashtags"))}>
+                    <Hash size={12} /> {t("dashboard.schedule.aiHashtags")}
+                  </button>
+                  <button type="button" className="ai-action-btn" onClick={() => runAi("shorten", t("dashboard.schedule.aiShorten"))}>
+                    <Scissors size={12} /> {t("dashboard.schedule.aiShorten")}
+                  </button>
+                  <button type="button" className="ai-action-btn" onClick={() => runAi("engaging", t("dashboard.schedule.aiEngaging"))}>
+                    <Flame size={12} /> {t("dashboard.schedule.aiEngaging")}
+                  </button>
+                  {aiUndo !== null && (
+                    <button type="button" className="ai-action-btn ai-undo" onClick={undoAi}>
+                      <RotateCcw size={12} /> {t("dashboard.schedule.aiUndo")}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
             <textarea className="input textarea" rows={8} placeholder={t("dashboard.fields.contentPlaceholder")} value={content} onChange={(e) => setContent(e.target.value)} required />
+            {aiError && <p className="ai-error"><XCircle size={13} /> {aiError}</p>}
           </div>
           <div className="field-group">
             <label className="field-label">{t("dashboard.fields.image")}</label>
@@ -2769,6 +2832,172 @@ const PROVIDER_ICONS = {
   google: "G", facebook: "F", github: "Gh", email: "E",
 };
 
+const AI_PROVIDERS = [
+  { id: "gemini", defaultModel: "gemini-2.5-flash" },
+  { id: "openai", defaultModel: "gpt-4o-mini" },
+  { id: "claude", defaultModel: "claude-3-5-haiku" },
+  { id: "custom", defaultModel: "gpt-4o-mini" },
+];
+
+function AiSettingsSection({ t }) {
+  const [provider, setProvider] = useState("gemini");
+  const [model, setModel] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [hasKey, setHasKey] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/settings/ai");
+        if (res.ok) {
+          const d = await res.json();
+          setProvider(d.provider || "gemini");
+          setModel(d.model_name || "");
+          setBaseUrl(d.base_url || "");
+          setHasKey(!!d.has_key);
+        }
+      } catch (e) {
+        /* ignore load errors */
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  function onProviderChange(next) {
+    setProvider(next);
+    const def = (AI_PROVIDERS.find((p) => p.id === next) || {}).defaultModel;
+    if (def) setModel(def);
+  }
+
+  async function saveSettings() {
+    setSaving(true);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/settings/ai", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, api_key: apiKey, model_name: model, base_url: baseUrl }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setStatus({ kind: "error", message: d.error || t("profile.aiSaveFailed") }); return; }
+      setApiKey("");
+      setHasKey(!!d.has_key);
+      setStatus({ kind: "success", message: t("profile.aiSaved") });
+    } catch (e) {
+      setStatus({ kind: "error", message: t("profile.aiSaveFailed") });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function testSettings() {
+    setTesting(true);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/settings/ai/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, api_key: apiKey, model_name: model, base_url: baseUrl }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (d.ok) {
+        setStatus({ kind: "success", message: t("profile.aiTestOk") });
+      } else {
+        setStatus({ kind: "error", message: d.error || t("profile.aiTestFail") });
+      }
+    } catch (e) {
+      setStatus({ kind: "error", message: t("profile.aiTestFail") });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  const current = AI_PROVIDERS.find((p) => p.id === provider) || AI_PROVIDERS[0];
+
+  return (
+    <div className="profile-section">
+      <div className="profile-section-head">
+        <div>
+          <span className="eyebrow">{t("profile.aiSectionEyebrow")}</span>
+          <h2><Sparkles size={16} /> {t("profile.aiSectionTitle")}</h2>
+          <p className="sub">{t("profile.aiSectionSubtitle")}</p>
+        </div>
+      </div>
+
+      <div className="profile-section-body">
+        {loading ? (
+          <p style={{ color: "var(--text-muted)", padding: "8px 0" }}>{t("common.loading")}</p>
+        ) : (
+          <>
+            <div className="field-group">
+              <label className="field-label">{t("profile.aiProvider")}</label>
+              <select className="input" value={provider} onChange={(e) => onProviderChange(e.target.value)}>
+                {AI_PROVIDERS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {t(`profile.aiProviders.${p.id}`)} — {t("profile.aiDefaultModel", { model: p.defaultModel })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">{t("profile.aiApiKey")}</label>
+              <div className="input-with-icon">
+                <input
+                  className="input"
+                  type={showKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={hasKey && !apiKey ? t("profile.aiApiKeyMasked") : t("profile.aiApiKeyPlaceholder")}
+                  autoComplete="off"
+                />
+                <button type="button" className="icon-btn" onClick={() => setShowKey(!showKey)} aria-label={showKey ? t("profile.aiHideKey") : t("profile.aiShowKey")}>
+                  {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {hasKey && <p className="ai-field-hint">{t("profile.aiApiKeyHint")}</p>}
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">{t("profile.aiModelName")}</label>
+              <input className="input mono" value={model} onChange={(e) => setModel(e.target.value)} placeholder={current.defaultModel} />
+            </div>
+
+            {provider === "custom" && (
+              <div className="field-group">
+                <label className="field-label">{t("profile.aiBaseUrl")}</label>
+                <input className="input mono" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.openai.com/v1" />
+              </div>
+            )}
+
+            <div className="ai-actions">
+              <button type="button" className="btn btn-primary" onClick={saveSettings} disabled={saving || !model.trim()}>
+                {saving ? <><Loader2 size={14} className="spin" /> {t("common.loading")}</> : <><Check size={14} /> {t("profile.aiSaveBtn")}</>}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={testSettings} disabled={testing}>
+                {testing ? <><Loader2 size={14} className="spin" /> {t("common.loading")}</> : <><Zap size={14} /> {t("profile.aiTestBtn")}</>}
+              </button>
+            </div>
+
+            {status && (
+              <div className={`ai-test-status ai-status-${status.kind}`}>
+                {status.kind === "success" ? <Check size={13} /> : <XCircle size={13} />}
+                <span>{status.message}</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ProfileView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage, onTogglePageFavorite, onAddFolder, onRenameFolder, onDeleteFolder, onToggleFolderFavorite, authed, t, PLATFORMS }) {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
@@ -2971,6 +3200,8 @@ function ProfileView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage, on
         PLATFORMS={PLATFORMS}
         embedded
       />
+
+      <AiSettingsSection t={t} />
     </div>
   );
 }
@@ -3307,6 +3538,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           --accent-soft: var(--accent-dim);
           --warning-soft: rgba(248,195,74,.16);
           --danger-soft: rgba(255,107,129,.14);
+          --success-soft: rgba(94,234,164,.14);
           --overlay: var(--modal-overlay);
           --radius: var(--radius-sm);
         }
@@ -4062,6 +4294,21 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           transition: border-color .12s, color .12s;
         }
         .preset-chip:hover { color: var(--text); border-color: var(--glass-border-accent); }
+
+        .ai-helper-head { margin-bottom: 6px; }
+        .ai-helper-label { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--accent); }
+        .ai-actions-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 28px; align-items: center; }
+        .ai-action-btn {
+          display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px;
+          background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+          color: var(--text-muted); font-size: 11.5px; cursor: pointer;
+          transition: border-color .12s, color .12s;
+        }
+        .ai-action-btn:hover { color: var(--text); border-color: var(--glass-border-accent); }
+        .ai-action-btn.ai-undo { color: var(--warning); border-color: var(--glass-border); }
+        .ai-action-btn.ai-undo:hover { border-color: var(--warning); color: var(--warning); }
+        .ai-loading { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+        .ai-error { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--danger); margin-top: 8px; }
         .field-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
         .input {
           width: 100%;
@@ -4310,6 +4557,16 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           background: var(--glass-bg); border: 1px solid var(--glass-border);
           border-radius: var(--radius); padding: 22px;
         }
+        .profile-section-body .input { margin-top: 0; }
+        .ai-actions { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+        .ai-field-hint { font-size: 11.5px; color: var(--text-dim); margin-top: 6px; }
+        .ai-test-status {
+          display: flex; align-items: center; gap: 7px; margin-top: 14px;
+          padding: 9px 12px; border-radius: var(--radius-sm); font-size: 12.5px;
+          border: 1px solid var(--glass-border);
+        }
+        .ai-status-success { color: var(--success); background: var(--success-soft); border-color: var(--success); }
+        .ai-status-error { color: var(--danger); background: var(--danger-soft); border-color: var(--danger); }
         .pfp-avatar-wrap { display: flex; justify-content: center; margin: 6px 0 14px; }
         .pfp-avatar-wrap .avatar,
         .avatar-fallback {

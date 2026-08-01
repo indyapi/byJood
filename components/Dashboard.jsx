@@ -793,19 +793,26 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
   }, [displayGroups, q, sortBy]);
 
   const timelineItems = useMemo(() => {
-    const arr = posts.filter((p) => {
-      if (!q) return true;
-      const page = pages.find((pg) => pg.id === p.pageId);
-      const name = p.pageName || page?.label || "";
-      return (p.content || "").toLowerCase().includes(q) || name.toLowerCase().includes(q);
+    const nextByGroup = {};
+    posts.forEach((p) => {
+      if (!p.groupId) return;
+      const t = `${p.date} ${p.time}`.trim();
+      if (!t) return;
+      if (!nextByGroup[p.groupId] || t < nextByGroup[p.groupId]) nextByGroup[p.groupId] = t;
     });
-    return arr.sort((a, b) => {
-      const ka = a.status === "pending" || a.status === "queued" ? 0 : 1;
-      const kb = b.status === "pending" || b.status === "queued" ? 0 : 1;
-      if (ka !== kb) return ka - kb;
-      return (a.date + a.time).localeCompare(b.date + b.time);
-    });
-  }, [posts, pages, q]);
+    return sortedGroups
+      .map((g) => {
+        const next = nextByGroup[g.id] || `${g.date} ${g.time}`.trim();
+        const [nextDate = g.date, nextClock = g.time] = next.split(" ");
+        return { ...g, nextTime: next, nextDate, nextClock };
+      })
+      .sort((a, b) => {
+        const ka = a.pending > 0 ? 0 : 1;
+        const kb = b.pending > 0 ? 0 : 1;
+        if (ka !== kb) return ka - kb;
+        return (a.nextTime || "").localeCompare(b.nextTime || "");
+      });
+  }, [sortedGroups, posts]);
 
   const monthLabel = (key) => {
     const [y, m] = key.split("-").map(Number);
@@ -901,7 +908,7 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
       const item = el?.closest?.(".timeline-item");
       if (item) {
         const idx = Array.prototype.indexOf.call(wrap.querySelectorAll(".timeline-item"), item);
-        if (idx >= 0 && timelineItems[idx]) setViewPost(timelineItems[idx]);
+        if (idx >= 0 && timelineItems[idx]) openGroupDetail(timelineItems[idx]);
       }
       return;
     }
@@ -917,9 +924,9 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     const target = Math.max(0, best * TL_ITEM_H);
     wrap.scrollTo({ top: target, behavior: "smooth" });
   }
-  function tlOpenPost(i) {
-    const p = timelineItems[i];
-    if (p) setViewPost(p);
+  function tlOpenFolder(i) {
+    const g = timelineItems[i];
+    if (g) openGroupDetail(g);
   }
   function tlScrollToTop() {
     const wrap = timelineWrapRef.current;
@@ -1568,33 +1575,36 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
                 {search && <button className="btn btn-ghost" onClick={() => setSearch("")}><X size={14} /> {t("dashboard.schedule.clearSearch")}</button>}
               </div>
             ) : (
-              timelineItems.map((p, i) => {
-                const page = pages.find((pg) => pg.id === p.pageId);
+              timelineItems.map((g, i) => {
                 const active = i === tlActive;
                 return (
                   <div
                     className={"timeline-item" + (active ? " tl-active" : "")}
-                    key={p.id}
+                    key={g.id}
                     role="button"
                     tabIndex={0}
-                    aria-label={p.content || p.pageName || p.date}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tlOpenPost(i); } }}
+                    aria-label={g.name}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tlOpenFolder(i); } }}
                   >
                     {active && (
                       <span className="tl-next-badge"><Zap size={10} /> {t("dashboard.schedule.tlNext")}</span>
                     )}
                     <div className="tl-thumb">
-                      <MediaThumb src={p.media_urls?.[0]} size={52} />
+                      <MediaThumb src={g.thumbnail} icon="folder" size={52} />
                     </div>
                     <div className="tl-main">
                       <div className="tl-top">
-                        <StatusPipeline status={p.status} t={t} />
-                        <span className="tl-time"><Clock size={11} /> {p.date} {p.time}</span>
+                        <span className="tl-folder-name">{g.name}</span>
+                        <span className="tl-time-badge"><Clock size={11} /> {g.nextDate} {g.nextClock}</span>
                       </div>
-                      <div className="tl-content">{p.content}</div>
                       <div className="tl-meta">
-                        <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
-                        <span className="tl-page">{p.pageName || page?.label || t("dashboard.schedule.pageNotFound")}</span>
+                        <span className="tl-count"><Images size={12} /> {g.total} {t("dashboard.schedule.pagesSuffix")}</span>
+                        {g.posted > 0 && <span className="status-dot-group success" />}
+                        {g.posted > 0 && <span className="status-count success">{g.posted}</span>}
+                        {g.pending > 0 && <span className="status-dot-group pending" />}
+                        {g.pending > 0 && <span className="status-count pending">{g.pending}</span>}
+                        {g.failed > 0 && <span className="status-dot-group failed" />}
+                        {g.failed > 0 && <span className="status-count failed">{g.failed}</span>}
                       </div>
                     </div>
                   </div>
@@ -4533,10 +4543,21 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .tl-thumb { flex-shrink: 0; }
         .tl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
         .tl-top { display: flex; align-items: center; gap: 10px; }
-        .tl-time { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); white-space: nowrap; margin-left: auto; }
-        .tl-content { font-size: 13px; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .tl-meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
-        .tl-page { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tl-folder-name {
+          flex: 1; min-width: 0; font-weight: 600; font-size: 13.5px; color: var(--text);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .tl-time-badge {
+          display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+          font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; color: var(--text);
+          background: var(--glass-border); border-radius: 999px; padding: 3px 9px; white-space: nowrap;
+        }
+        .tl-meta { display: flex; align-items: center; gap: 6px; min-width: 0; }
+        .tl-count {
+          display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;
+          color: var(--text-muted); white-space: nowrap;
+        }
+        .tl-meta .status-count { font-size: 10.5px; padding: 1px 7px; }
         .tl-top-btn {
           position: fixed; right: 26px; bottom: 26px; z-index: 40;
           display: inline-flex; align-items: center; gap: 6px;

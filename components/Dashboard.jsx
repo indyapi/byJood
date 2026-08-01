@@ -729,7 +729,9 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
 
   useEffect(() => {
     function handleClick(e) {
-      if (activeMenu && !e.target.closest(".post-actions") && !e.target.closest(".group-actions")) {
+      const inPostActions = e.target.closest(".post-actions");
+      const inGroupActions = e.target.closest(".group-actions");
+      if ((activeMenu || activeGroupMenu || viewGroupPosts) && !inPostActions && !inGroupActions) {
         setActiveMenu(null);
         setActiveSubmenu(null);
         setActiveGroupMenu(null);
@@ -742,7 +744,7 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [activeMenu, detailMenu]);
+  }, [activeMenu, activeGroupMenu, viewGroupPosts, detailMenu]);
 
   // Dynamic badge filters: months (layer 1) and active days (layer 2) with post counts.
   const monthCounts = useMemo(() => {
@@ -4304,10 +4306,6 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .filter-pill.active { color: var(--accent); border-color: var(--glass-border-accent); background: var(--accent-soft); }
         .filter-pill .pill-count { font-weight: 700; white-space: nowrap; }
 
-        .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-        .group-card { cursor: pointer; position: relative; transition: border-color .12s, transform .12s; }
-        .group-card:hover { border-color: var(--glass-border-accent); transform: translateY(-1px); }
-        .group-card.menu-open { z-index: 50; }
         .thumb { display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--glass-bg-dark); border: 1px solid var(--glass-border); }
         .thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .thumb-fallback { color: var(--text-dim); }
@@ -4338,7 +4336,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .menu-item.retry-item { color: var(--danger); }
         .menu-item.retry-item:hover:not(:disabled) { background: var(--badge-failed-bg); color: var(--danger); }
         .menu-item.retry-item:disabled { opacity: .5; cursor: not-allowed; }
-        .group-actions { position: absolute; top: 12px; right: 10px; }
+        .group-actions { position: absolute; top: 12px; right: 10px; z-index: 5; }
         .group-actions .action-menu { right: 0; left: auto; }
         .group-detail-head { position: relative; margin-bottom: 18px; }
         .group-detail-head .link-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; margin-bottom: 8px; }
@@ -4361,7 +4359,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           transition: border-color .12s;
         }
         .post-row:hover { border-color: var(--glass-border-accent); }
-        .post-row.menu-open { z-index: 50; }
+        .post-row.menu-open { z-index: 100; transform: none; }
         .post-time {
           display: flex; align-items: center; gap: 5px; font-family: var(--font-mono);
           font-size: 12px; color: var(--text-muted); width: 62px; flex-shrink: 0;
@@ -4416,7 +4414,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .sort-box select:focus { border-color: var(--glass-border-accent); }
 
         .schedule-scroll {
-          max-height: calc(100vh - 280px); overflow-y: auto; padding-right: 4px;
+          max-height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;
           scrollbar-width: thin;
           scrollbar-color: var(--scrollbar-thumb, rgba(127,127,127,.35)) transparent;
         }
@@ -4435,11 +4433,14 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
         /* Grid cards (2-col: thumbnail + info) */
         .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 14px; }
-        .group-card { cursor: pointer; position: relative; transition: border-color .12s, transform .12s; }
-        .group-card:hover { border-color: var(--glass-border-accent); transform: translateY(-1px); }
-        .group-card.menu-open { z-index: 50; }
-        .group-card-inner { display: flex; gap: 14px; align-items: stretch; }
-        .group-card-thumb { position: relative; flex-shrink: 0; }
+        .group-card {
+          cursor: pointer; position: relative; overflow: visible;
+          transition: border-color .12s;
+        }
+        .group-card:hover { border-color: var(--glass-border-accent); }
+        .group-card.menu-open { z-index: 100; transform: none; }
+        .group-card-inner { display: flex; gap: 14px; align-items: stretch; min-width: 0; }
+        .group-card-thumb { position: relative; flex: 0 0 auto; width: 96px; }
         .group-card-thumb .thumb { width: 96px; height: 96px; border-radius: 10px; }
         .thumb-count {
           position: absolute; right: -6px; bottom: -6px; min-width: 22px; height: 20px; padding: 0 6px;
@@ -4447,7 +4448,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           font-size: 11px; font-weight: 700; color: #fff; background: var(--accent);
           border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.28);
         }
-        .group-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+        .group-card-main {
+          flex: 1 1 auto; min-width: 0; overflow: hidden;
+          display: flex; flex-direction: column; gap: 7px; padding-right: 26px;
+        }
         .group-card-main .group-card-name {
           display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
           line-height: 1.35; word-break: break-word;
@@ -4463,11 +4467,11 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           backdrop-filter: blur(var(--glass-blur));
           -webkit-backdrop-filter: blur(var(--glass-blur));
           border: 1px solid var(--glass-border);
-          border-radius: 10px; padding: 10px 12px; cursor: pointer; position: relative; z-index: 1;
+          border-radius: 10px; padding: 10px 42px 10px 12px; cursor: pointer; position: relative; z-index: 1;
           transition: border-color .12s;
         }
         .group-list-row:hover { border-color: var(--glass-border-accent); }
-        .group-list-row.menu-open { z-index: 50; }
+        .group-list-row.menu-open { z-index: 100; transform: none; }
         .gl-name { flex: 1; min-width: 0; font-weight: 600; font-size: 13.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .gl-time { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); white-space: nowrap; }
         .gl-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
@@ -4475,20 +4479,24 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .gl-status .status-count { font-size: 10.5px; padding: 1px 7px; }
 
         /* Table view */
-        .group-table-wrap { border: 1px solid var(--glass-border); border-radius: 12px; overflow: hidden; background: var(--glass-bg); }
+        .group-table-wrap { border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-bg); }
         .group-table-scroll { overflow-x: auto; }
-        .group-table { width: 100%; border-collapse: collapse; min-width: 680px; }
+        .group-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 680px; }
         .group-table thead th {
           font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim);
           font-weight: 600; text-align: left; padding: 12px 14px;
           background: var(--glass-bg-dark); border-bottom: 1px solid var(--glass-border); white-space: nowrap;
         }
+        .group-table thead th:first-child { border-top-left-radius: 11px; }
+        .group-table thead th:last-child { border-top-right-radius: 11px; }
         .group-table thead th.th-actions { text-align: right; }
         .group-table tbody td { padding: 11px 14px; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
         .group-table tbody tr { cursor: pointer; transition: background .12s; }
         .group-table tbody tr:hover { background: var(--glass-border); }
-        .group-table tbody tr.menu-open { position: relative; z-index: 40; }
+        .group-table tbody tr.menu-open { position: relative; z-index: 100; }
         .group-table tbody tr:last-child td { border-bottom: none; }
+        .group-table tbody tr:last-child td:first-child { border-bottom-left-radius: 11px; }
+        .group-table tbody tr:last-child td:last-child { border-bottom-right-radius: 11px; }
         .table-group-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
         .table-group-name { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
         .table-time { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); white-space: nowrap; }
@@ -4504,7 +4512,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
         /* Timeline wheel */
         .timeline-wrap {
-          height: min(460px, calc(100vh - 300px)); min-height: 300px;
+          height: min(460px, calc(100vh - 320px)); min-height: 300px;
           overflow-y: auto; scroll-snap-type: y proximity; position: relative;
           touch-action: pan-y;
           scrollbar-width: thin;
@@ -4568,14 +4576,15 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .tl-top-btn:hover { transform: translateY(-2px); }
 
         .action-menu {
-          position: absolute; right: 0; top: calc(100% + 6px);
+          position: absolute; right: 0; top: 100%; margin-top: 4px;
+          margin-left: 0; z-index: 100;
           background: var(--surface);
           backdrop-filter: blur(var(--glass-blur-lg));
           -webkit-backdrop-filter: blur(var(--glass-blur-lg));
           border: 1px solid var(--border);
-          border-radius: 10px; padding: 4px; z-index: 50;
-          min-width: 210px;
-          box-shadow: var(--shadow);
+          border-radius: 10px; padding: 4px;
+          min-width: 210px; max-width: calc(100vw - 24px);
+          box-shadow: 0 18px 40px rgba(0,0,0,.3), 0 6px 16px rgba(0,0,0,.16), var(--shadow);
         }
         .menu-item-group { display: flex; flex-direction: column; }
         .menu-item {

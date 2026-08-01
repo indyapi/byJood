@@ -388,7 +388,7 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
                 <PlatformChip platform={pg.platform} PLATFORMS={PLATFORMS} />
                 <StatusPill status={pg.status} t={t} />
               </div>
-              <div className="card-title">{pg.label}</div>
+              <div className="card-title" title={pg.label}>{pg.label}</div>
               <div className="card-row">
                 <span className="label-dim">{t("dashboard.connections.idLabel")}</span>
                 <span className="mono">{pg.externalId}</span>
@@ -3345,9 +3345,38 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); }
         .card-foot-actions { display: flex; align-items: center; gap: 2px; }
 
-        .card-foot-move { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 11px; }
-        .card-foot-move .label-dim { min-width: auto; white-space: nowrap; }
-        .folder-move-select { padding: 6px 8px; font-size: 12px; flex: 1; min-width: 0; }
+        .explorer-grid .card {
+          height: auto;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .explorer-grid .card-title {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          line-height: 1.35;
+          min-height: 2.7em;
+          margin-bottom: 0;
+        }
+        .explorer-grid .card-foot { gap: 8px; margin-top: 10px; }
+        .explorer-grid .card-foot-actions { margin-left: auto; gap: 4px; }
+        .explorer-grid .card-row { min-width: 0; }
+        .explorer-grid .card-row .mono { overflow-wrap: anywhere; word-break: break-all; }
+
+        .card-foot-move {
+          display: flex; align-items: center; gap: 8px;
+          width: 100%; min-width: 0;
+          margin-top: 6px; padding-top: 10px;
+          border-top: 1px solid var(--border);
+          font-size: 11px;
+        }
+        .card-foot-move .label-dim { min-width: auto; white-space: nowrap; flex-shrink: 0; }
+        .folder-move-select { padding: 6px 8px; font-size: 12px; flex: 1; min-width: 0; max-width: 100%; }
         .icon-btn.starred { color: var(--warning); }
         .icon-btn.starred:hover { color: var(--warning); }
 
@@ -3380,7 +3409,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .explorer-new-folder { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 10px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); }
         .explorer-new-folder .input { flex: 1; }
 
-        .explorer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; align-items: start; }
+        .explorer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; align-items: start; }
         .folder-card {
           background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius);
           padding: 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow);

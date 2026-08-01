@@ -229,7 +229,7 @@ function GroupActionMenu({
                     >
                       <span className="submenu-page">
                         <PlatformChip platform={post.platform} size="sm" PLATFORMS={PLATFORMS} />
-                        <span className="submenu-page-name">{name || t("dashboard.schedule.pageNotFound")}</span>
+                        <span className="submenu-page-name" title={name || t("dashboard.schedule.pageNotFound")}>{name || t("dashboard.schedule.pageNotFound")}</span>
                         {clickable ? (
                           <ExternalLink size={12} className="submenu-page-link" />
                         ) : (
@@ -1521,15 +1521,19 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
                           <ChevronRight size={12} className="sub-arrow" />
                         </button>
                         {activeSubmenu === "group-view-fb" && (
-                          <div className="submenu">
+                          <div className="submenu view-post-submenu">
                             {postedPages.map((x) => {
                               const xpage = pages.find((pg) => pg.id === x.pageId);
+                              const label = xpage?.label || x.pageName;
                               return (
                                 <button
                                   key={x.id}
+                                  title={label}
                                   onClick={() => { setDetailMenu(false); setActiveSubmenu(null); window.open(getPostUrl(x), "_blank", "noopener"); }}
                                 >
-                                  {xpage?.label || x.pageName}
+                                  <span className="submenu-page">
+                                    <span className="submenu-page-name">{label}</span>
+                                  </span>
                                 </button>
                               );
                             })}
@@ -4703,9 +4707,12 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .submenu button:hover { background: var(--menu-hover); }
         .submenu button:disabled { opacity: .35; cursor: not-allowed; }
 
-        .view-post-submenu { min-width: 190px; }
+        .view-post-submenu { min-width: 190px; max-width: 240px; max-height: 240px; overflow-y: auto; }
+        .view-post-submenu::-webkit-scrollbar { width: 8px; }
+        .view-post-submenu::-webkit-scrollbar-track { background: transparent; }
+        .view-post-submenu::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb, rgba(127,127,127,.35)); border-radius: 8px; }
         .submenu-page { display: flex; align-items: center; gap: 8px; min-width: 0; }
-        .submenu-page-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .submenu-page-name { flex: 1; min-width: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .submenu-page-link { color: var(--text-dim); flex-shrink: 0; }
         .submenu-page-status { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; flex-shrink: 0; padding: 1px 7px; border-radius: 999px; }
         .submenu-page-status-posted, .submenu-page-status-success { color: var(--badge-success-text); background: var(--badge-success-bg); }

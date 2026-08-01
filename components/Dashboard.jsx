@@ -3848,9 +3848,6 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         .fb-toggle:hover { text-decoration: underline; }
 
-        .modal-lg { max-width: min(1100px, 92vw); width: 100%; }
-        .modal-lg.fb-modal { max-width: 768px; }
-        .modal-sm { max-width: 360px; width: 100%; }
         .delete-body { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 4px; }
         .delete-images-option { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; font-size: 13px; color: var(--text-muted); cursor: pointer; }
         .delete-images-option input { accent-color: var(--danger); }
@@ -4046,12 +4043,16 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           width: 100%; max-width: 440px; padding: 22px; box-sizing: border-box;
           box-shadow: var(--shadow);
         }
+        .modal.modal-lg { max-width: min(1100px, 92vw); width: 100%; }
+        .modal.modal-lg.fb-modal { max-width: 768px; }
+        .modal.modal-sm { max-width: 360px; width: 100%; }
         .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .modal-head h2 { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
         .field-group { margin-bottom: 14px; }
         .field-row { display: flex; gap: 10px; }
         .field-row .field-group { flex: 1; }
         .post-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+        .post-col { min-width: 0; }
         .post-grid .field-group:last-child { margin-bottom: 0; }
         .time-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
         .preset-chip {
@@ -4274,8 +4275,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           .stat-card-number { font-size: 17px; }
           .modal-overlay { padding: 20px 12px; }
           .modal { padding: 16px; }
-          .modal-lg, .fb-modal, .modal-sm { max-width: 100%; width: 100%; margin: 0; }
-          .modal-lg.fb-modal { max-width: 100%; }
+          .modal.modal-lg, .modal.modal-sm, .fb-modal { max-width: 100%; width: 100%; margin: 0; }
+          .modal.modal-lg.fb-modal { max-width: 100%; }
           .grid-cards { grid-template-columns: 1fr; }
           .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
           .gallery-actions { opacity: 1; }

@@ -1596,6 +1596,10 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const uidCounter = useRef(0);
+  const previewGridRef = useRef(null);
+  const touchDragRef = useRef(null);
+  const selectedImagesRef = useRef(selectedImages);
+  const hasSelectedImages = selectedImages.length > 0;
   const [pageFilter, setPageFilter] = useState("all");
   const [expandedFolders, setExpandedFolders] = useState(() => new Set(folders.filter((f) => !f.parent_id).map((f) => f.id)));
 
@@ -1783,6 +1787,71 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
       next.splice(to, 0, moved);
       return next;
     });
+  }
+
+  useEffect(() => {
+    selectedImagesRef.current = selectedImages;
+  }, [selectedImages]);
+
+  useEffect(() => {
+    const grid = previewGridRef.current;
+    if (!grid) return;
+    const onTouchMove = (e) => {
+      const td = touchDragRef.current;
+      if (!td || !td.armed) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const card = el && el.closest ? el.closest(".preview-wrap") : null;
+      const uid = card && card.dataset ? card.dataset.uid : null;
+      if (uid) {
+        const idx = selectedImagesRef.current.findIndex((img) => img.uid === uid);
+        if (idx !== -1) setDragOverIndex(idx);
+      }
+    };
+    grid.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => grid.removeEventListener("touchmove", onTouchMove);
+  }, [hasSelectedImages]);
+
+  function handleTouchStart(e, i) {
+    if (selectedImages.length < 2) return;
+    const t = e.touches[0];
+    touchDragRef.current = {
+      index: i,
+      startX: t.clientX,
+      startY: t.clientY,
+      armed: false,
+      timer: setTimeout(() => {
+        if (touchDragRef.current) {
+          touchDragRef.current.armed = true;
+          setDragIndex(i);
+        }
+      }, 350),
+    };
+  }
+
+  function handleTouchMove(e) {
+    const td = touchDragRef.current;
+    if (!td || td.armed) return;
+    const t = e.touches[0];
+    const dx = Math.abs(t.clientX - td.startX);
+    const dy = Math.abs(t.clientY - td.startY);
+    if (dx > 10 || dy > 10) {
+      clearTimeout(td.timer);
+      touchDragRef.current = null;
+    }
+  }
+
+  function handleTouchEnd() {
+    const td = touchDragRef.current;
+    if (!td) return;
+    clearTimeout(td.timer);
+    if (td.armed && dragOverIndex !== null && dragOverIndex !== td.index) {
+      reorderImages(td.index, dragOverIndex);
+    }
+    touchDragRef.current = null;
+    setDragIndex(null);
+    setDragOverIndex(null);
   }
 
   async function submit(e) {
@@ -2030,10 +2099,11 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
                   <span>{t("dashboard.schedule.imageSelectedTitle")}</span>
                   <span className="selected-images-hint">{t("dashboard.schedule.imageDragHint")}</span>
                 </div>
-                <div className="upload-preview-grid">
+                <div className="upload-preview-grid" ref={previewGridRef}>
                   {selectedImages.map((img, i) => (
                     <div
                       key={img.uid}
+                      data-uid={img.uid}
                       className={`preview-wrap drag-item ${dragIndex === i ? "dragging" : ""} ${dragOverIndex === i && dragIndex !== i ? "drag-over" : ""}`}
                       draggable={selectedImages.length > 1}
                       onDragStart={(e) => {
@@ -2054,6 +2124,11 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
                         setDragIndex(null);
                         setDragOverIndex(null);
                       }}
+                      onTouchStart={(e) => handleTouchStart(e, i)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchCancel={handleTouchEnd}
+                      onContextMenu={(e) => e.preventDefault()}
                     >
                       <img
                         src={img.kind === "upload" ? img.previewUrl : img.item.public_url}
@@ -2061,6 +2136,18 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
                         className="preview-img"
                       />
                       <span className="upload-order-badge">{i + 1}</span>
+                      <div className="preview-move">
+                        {i > 0 && (
+                          <button type="button" className="move-btn" onClick={() => reorderImages(i, i - 1)} aria-label={t("dashboard.schedule.imageMoveLeft")}>
+                            <ChevronLeft size={14} />
+                          </button>
+                        )}
+                        {i < selectedImages.length - 1 && (
+                          <button type="button" className="move-btn" onClick={() => reorderImages(i, i + 1)} aria-label={t("dashboard.schedule.imageMoveRight")}>
+                            <ChevronRight size={14} />
+                          </button>
+                        )}
+                      </div>
                       <button type="button" className="remove-btn" onClick={() => removeImage(img.uid)}>
                         <X size={12} /> {t("dashboard.fields.removeImage")}
                       </button>
@@ -3995,6 +4082,23 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         .remove-btn { position: absolute; top: 6px; right: 6px; background: var(--glass-bg-dark); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--glass-border); color: var(--text); border-radius: var(--radius-sm); padding: 4px 8px; cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 4px; transition: border-color .15s; }
         .remove-btn:hover { border-color: var(--glass-border-light); }
+
+        .preview-move {
+          position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+          display: flex; align-items: center; gap: 4px;
+          background: var(--glass-bg-dark); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+          border: 1px solid var(--glass-border); border-radius: 999px; padding: 3px;
+          opacity: 0; transition: opacity .12s;
+        }
+        .preview-wrap:hover .preview-move { opacity: 1; }
+        @media (hover: none) { .preview-move { opacity: 1; } }
+        .move-btn {
+          background: none; border: none; color: var(--text); cursor: pointer;
+          width: 26px; height: 26px; border-radius: 50%;
+          display: inline-flex; align-items: center; justify-content: center;
+          transition: background .12s, color .12s;
+        }
+        .move-btn:hover { background: var(--accent-soft); color: var(--accent); }
 
         /* ── AddPostModal image tabs ── */
         .image-tabs {

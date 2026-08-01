@@ -294,6 +294,8 @@
       "imageAddMore": "Add more images",
       "imageSelectedTitle": "Selected Images",
       "imageDragHint": "Drag to reorder — #1 is the cover",
+      "imageMoveLeft": "Move left",
+      "imageMoveRight": "Move right",
       "cancel": "Cancel",
       "save": "Save Schedule",
       "batchSuffix": "page(s)",

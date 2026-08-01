@@ -250,6 +250,7 @@
       "renameAria": "Rename folder",
       "deleteAria": "Delete folder",
       "expandAria": "Expand/collapse folder",
+      "dragHint": "Drag to a folder or the Root to move this page",
       "deleteFolderTitle": "Delete Folder",
       "deleteFolderConfirm": "Delete this folder? Pages inside it will be moved to the root and sub-folders will be moved up one level."
     },

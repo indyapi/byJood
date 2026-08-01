@@ -123,6 +123,8 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
   const [renameId, setRenameId] = useState(null);
   const [renameValue, setRenameValue] = useState("");
   const [confirmFolder, setConfirmFolder] = useState(null);
+  const [dragPageId, setDragPageId] = useState(null);
+  const [dropTargetId, setDropTargetId] = useState(null);
 
   const folderMap = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders]);
 
@@ -151,6 +153,55 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
     if (renameValue.trim()) onRenameFolder(folder.id, renameValue.trim());
     setRenameId(null);
     setRenameValue("");
+  }
+
+  function startDrag(e, pageId) {
+    if (!authed) return;
+    setDragPageId(pageId);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", pageId);
+    }
+  }
+
+  function endDrag() {
+    setDragPageId(null);
+    setDropTargetId(null);
+  }
+
+  function allowDrop(e, targetId) {
+    if (!authed || !dragPageId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    if (dropTargetId !== targetId) setDropTargetId(targetId);
+  }
+
+  function clearDrop(targetId) {
+    if (dropTargetId === targetId) setDropTargetId(null);
+  }
+
+  function handleDropPage(e, targetId) {
+    if (!authed) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pageId = dragPageId || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+    setDragPageId(null);
+    setDropTargetId(null);
+    if (!pageId) return;
+    const page = pages.find((p) => p.id === pageId);
+    const currentFolder = page ? page.folderId || null : null;
+    const targetFolder = targetId === "__root__" ? null : targetId || null;
+    if (currentFolder === targetFolder) return;
+    onMovePage(pageId, targetFolder);
+  }
+
+  function allowRootDrop(e) {
+    if (!authed || !dragPageId) return;
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    if (dropTargetId !== "__root__") setDropTargetId("__root__");
   }
 
   const head = embedded ? (
@@ -217,13 +268,27 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
 
       <div className="explorer-bar">
         <div className="breadcrumb">
-          <button className={`bc-crumb ${currentFolderId ? "" : "active"}`} onClick={() => setCurrentFolderId(null)}>
+          <button
+            className={`bc-crumb ${currentFolderId ? "" : "active"} ${dropTargetId === "__root__" ? "drop-target" : ""}`}
+            onClick={() => setCurrentFolderId(null)}
+            onDragOver={(e) => allowDrop(e, "__root__")}
+            onDragLeave={() => clearDrop("__root__")}
+            onDrop={(e) => handleDropPage(e, "__root__")}
+          >
             <Home size={13} /> {t("dashboard.folders.rootName")}
           </button>
           {trail.map((f) => (
             <React.Fragment key={f.id}>
               <ChevronRight size={12} className="bc-sep" />
-              <button className="bc-crumb" onClick={() => setCurrentFolderId(f.id)}>{f.name}</button>
+              <button
+                className={`bc-crumb ${dropTargetId === f.id ? "drop-target" : ""}`}
+                onClick={() => setCurrentFolderId(f.id)}
+                onDragOver={(e) => allowDrop(e, f.id)}
+                onDragLeave={() => clearDrop(f.id)}
+                onDrop={(e) => handleDropPage(e, f.id)}
+              >
+                {f.name}
+              </button>
             </React.Fragment>
           ))}
         </div>
@@ -264,9 +329,23 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
           <p>{t("dashboard.folders.folderEmpty")}</p>
         </div>
       ) : (
-        <div className="explorer-grid">
+        <div
+          className={`explorer-grid ${dragPageId ? "has-drag" : ""}`}
+          onDragOver={allowRootDrop}
+          onDragLeave={() => clearDrop("__root__")}
+          onDrop={(e) => {
+            if (e.target !== e.currentTarget) return;
+            handleDropPage(e, "__root__");
+          }}
+        >
           {childFolders.map((f) => (
-            <div className="folder-card" key={f.id}>
+            <div
+              className={`folder-card ${dropTargetId === f.id ? "drop-target" : ""}`}
+              key={f.id}
+              onDragOver={(e) => allowDrop(e, f.id)}
+              onDragLeave={() => clearDrop(f.id)}
+              onDrop={(e) => handleDropPage(e, f.id)}
+            >
               <button className="folder-card-main" onClick={() => setCurrentFolderId(f.id)}>
                 <FolderOpen size={32} className="folder-card-icon" />
                 <span className="folder-card-name">{f.name}</span>
@@ -297,7 +376,14 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
           ))}
 
           {currentPages.map((pg) => (
-            <div className={`card${pg.status === "expired" ? " card-alert" : ""}`} key={pg.id}>
+            <div
+              className={`card${pg.status === "expired" ? " card-alert" : ""} ${dragPageId === pg.id ? "dragging" : ""}`}
+              key={pg.id}
+              draggable={authed}
+              onDragStart={(e) => startDrag(e, pg.id)}
+              onDragEnd={endDrag}
+              title={authed ? t("dashboard.folders.dragHint") : undefined}
+            >
               <div className="card-top">
                 <PlatformChip platform={pg.platform} PLATFORMS={PLATFORMS} />
                 <StatusPill status={pg.status} t={t} />
@@ -3309,6 +3395,19 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .folder-rename { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
         .folder-rename .input { flex: 1; padding: 6px 8px; font-size: 12px; }
         .btn-xs { padding: 6px 8px; font-size: 12px; }
+
+        .card.dragging { opacity: .5; }
+        .explorer-grid.has-drag { cursor: grabbing; }
+        .folder-card.drop-target {
+          border-color: var(--accent);
+          background: var(--accent-soft);
+          box-shadow: 0 0 0 2px var(--accent-soft);
+        }
+        .bc-crumb.drop-target {
+          color: var(--accent);
+          background: var(--accent-soft);
+          box-shadow: 0 0 0 2px var(--accent-soft);
+        }
 
         .chip { display: inline-flex; align-items: center; gap: 6px; }
         .chip-code {

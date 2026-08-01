@@ -424,6 +424,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
   const [editGroup, setEditGroup] = useState(null);
   const [changeGroupTime, setChangeGroupTime] = useState(null);
   const [deleteGroup, setDeleteGroup] = useState(null);
+  const [deleteImages, setDeleteImages] = useState(false);
   const [groupRename, setGroupRename] = useState("");
   const [groupDeleteConfirm, setGroupDeleteConfirm] = useState("");
   const [groups, setGroups] = useState([]);
@@ -515,13 +516,14 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
 
   async function handleDeleteConfirmed() {
     if (!deletePost) return;
-    const res = await fetch(`/api/scheduled-posts/${deletePost.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/scheduled-posts/${deletePost.id}?delete_images=${deleteImages}`, { method: "DELETE" });
     if (res.status === 401) { router.replace("/sign-in"); return; }
     if (res.ok || res.status === 204) {
       onDelete(deletePost.id);
       setGroupPosts((prev) => prev.filter((p) => p.id !== deletePost.id));
     }
     setDeletePost(null);
+    setDeleteImages(false);
   }
 
   async function openGroupDetail(group) {
@@ -623,6 +625,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     const total = target.total || 0;
     setDeleteGroup(null);
     setGroupDeleteConfirm("");
+    setDeleteImages(false);
     setToast({ kind: "info", message: t("dashboard.schedule.deletingInProgress"), progress: { current: 0, total } });
 
     let current = 0;
@@ -634,7 +637,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
     }, 180);
 
     try {
-      const res = await fetch(`/api/post-groups/${target.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/post-groups/${target.id}?delete_images=${deleteImages}`, { method: "DELETE" });
       clearInterval(ticker);
       if (res.status === 401) { router.replace("/sign-in"); return; }
       if (res.ok || res.status === 204) {
@@ -1213,11 +1216,15 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
           <div className="modal modal-sm">
             <div className="modal-head">
               <h2>{t("dashboard.schedule.deleteTitle")}</h2>
-              <button className="icon-btn" onClick={() => setDeletePost(null)}><X size={18} /></button>
+              <button className="icon-btn" onClick={() => { setDeletePost(null); setDeleteImages(false); }}><X size={18} /></button>
             </div>
             <p className="delete-body">{t("dashboard.schedule.deleteConfirm")}</p>
+            <label className="delete-images-option">
+              <input type="checkbox" checked={deleteImages} onChange={(e) => setDeleteImages(e.target.checked)} />
+              <span>{t("dashboard.schedule.deleteImagesLabel")}</span>
+            </label>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={() => setDeletePost(null)}>{t("dashboard.schedule.cancel")}</button>
+              <button className="btn btn-ghost" onClick={() => { setDeletePost(null); setDeleteImages(false); }}>{t("dashboard.schedule.cancel")}</button>
               <button className="btn btn-danger" onClick={handleDeleteConfirmed}>{t("dashboard.schedule.deleteConfirmBtn")}</button>
             </div>
           </div>
@@ -1275,15 +1282,19 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
           <div className="modal modal-sm">
             <div className="modal-head">
               <h2>{t("dashboard.schedule.deleteGroupTitle")}</h2>
-              <button className="icon-btn" onClick={() => setDeleteGroup(null)}><X size={18} /></button>
+              <button className="icon-btn" onClick={() => { setDeleteGroup(null); setDeleteImages(false); }}><X size={18} /></button>
             </div>
             <p className="delete-body">{t("dashboard.schedule.deleteGroupConfirm")}</p>
             <div className="field-group">
               <label className="field-label">{t("dashboard.schedule.typeDeleteToConfirm")}</label>
               <input className="input" autoFocus value={groupDeleteConfirm} onChange={(e) => setGroupDeleteConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleDeleteGroupConfirmed()} placeholder="delete" />
             </div>
+            <label className="delete-images-option">
+              <input type="checkbox" checked={deleteImages} onChange={(e) => setDeleteImages(e.target.checked)} />
+              <span>{t("dashboard.schedule.deleteImagesLabel")}</span>
+            </label>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={() => setDeleteGroup(null)}>{t("dashboard.schedule.cancel")}</button>
+              <button className="btn btn-ghost" onClick={() => { setDeleteGroup(null); setDeleteImages(false); }}>{t("dashboard.schedule.cancel")}</button>
               <button className="btn btn-danger" onClick={handleDeleteGroupConfirmed} disabled={groupDeleteConfirm.toLowerCase().trim() !== "delete"}>{t("dashboard.schedule.deleteGroupBtn")}</button>
             </div>
           </div>
@@ -3088,6 +3099,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .modal-lg { max-width: 896px; width: 100%; }
         .modal-sm { max-width: 360px; width: 100%; }
         .delete-body { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 4px; }
+        .delete-images-option { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; font-size: 13px; color: var(--text-muted); cursor: pointer; }
+        .delete-images-option input { accent-color: var(--danger); }
 
         .pipeline { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
         .pipe-node { width: 8px; height: 8px; border-radius: 50%; background: var(--border); border: 1px solid var(--text-dim); transition: all .2s; }

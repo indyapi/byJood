@@ -1,5 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { deleteMediaForPublicUrls } from "@/lib/media-delete";
 
 async function deleteFromPlatform(platform, externalPostId, accessToken) {
   switch (platform) {
@@ -91,15 +92,29 @@ export async function DELETE(request, { params }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  const url = new URL(request.url);
+  let deleteImages = url.searchParams.get("delete_images") === "true";
+  if (!deleteImages) {
+    try {
+      const body = await request.json();
+      deleteImages = body?.delete_images === true;
+    } catch {}
+  }
+
   const admin = createAdminSupabase();
 
   const { data: posts, error: fetchErr } = await admin
     .from("scheduled_posts")
-    .select("id, external_post_id, platform, page_id")
+    .select("id, external_post_id, platform, page_id, media_urls")
     .eq("group_id", params.id)
     .eq("user_id", user.id);
 
   if (fetchErr) return Response.json({ error: fetchErr.message }, { status: 500 });
+
+  if (deleteImages) {
+    const urls = (posts || []).flatMap((post) => post.media_urls || []);
+    await deleteMediaForPublicUrls(admin, urls, user.id);
+  }
 
   for (const post of posts || []) {
     if (post.external_post_id) {

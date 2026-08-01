@@ -316,7 +316,8 @@
       "changeTimeTitle": "เปลี่ยนวันเวลา",
       "deleteTitle": "ลบโพสต์",
       "deleteConfirm": "ยืนยันลบโพสต์ที่ตั้งเวลานี้?",
-      "deleteConfirmBtn": "ลบ"
+      "deleteConfirmBtn": "ลบ",
+      "deleteImagesLabel": "ลบรูปภาพที่เกี่ยวข้องจาก Gallery/Storage ด้วย"
     },
     "logs": {
       "eyebrow": "LOGS",

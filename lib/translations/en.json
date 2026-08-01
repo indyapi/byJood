@@ -315,7 +315,8 @@
       "changeTimeTitle": "Change Schedule Time",
       "deleteTitle": "Delete Post",
       "deleteConfirm": "Are you sure you want to delete this scheduled post?",
-      "deleteConfirmBtn": "Delete"
+      "deleteConfirmBtn": "Delete",
+      "deleteImagesLabel": "Delete associated images from Gallery/Storage"
     },
     "logs": {
       "eyebrow": "LOGS",

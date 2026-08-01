@@ -1408,6 +1408,7 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
     if (selectedIds.length === 0) return;
 
     const mediaUrls = [];
+    const urlByUid = {};
     const uploadItems = selectedImages.filter((x) => x.kind === "upload");
     if (uploadItems.length > 0) {
       setUploading(true);
@@ -1415,7 +1416,6 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
       const supabase = createClientSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
-      const urlByUid = {};
 
       for (let i = 0; i < uploadItems.length; i++) {
         const item = uploadItems[i];

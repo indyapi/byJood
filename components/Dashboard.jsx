@@ -11,6 +11,7 @@ import {
   Mail, Shield, Edit3, Camera, Check, LogOut, Menu, Folder, ThumbsUp, ExternalLink, MessageCircle, Share2,
   Images, Loader2, Upload, Star, Home, ChevronDown, FolderPlus, FolderOpen,
   Timer, Sunrise, Sunset, Sparkles, RotateCcw, Zap, PenLine, Hash, Scissors, Flame,
+  LayoutGrid, List, Table2, ArrowUp, ArrowUpDown,
 } from "lucide-react";
 import Breadcrumb from "./Breadcrumb";
 import { createClientSupabase } from "@/lib/supabase-client";
@@ -694,6 +695,13 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
   const [groupRename, setGroupRename] = useState("");
   const [groupDeleteConfirm, setGroupDeleteConfirm] = useState("");
   const [groups, setGroups] = useState([]);
+  const [viewMode, setViewMode] = useState("grid");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("time_asc");
+  const [tlActive, setTlActive] = useState(0);
+  const timelineWrapRef = useRef(null);
+  const tlRaf = useRef(null);
+  const tlDrag = useRef(null);
 
   useEffect(() => { fetchGroups(); }, []);
 
@@ -769,6 +777,36 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     })
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
+  const q = search.trim().toLowerCase();
+  const sortedGroups = useMemo(() => {
+    const arr = displayGroups.filter((g) => {
+      if (!q) return true;
+      return g.name.toLowerCase().includes(q) || `${g.date} ${g.time}`.includes(q);
+    });
+    switch (sortBy) {
+      case "time_desc": return arr.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+      case "created_desc": return arr.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+      case "name_az": return arr.sort((a, b) => a.name.localeCompare(b.name));
+      case "name_za": return arr.sort((a, b) => b.name.localeCompare(a.name));
+      default: return arr.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    }
+  }, [displayGroups, q, sortBy]);
+
+  const timelineItems = useMemo(() => {
+    const arr = posts.filter((p) => {
+      if (!q) return true;
+      const page = pages.find((pg) => pg.id === p.pageId);
+      const name = p.pageName || page?.label || "";
+      return (p.content || "").toLowerCase().includes(q) || name.toLowerCase().includes(q);
+    });
+    return arr.sort((a, b) => {
+      const ka = a.status === "pending" || a.status === "queued" ? 0 : 1;
+      const kb = b.status === "pending" || b.status === "queued" ? 0 : 1;
+      if (ka !== kb) return ka - kb;
+      return (a.date + a.time).localeCompare(b.date + b.time);
+    });
+  }, [posts, pages, q]);
+
   const monthLabel = (key) => {
     const [y, m] = key.split("-").map(Number);
     return new Date(y, m - 1, 1).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { month: "long" });
@@ -781,6 +819,113 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     const mn = dt.toLocaleDateString(loc, { month: "short" }).replace(".", "");
     return `${wd}. ${d} ${mn}.`;
   };
+
+  const TL_ITEM_H = 88;
+  const applyTlTransforms = useCallback(() => {
+    const wrap = timelineWrapRef.current;
+    if (!wrap) return;
+    const H = wrap.clientHeight;
+    if (!H) return;
+    const mid = wrap.scrollTop + H / 2;
+    let best = 0;
+    let bestDist = Infinity;
+    wrap.querySelectorAll(".timeline-item").forEach((el, i) => {
+      const top = el.offsetTop + el.clientHeight / 2;
+      const dist = (top - mid) / TL_ITEM_H;
+      const adist = Math.abs(dist);
+      el.style.transform = `translateY(${dist * 9}px) scale(${Math.max(0.8, 1 - adist * 0.13)})`;
+      el.style.opacity = String(Math.max(0.2, 1 - adist * 0.24));
+      el.style.filter = adist > 1.2 ? "blur(1.4px)" : "none";
+      el.style.zIndex = String(Math.round(100 - adist * 20));
+      if (adist < bestDist) { bestDist = adist; best = i; }
+    });
+    setTlActive((prev) => (prev === best ? prev : best));
+  }, []);
+
+  const onTlScroll = useCallback(() => {
+    if (tlRaf.current) return;
+    tlRaf.current = requestAnimationFrame(() => {
+      tlRaf.current = null;
+      applyTlTransforms();
+    });
+  }, [applyTlTransforms]);
+
+  useEffect(() => {
+    const wrap = timelineWrapRef.current;
+    if (!wrap) return;
+    const pad = Math.max(0, (wrap.clientHeight - TL_ITEM_H) / 2);
+    wrap.style.paddingTop = pad + "px";
+    wrap.style.paddingBottom = pad + "px";
+    applyTlTransforms();
+    let ro = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => {
+        const p2 = Math.max(0, (wrap.clientHeight - TL_ITEM_H) / 2);
+        wrap.style.paddingTop = p2 + "px";
+        wrap.style.paddingBottom = p2 + "px";
+      });
+      ro.observe(wrap);
+    }
+    return () => ro && ro.disconnect();
+  }, [applyTlTransforms]);
+
+  useEffect(() => {
+    const wrap = timelineWrapRef.current;
+    if (!wrap) return;
+    wrap.scrollTop = 0;
+    applyTlTransforms();
+  }, [applyTlTransforms, timelineItems, viewMode]);
+
+  function tlPointerDown(e) {
+    if (e.pointerType === "touch") return;
+    const wrap = timelineWrapRef.current;
+    if (!wrap) return;
+    tlDrag.current = { y: e.clientY, top: wrap.scrollTop, moved: false, id: e.pointerId };
+    try { wrap.setPointerCapture(e.pointerId); } catch {}
+  }
+  function tlPointerMove(e) {
+    const d = tlDrag.current;
+    const wrap = timelineWrapRef.current;
+    if (!d || !wrap || d.id !== e.pointerId) return;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dy) > 3) d.moved = true;
+    wrap.scrollTop = d.top - dy;
+  }
+  function tlPointerUp(e) {
+    const d = tlDrag.current;
+    const wrap = timelineWrapRef.current;
+    tlDrag.current = null;
+    if (!d || !wrap) return;
+    if (!d.moved) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const item = el?.closest?.(".timeline-item");
+      if (item) {
+        const idx = Array.prototype.indexOf.call(wrap.querySelectorAll(".timeline-item"), item);
+        if (idx >= 0 && timelineItems[idx]) setViewPost(timelineItems[idx]);
+      }
+      return;
+    }
+    const H = wrap.clientHeight;
+    const mid = wrap.scrollTop + H / 2;
+    let best = 0;
+    let bestDist = Infinity;
+    wrap.querySelectorAll(".timeline-item").forEach((el, i) => {
+      const top = el.offsetTop + el.clientHeight / 2;
+      const dist = Math.abs(top - mid);
+      if (dist < bestDist) { bestDist = dist; best = i; }
+    });
+    const target = Math.max(0, best * TL_ITEM_H);
+    wrap.scrollTo({ top: target, behavior: "smooth" });
+  }
+  function tlOpenPost(i) {
+    const p = timelineItems[i];
+    if (p) setViewPost(p);
+  }
+  function tlScrollToTop() {
+    const wrap = timelineWrapRef.current;
+    if (!wrap) return;
+    wrap.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   async function handleDeleteConfirmed() {
     if (!deletePost) return;
@@ -1050,6 +1195,76 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     if (shareUrl) window.open(shareUrl, "_blank", "noopener");
   }
 
+  function groupMenuContent(g, ginfo) {
+    return (
+      <div className="action-menu">
+        <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setEditGroup(g); setGroupRename(g.name); }}>
+          <Edit3 size={14} /> {t("dashboard.schedule.editGroupAction")}
+        </button>
+        <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setChangeGroupTime({ id: g.id, date: g.date, time: g.time }); }}>
+          <Clock size={14} /> {t("dashboard.schedule.changeGroupTimeAction")}
+        </button>
+        {g.failed > 0 && (
+          <button
+            className="menu-item retry-item"
+            onClick={() => { setActiveGroupMenu(null); handleRetryGroup(g); }}
+            disabled={ginfo.disabled}
+            title={ginfo.disabled ? ginfo.label : t("dashboard.schedule.retryAction")}
+          >
+            <RefreshCw size={14} /> {ginfo.label}
+          </button>
+        )}
+        {g.posted > 0 && (
+          <div
+            className="menu-has-submenu"
+            onMouseEnter={() => handleViewGroupPost(g)}
+            onMouseLeave={() => setViewGroupPosts(null)}
+          >
+            <button className="menu-item menu-trigger" onClick={() => handleViewGroupPost(g, true)}>
+              <ExternalLink size={14} />
+              <span>{t("dashboard.schedule.viewPostAction")}</span>
+              <ChevronRight size={12} className="sub-arrow" />
+            </button>
+            {viewGroupPosts?.groupId === g.id && viewGroupPosts.entries.length > 1 && (
+              <div className="submenu view-post-submenu">
+                {viewGroupPosts.entries.map(({ post, name }) => {
+                  const url = getPostUrl(post);
+                  const clickable = isPublished(post) && url;
+                  return (
+                    <button
+                      key={post.id}
+                      disabled={!clickable}
+                      onClick={() => {
+                        if (!url) return;
+                        setActiveGroupMenu(null);
+                        setViewGroupPosts(null);
+                        window.open(url, "_blank", "noopener,noreferrer");
+                      }}
+                    >
+                      <span className="submenu-page">
+                        <PlatformChip platform={post.platform} size="sm" PLATFORMS={PLATFORMS} />
+                        <span className="submenu-page-name">{name || t("dashboard.schedule.pageNotFound")}</span>
+                        {clickable ? (
+                          <ExternalLink size={12} className="submenu-page-link" />
+                        ) : (
+                          <span className={`submenu-page-status submenu-page-status-${post.status}`}>{t(`dashboard.status.${post.status}`)}</span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="menu-divider" />
+        <button className="menu-item danger" onClick={() => { setActiveGroupMenu(null); setDeleteGroup(g); setGroupDeleteConfirm(""); }}>
+          <Trash2 size={14} /> {t("dashboard.schedule.deleteGroupAction")}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="view">
       <div className="view-head">
@@ -1101,6 +1316,53 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
             </div>
           </div>
         )}
+      </div>
+
+      <div className="schedule-toolbar">
+        <div className="view-switcher" role="group" aria-label={t("dashboard.schedule.viewLabel")}>
+          {[
+            { key: "grid", icon: <LayoutGrid size={15} />, label: t("dashboard.schedule.viewGrid") },
+            { key: "list", icon: <List size={15} />, label: t("dashboard.schedule.viewList") },
+            { key: "table", icon: <Table2 size={15} />, label: t("dashboard.schedule.viewTable") },
+            { key: "timeline", icon: <ScrollText size={15} />, label: t("dashboard.schedule.viewTimeline") },
+          ].map((v) => (
+            <button
+              key={v.key}
+              className={`vs-btn${viewMode === v.key ? " active" : ""}`}
+              onClick={() => setViewMode(v.key)}
+              title={v.label}
+              aria-label={v.label}
+            >
+              {v.icon}
+            </button>
+          ))}
+        </div>
+        <div className="st-right">
+          <div className="search-box">
+            <Search size={14} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("dashboard.schedule.searchPlaceholder")}
+            />
+            {search && (
+              <button className="search-clear" onClick={() => setSearch("")} aria-label={t("dashboard.schedule.clearSearch")}>
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <div className="sort-box">
+            <span className="sort-icon"><ArrowUpDown size={13} /></span>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label={t("dashboard.schedule.sortLabel")}>
+              <option value="time_asc">{t("dashboard.schedule.sortTimeAsc")}</option>
+              <option value="time_desc">{t("dashboard.schedule.sortTimeDesc")}</option>
+              <option value="created_desc">{t("dashboard.schedule.sortCreatedDesc")}</option>
+              <option value="name_az">{t("dashboard.schedule.sortNameAz")}</option>
+              <option value="name_za">{t("dashboard.schedule.sortNameZa")}</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {openedGroup ? (
@@ -1288,139 +1550,219 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
           <p>{t("dashboard.schedule.empty")}</p>
           <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}><Plus size={16} /> {t("dashboard.schedule.addBtn")}</button>
         </div>
-      ) : (
-        <div className="group-grid">
-          {displayGroups.map((g) => {
-            const ginfo = retryInfo(g, t);
-            return (
-            <div className={"card group-card" + (activeGroupMenu === g.id ? " menu-open" : "")} key={g.id} onClick={() => openGroupDetail(g)}>
-              {g.total === 0 ? (
-                <div className="group-card-body">
-                  <div className="group-card-head">
-                    <MediaThumb src={g.thumbnail} />
-                    <div className="group-card-title">
-                      <div className="group-card-name">{g.name}</div>
-                      <div className="group-card-row">{g.date} {g.time}</div>
+      ) : viewMode === "timeline" ? (
+        <>
+          <div
+            className="timeline-wrap schedule-scroll"
+            ref={timelineWrapRef}
+            onScroll={onTlScroll}
+            onPointerDown={tlPointerDown}
+            onPointerMove={tlPointerMove}
+            onPointerUp={tlPointerUp}
+            onPointerCancel={tlPointerUp}
+          >
+            {timelineItems.length === 0 ? (
+              <div className="empty">
+                <ScrollText size={24} />
+                <p>{search ? t("dashboard.schedule.noResults") : t("dashboard.schedule.tlEmpty")}</p>
+                {search && <button className="btn btn-ghost" onClick={() => setSearch("")}><X size={14} /> {t("dashboard.schedule.clearSearch")}</button>}
+              </div>
+            ) : (
+              timelineItems.map((p, i) => {
+                const page = pages.find((pg) => pg.id === p.pageId);
+                const active = i === tlActive;
+                return (
+                  <div
+                    className={"timeline-item" + (active ? " tl-active" : "")}
+                    key={p.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={p.content || p.pageName || p.date}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tlOpenPost(i); } }}
+                  >
+                    {active && (
+                      <span className="tl-next-badge"><Zap size={10} /> {t("dashboard.schedule.tlNext")}</span>
+                    )}
+                    <div className="tl-thumb">
+                      <MediaThumb src={p.media_urls?.[0]} size={52} />
+                    </div>
+                    <div className="tl-main">
+                      <div className="tl-top">
+                        <StatusPipeline status={p.status} t={t} />
+                        <span className="tl-time"><Clock size={11} /> {p.date} {p.time}</span>
+                      </div>
+                      <div className="tl-content">{p.content}</div>
+                      <div className="tl-meta">
+                        <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
+                        <span className="tl-page">{p.pageName || page?.label || t("dashboard.schedule.pageNotFound")}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="group-card-status">
-                    <span className="group-status-zero">{t("dashboard.schedule.noPostsInGroup")}</span>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="group-card-body">
-                    <div className="group-card-head">
-                      <MediaThumb src={g.thumbnail} />
-                      <div className="group-card-title">
+                );
+              })
+            )}
+          </div>
+          {timelineItems.length > 0 && (
+            <button className="tl-top-btn" onClick={tlScrollToTop} aria-label={t("dashboard.schedule.tlTop")}>
+              <ArrowUp size={15} /> {t("dashboard.schedule.tlTop")}
+            </button>
+          )}
+        </>
+      ) : (
+        <div className="schedule-scroll">
+          {sortedGroups.length === 0 ? (
+            <div className="empty">
+              <CalendarClock size={24} />
+              <p>{search ? t("dashboard.schedule.noResults") : t("dashboard.schedule.empty")}</p>
+              {search && <button className="btn btn-ghost" onClick={() => setSearch("")}><X size={14} /> {t("dashboard.schedule.clearSearch")}</button>}
+            </div>
+          ) : viewMode === "grid" ? (
+            <div className="group-grid">
+              {sortedGroups.map((g) => {
+                const ginfo = retryInfo(g, t);
+                return (
+                  <div className={"card group-card" + (activeGroupMenu === g.id ? " menu-open" : "")} key={g.id} onClick={() => openGroupDetail(g)}>
+                    <div className="group-card-inner">
+                      <div className="group-card-thumb">
+                        <MediaThumb src={g.thumbnail} icon="folder" size={96} />
+                        {g.total > 0 && <span className="thumb-count">{g.total}</span>}
+                      </div>
+                      <div className="group-card-main">
                         <div className="group-card-name">{g.name}</div>
                         <div className="group-card-row">
                           <Clock size={12} />
                           <span>{g.date} {g.time}</span>
-                          <span className="group-dot">·</span>
-                          <span>{g.total} {t("dashboard.schedule.pagesSuffix")}</span>
+                          {g.total > 0 && (
+                            <>
+                              <span className="group-dot">·</span>
+                              <span>{g.total} {t("dashboard.schedule.pagesSuffix")}</span>
+                            </>
+                          )}
+                        </div>
+                        <div className="group-card-status">
+                          {g.total === 0 ? (
+                            <span className="group-status-zero">{t("dashboard.schedule.noPostsInGroup")}</span>
+                          ) : (
+                            <>
+                              {g.posted > 0 && <span className="status-dot-group success" />}
+                              {g.posted > 0 && <span className="status-count success">{g.posted} {t("dashboard.status.posted")}</span>}
+                              {g.pending > 0 && <span className="status-dot-group pending" />}
+                              {g.pending > 0 && <span className="status-count pending">{g.pending} {t("dashboard.status.pending")}</span>}
+                              {g.failed > 0 && <span className="status-dot-group failed" />}
+                              {g.failed > 0 && <span className="status-count failed">{g.failed} {t("dashboard.status.failed")}</span>}
+                              {g.failed > 0 && (
+                                <button
+                                  className="retry-chip"
+                                  onClick={(e) => { e.stopPropagation(); handleRetryGroup(g); }}
+                                  disabled={ginfo.disabled}
+                                  title={ginfo.disabled ? ginfo.label : t("dashboard.schedule.retryAction")}
+                                >
+                                  <RefreshCw size={12} /> {ginfo.label}
+                                </button>
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
-                    <div className="group-card-status">
-                      {g.posted > 0 && <span className="status-dot-group success" />}
-                      {g.posted > 0 && <span className="status-count success">{g.posted} {t("dashboard.status.posted")}</span>}
-                      {g.pending > 0 && <span className="status-dot-group pending" />}
-                      {g.pending > 0 && <span className="status-count pending">{g.pending} {t("dashboard.status.pending")}</span>}
-                      {g.failed > 0 && <span className="status-dot-group failed" />}
-                      {g.failed > 0 && <span className="status-count failed">{g.failed} {t("dashboard.status.failed")}</span>}
-                      {g.failed > 0 && (
-                        <button
-                          className="retry-chip"
-                          onClick={(e) => { e.stopPropagation(); handleRetryGroup(g); }}
-                          disabled={ginfo.disabled}
-                          title={ginfo.disabled ? ginfo.label : t("dashboard.schedule.retryAction")}
-                        >
-                          <RefreshCw size={12} /> {ginfo.label}
-                        </button>
-                      )}
+                    <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
+                      <button
+                        className="icon-btn"
+                        onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); if (activeGroupMenu !== g.id) setViewGroupPosts(null); }}
+                      >
+                        <MoreHorizontal size={14} />
+                      </button>
+                      {activeGroupMenu === g.id && groupMenuContent(g, ginfo)}
                     </div>
                   </div>
-                  <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
-                    <button
-                      className="icon-btn"
-                      onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); if (activeGroupMenu !== g.id) setViewGroupPosts(null); }}
-                    >
-                      <MoreHorizontal size={14} />
-                    </button>
-                    {activeGroupMenu === g.id && (
-                      <div className="action-menu">
-                        <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setEditGroup(g); setGroupRename(g.name); }}>
-                          <Edit3 size={14} /> {t("dashboard.schedule.editGroupAction")}
-                        </button>
-                        <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setChangeGroupTime({ id: g.id, date: g.date, time: g.time }); }}>
-                          <Clock size={14} /> {t("dashboard.schedule.changeGroupTimeAction")}
-                        </button>
-                        {g.failed > 0 && (
-                          <button
-                            className="menu-item retry-item"
-                            onClick={() => { setActiveGroupMenu(null); handleRetryGroup(g); }}
-                            disabled={ginfo.disabled}
-                            title={ginfo.disabled ? ginfo.label : t("dashboard.schedule.retryAction")}
-                          >
-                            <RefreshCw size={14} /> {ginfo.label}
-                          </button>
-                        )}
-                        {g.posted > 0 && (
-                          <div
-                            className="menu-has-submenu"
-                            onMouseEnter={() => handleViewGroupPost(g)}
-                            onMouseLeave={() => setViewGroupPosts(null)}
-                          >
-                            <button className="menu-item menu-trigger" onClick={() => handleViewGroupPost(g, true)}>
-                              <ExternalLink size={14} />
-                              <span>{t("dashboard.schedule.viewPostAction")}</span>
-                              <ChevronRight size={12} className="sub-arrow" />
-                            </button>
-                            {viewGroupPosts?.groupId === g.id && viewGroupPosts.entries.length > 1 && (
-                              <div className="submenu view-post-submenu">
-                                {viewGroupPosts.entries.map(({ post, name }) => {
-                                  const url = getPostUrl(post);
-                                  const clickable = isPublished(post) && url;
-                                  return (
-                                    <button
-                                      key={post.id}
-                                      disabled={!clickable}
-                                      onClick={() => {
-                                        if (!url) return;
-                                        setActiveGroupMenu(null);
-                                        setViewGroupPosts(null);
-                                        window.open(url, "_blank", "noopener,noreferrer");
-                                      }}
-                                    >
-                                      <span className="submenu-page">
-                                        <PlatformChip platform={post.platform} size="sm" PLATFORMS={PLATFORMS} />
-                                        <span className="submenu-page-name">{name || t("dashboard.schedule.pageNotFound")}</span>
-                                        {clickable ? (
-                                          <ExternalLink size={12} className="submenu-page-link" />
-                                        ) : (
-                                          <span className={`submenu-page-status submenu-page-status-${post.status}`}>{t(`dashboard.status.${post.status}`)}</span>
-                                        )}
-                                      </span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <div className="menu-divider" />
-                        <button className="menu-item danger" onClick={() => { setActiveGroupMenu(null); setDeleteGroup(g); setGroupDeleteConfirm(""); }}>
-                          <Trash2 size={14} /> {t("dashboard.schedule.deleteGroupAction")}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+                );
+              })}
             </div>
-            );
-          })}
+          ) : viewMode === "list" ? (
+            <div className="group-list">
+              {sortedGroups.map((g) => {
+                const ginfo = retryInfo(g, t);
+                return (
+                  <div className={"group-list-row" + (activeGroupMenu === g.id ? " menu-open" : "")} key={g.id} onClick={() => openGroupDetail(g)}>
+                    <MediaThumb src={g.thumbnail} icon="folder" size={40} />
+                    <div className="gl-name">{g.name}</div>
+                    <div className="gl-time"><Clock size={12} /> {g.date} {g.time}</div>
+                    <div className="gl-count">{g.total} {t("dashboard.schedule.pagesSuffix")}</div>
+                    <div className="gl-status">
+                      {g.posted > 0 && <span className="status-count success">{g.posted}</span>}
+                      {g.pending > 0 && <span className="status-count pending">{g.pending}</span>}
+                      {g.failed > 0 && <span className="status-count failed">{g.failed}</span>}
+                    </div>
+                    <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
+                      <button
+                        className="icon-btn"
+                        onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); if (activeGroupMenu !== g.id) setViewGroupPosts(null); }}
+                      >
+                        <MoreHorizontal size={15} />
+                      </button>
+                      {activeGroupMenu === g.id && groupMenuContent(g, ginfo)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="group-table-wrap">
+              <div className="group-table-scroll">
+                <table className="group-table">
+                  <thead>
+                    <tr>
+                      <th>{t("dashboard.schedule.colGroup")}</th>
+                      <th>{t("dashboard.schedule.colSchedule")}</th>
+                      <th>{t("dashboard.schedule.colPages")}</th>
+                      <th>{t("dashboard.schedule.colStatus")}</th>
+                      <th className="th-actions">{t("dashboard.schedule.colActions")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedGroups.map((g) => {
+                      const ginfo = retryInfo(g, t);
+                      return (
+                        <tr className={activeGroupMenu === g.id ? "menu-open" : ""} key={g.id} onClick={() => openGroupDetail(g)}>
+                          <td>
+                            <div className="table-group-cell">
+                              <MediaThumb src={g.thumbnail} icon="folder" size={36} />
+                              <span className="table-group-name">{g.name}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="table-time"><Clock size={12} /> {g.date} {g.time}</span>
+                          </td>
+                          <td><span className="table-count">{g.total}</span></td>
+                          <td>
+                            <div className="table-status">
+                              {g.posted > 0 && <span className="status-dot-group success" />}
+                              {g.posted > 0 && <span className="status-count success">{g.posted}</span>}
+                              {g.pending > 0 && <span className="status-dot-group pending" />}
+                              {g.pending > 0 && <span className="status-count pending">{g.pending}</span>}
+                              {g.failed > 0 && <span className="status-dot-group failed" />}
+                              {g.failed > 0 && <span className="status-count failed">{g.failed}</span>}
+                            </div>
+                          </td>
+                          <td className="td-actions">
+                            <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
+                              <button
+                                className="icon-btn"
+                                onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); if (activeGroupMenu !== g.id) setViewGroupPosts(null); }}
+                              >
+                                <MoreHorizontal size={15} />
+                              </button>
+                              {activeGroupMenu === g.id && groupMenuContent(g, ginfo)}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -3265,6 +3607,7 @@ function postFromDb(p) {
     external_post_id: p.external_post_id || "",
     permalink_url: p.permalink_url || "",
     groupId: p.group_id || null,
+    createdAt: p.created_at || "",
     date: toDateKey(d),
     time: toTimeKey(d),
     status: p.status || "pending",
@@ -3287,6 +3630,7 @@ function groupFromDb(g) {
     failed: g.failed || 0,
     pending: g.pending || 0,
     thumbnail: g.thumbnail || null,
+    createdAt: g.created_at || "",
     date: toDateKey(d),
     time: toTimeKey(d),
     retry_count: g.retry_count || 0,
@@ -4017,6 +4361,191 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .post-content { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .post-actions { position: relative; flex-shrink: 0; }
 
+        /* ── Schedule View Mode Switcher + Toolbar ── */
+        .schedule-toolbar {
+          display: flex; align-items: center; gap: 12px; justify-content: space-between;
+          flex-wrap: wrap; margin-bottom: 14px; position: sticky; top: 0; z-index: 20;
+          background: var(--bg); padding: 4px 0 10px;
+        }
+        .view-switcher {
+          display: inline-flex; gap: 3px; padding: 3px; flex-shrink: 0;
+          background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 10px;
+        }
+        .vs-btn {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 34px; height: 30px; border: none; background: transparent;
+          border-radius: 7px; color: var(--text-muted); cursor: pointer;
+          transition: background .12s, color .12s;
+        }
+        .vs-btn:hover { color: var(--text); background: var(--glass-border); }
+        .vs-btn.active { background: var(--accent); color: #fff; }
+        .st-right { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; flex-wrap: wrap; }
+        .search-box { position: relative; display: flex; align-items: center; flex: 1; min-width: 180px; max-width: 340px; }
+        .search-box > svg { position: absolute; left: 10px; color: var(--text-dim); pointer-events: none; }
+        .search-box input {
+          width: 100%; padding: 8px 30px 8px 32px; font-size: 12.5px; color: var(--text);
+          background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 9px;
+          outline: none; transition: border-color .12s;
+        }
+        .search-box input:focus { border-color: var(--glass-border-accent); }
+        .search-box input::placeholder { color: var(--text-dim); }
+        .search-clear {
+          position: absolute; right: 6px; display: inline-flex; align-items: center; justify-content: center;
+          width: 22px; height: 22px; border: none; background: transparent; color: var(--text-dim);
+          border-radius: 50%; cursor: pointer;
+        }
+        .search-clear:hover { color: var(--text); background: var(--glass-border); }
+        .sort-box { position: relative; display: inline-flex; align-items: center; }
+        .sort-box .sort-icon { position: absolute; left: 9px; color: var(--text-dim); pointer-events: none; display: inline-flex; }
+        .sort-box select {
+          appearance: none; -webkit-appearance: none;
+          padding: 8px 28px 8px 28px; font-size: 12.5px; color: var(--text);
+          background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 9px;
+          outline: none; cursor: pointer;
+        }
+        .sort-box select:focus { border-color: var(--glass-border-accent); }
+
+        .schedule-scroll {
+          max-height: calc(100vh - 280px); overflow-y: auto; padding-right: 4px;
+          scrollbar-width: thin;
+          scrollbar-color: var(--scrollbar-thumb, rgba(127,127,127,.35)) transparent;
+        }
+        .schedule-scroll::-webkit-scrollbar { width: 9px; }
+        .schedule-scroll::-webkit-scrollbar-track { background: transparent; }
+        .schedule-scroll::-webkit-scrollbar-thumb {
+          background: var(--scrollbar-thumb, rgba(127,127,127,.35));
+          border-radius: 8px; border: 2px solid transparent; background-clip: padding-box;
+        }
+        .schedule-scroll::-webkit-scrollbar-thumb:hover {
+          background: var(--scrollbar-thumb-hover, rgba(127,127,127,.55));
+          border-radius: 8px; border: 2px solid transparent; background-clip: padding-box;
+        }
+
+        .empty .btn-ghost { margin-top: 12px; }
+
+        /* Grid cards (2-col: thumbnail + info) */
+        .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 14px; }
+        .group-card { cursor: pointer; position: relative; transition: border-color .12s, transform .12s; }
+        .group-card:hover { border-color: var(--glass-border-accent); transform: translateY(-1px); }
+        .group-card.menu-open { z-index: 50; }
+        .group-card-inner { display: flex; gap: 14px; align-items: stretch; }
+        .group-card-thumb { position: relative; flex-shrink: 0; }
+        .group-card-thumb .thumb { width: 96px; height: 96px; border-radius: 10px; }
+        .thumb-count {
+          position: absolute; right: -6px; bottom: -6px; min-width: 22px; height: 20px; padding: 0 6px;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 11px; font-weight: 700; color: #fff; background: var(--accent);
+          border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.28);
+        }
+        .group-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+        .group-card-main .group-card-name {
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+          line-height: 1.35; word-break: break-word;
+        }
+        .group-card-main .group-card-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .group-card-main .group-card-status { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+
+        /* List view */
+        .group-list { display: flex; flex-direction: column; gap: 8px; }
+        .group-list-row {
+          display: flex; align-items: center; gap: 12px;
+          background: var(--glass-bg);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
+          border: 1px solid var(--glass-border);
+          border-radius: 10px; padding: 10px 12px; cursor: pointer; position: relative; z-index: 1;
+          transition: border-color .12s;
+        }
+        .group-list-row:hover { border-color: var(--glass-border-accent); }
+        .group-list-row.menu-open { z-index: 50; }
+        .gl-name { flex: 1; min-width: 0; font-weight: 600; font-size: 13.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .gl-time { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+        .gl-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+        .gl-status { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .gl-status .status-count { font-size: 10.5px; padding: 1px 7px; }
+
+        /* Table view */
+        .group-table-wrap { border: 1px solid var(--glass-border); border-radius: 12px; overflow: hidden; background: var(--glass-bg); }
+        .group-table-scroll { overflow-x: auto; }
+        .group-table { width: 100%; border-collapse: collapse; min-width: 680px; }
+        .group-table thead th {
+          font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim);
+          font-weight: 600; text-align: left; padding: 12px 14px;
+          background: var(--glass-bg-dark); border-bottom: 1px solid var(--glass-border); white-space: nowrap;
+        }
+        .group-table thead th.th-actions { text-align: right; }
+        .group-table tbody td { padding: 11px 14px; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
+        .group-table tbody tr { cursor: pointer; transition: background .12s; }
+        .group-table tbody tr:hover { background: var(--glass-border); }
+        .group-table tbody tr.menu-open { position: relative; z-index: 40; }
+        .group-table tbody tr:last-child td { border-bottom: none; }
+        .table-group-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .table-group-name { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+        .table-time { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+        .table-count {
+          display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px;
+          padding: 0 8px; font-size: 11.5px; font-weight: 700; border-radius: 999px;
+          background: var(--glass-border); color: var(--text);
+        }
+        .table-status { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .td-actions { position: relative; text-align: right; width: 60px; }
+        .td-actions .group-actions { position: absolute; top: 6px; right: 6px; }
+        .group-table .action-menu { right: 0; left: auto; }
+
+        /* Timeline wheel */
+        .timeline-wrap {
+          height: min(460px, calc(100vh - 300px)); min-height: 300px;
+          overflow-y: auto; scroll-snap-type: y proximity; position: relative;
+          touch-action: pan-y;
+          scrollbar-width: thin;
+          scrollbar-color: var(--scrollbar-thumb, rgba(127,127,127,.35)) transparent;
+        }
+        .timeline-wrap::-webkit-scrollbar { width: 9px; }
+        .timeline-wrap::-webkit-scrollbar-track { background: transparent; }
+        .timeline-wrap::-webkit-scrollbar-thumb {
+          background: var(--scrollbar-thumb, rgba(127,127,127,.35));
+          border-radius: 8px; border: 2px solid transparent; background-clip: padding-box;
+        }
+        .timeline-item {
+          height: 88px; margin: 0 10px; padding: 12px 14px;
+          display: flex; gap: 12px; align-items: center;
+          background: var(--glass-bg);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
+          border: 1px solid var(--glass-border); border-radius: 12px;
+          cursor: pointer; position: relative; scroll-snap-align: center;
+          will-change: transform, opacity; transform-origin: center;
+          user-select: none; transition: border-color .12s;
+        }
+        .timeline-item:hover { border-color: var(--glass-border-accent); }
+        .timeline-item.tl-active {
+          border-color: var(--glass-border-accent);
+          background: linear-gradient(90deg, var(--accent-soft), var(--glass-bg));
+          box-shadow: 0 10px 30px rgba(0,0,0,.14);
+        }
+        .tl-next-badge {
+          position: absolute; top: -9px; left: 16px; z-index: 3;
+          display: inline-flex; align-items: center; gap: 4px;
+          font-size: 10px; font-weight: 700; letter-spacing: .03em; color: #fff;
+          background: var(--accent); border-radius: 999px; padding: 2px 9px;
+          box-shadow: 0 2px 10px rgba(0,0,0,.25);
+        }
+        .tl-thumb { flex-shrink: 0; }
+        .tl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+        .tl-top { display: flex; align-items: center; gap: 10px; }
+        .tl-time { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); white-space: nowrap; margin-left: auto; }
+        .tl-content { font-size: 13px; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .tl-meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .tl-page { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tl-top-btn {
+          position: fixed; right: 26px; bottom: 26px; z-index: 40;
+          display: inline-flex; align-items: center; gap: 6px;
+          font-size: 12px; font-weight: 600; color: #fff; background: var(--accent);
+          border: none; border-radius: 999px; padding: 9px 16px; cursor: pointer;
+          box-shadow: 0 6px 20px rgba(0,0,0,.28); transition: transform .12s;
+        }
+        .tl-top-btn:hover { transform: translateY(-2px); }
+
         .action-menu {
           position: absolute; right: 0; top: calc(100% + 6px);
           background: var(--surface);
@@ -4616,6 +5145,15 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           .gallery-actions { opacity: 1; }
           .post-row { flex-wrap: wrap; gap: 8px; }
           .post-time { width: auto; }
+          .schedule-toolbar { position: static; }
+          .search-box { max-width: none; min-width: 0; }
+          .group-grid { grid-template-columns: 1fr; }
+          .group-card-thumb .thumb { width: 80px; height: 80px; }
+          .group-list-row { flex-wrap: wrap; }
+          .gl-time { margin-left: auto; }
+          .timeline-wrap { height: calc(100vh - 320px); }
+          .timeline-item { margin: 0 4px; }
+          .tl-top-btn { right: 14px; bottom: 14px; }
           .stat-row { gap: 8px; }
           .stat { padding: 12px 14px; min-width: 80px; }
           .page-picker { grid-template-columns: 1fr; max-height: 200px; }

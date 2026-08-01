@@ -361,6 +361,7 @@
       "editGroupAction": "เปลี่ยนชื่อ",
       "changeGroupTimeAction": "เปลี่ยนเวลา",
       "deleteGroupAction": "ลบ",
+      "menuLabel": "การจัดการกลุ่ม",
       "editGroupTitle": "เปลี่ยนชื่อกลุ่ม",
       "groupNameLabel": "ชื่อกลุ่ม",
       "changeGroupTimeTitle": "เปลี่ยนวันเวลา",

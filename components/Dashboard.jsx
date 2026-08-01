@@ -96,7 +96,7 @@ function MediaThumb({ src, size = 44, icon = "image" }) {
   );
 }
 
-function TableMenuPortal({ anchorEl, children }) {
+function MenuPortal({ anchorEl, children }) {
   const menuRef = useRef(null);
   const [pos, setPos] = useState(null);
 
@@ -147,6 +147,109 @@ function TableMenuPortal({ anchorEl, children }) {
     </div>,
     document.body
   );
+}
+
+function GroupActionMenu({
+  g, ginfo, t, PLATFORMS,
+  open, onToggle,
+  onRename, onChangeTime, onRetry, onDelete,
+  onViewSubmenu, onSubmenuClose, onCloseMenu,
+  viewGroupPosts, submenuSide,
+  getPostUrl, isPublished,
+  iconSize = 15, portal = false, wrapperClass = "group-actions",
+}) {
+  const btnRef = useRef(null);
+
+  return (
+    <div
+      className={wrapperClass}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <button className="icon-btn" ref={btnRef} onClick={onToggle} aria-label={t("dashboard.schedule.menuLabel")}>
+        <MoreHorizontal size={iconSize} />
+      </button>
+      {open && (
+        portal ? (
+          <MenuPortal anchorEl={btnRef.current}>
+            {renderMenu()}
+          </MenuPortal>
+        ) : (
+          <div className="action-menu">{renderMenu()}</div>
+        )
+      )}
+    </div>
+  );
+
+  function renderMenu() {
+    return (
+      <>
+        <button className="menu-item" onClick={onRename}>
+          <Edit3 size={14} /> {t("dashboard.schedule.editGroupAction")}
+        </button>
+        <button className="menu-item" onClick={onChangeTime}>
+          <Clock size={14} /> {t("dashboard.schedule.changeGroupTimeAction")}
+        </button>
+        {g.failed > 0 && (
+          <button
+            className="menu-item retry-item"
+            onClick={onRetry}
+            disabled={ginfo.disabled}
+            title={ginfo.disabled ? ginfo.label : t("dashboard.schedule.retryAction")}
+          >
+            <RefreshCw size={14} /> {ginfo.label}
+          </button>
+        )}
+        {g.posted > 0 && (
+          <div
+            className="menu-has-submenu"
+            onMouseEnter={onViewSubmenu}
+            onMouseLeave={onSubmenuClose}
+          >
+            <button className="menu-item menu-trigger" onClick={(e) => onViewSubmenu(e, true)}>
+              <ExternalLink size={14} />
+              <span>{t("dashboard.schedule.viewPostAction")}</span>
+              {submenuSide === "left" ? <ChevronLeft size={12} className="sub-arrow" /> : <ChevronRight size={12} className="sub-arrow" />}
+            </button>
+            {viewGroupPosts?.groupId === g.id && viewGroupPosts.entries.length > 1 && (
+              <div className={`submenu view-post-submenu${submenuSide === "left" ? " submenu-left" : ""}`}>
+                {viewGroupPosts.entries.map(({ post, name }) => {
+                  const url = getPostUrl(post);
+                  const clickable = isPublished(post) && url;
+                  return (
+                    <button
+                      key={post.id}
+                      disabled={!clickable}
+                      onClick={() => {
+                        if (!url) return;
+                        onCloseMenu();
+                        window.open(url, "_blank", "noopener,noreferrer");
+                      }}
+                    >
+                      <span className="submenu-page">
+                        <PlatformChip platform={post.platform} size="sm" PLATFORMS={PLATFORMS} />
+                        <span className="submenu-page-name">{name || t("dashboard.schedule.pageNotFound")}</span>
+                        {clickable ? (
+                          <ExternalLink size={12} className="submenu-page-link" />
+                        ) : (
+                          <span className={`submenu-page-status submenu-page-status-${post.status}`}>{t(`dashboard.status.${post.status}`)}</span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="menu-divider" />
+        <button className="menu-item danger" onClick={onDelete}>
+          <Trash2 size={14} /> {t("dashboard.schedule.deleteGroupAction")}
+        </button>
+      </>
+    );
+  }
 }
 
 function StatusPill({ status, t }) {
@@ -757,7 +860,6 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
   const timelineWrapRef = useRef(null);
   const tlRaf = useRef(null);
   const tlDrag = useRef(null);
-  const btnRefs = useRef({});
 
   useEffect(() => { fetchGroups(); }, []);
 
@@ -1266,82 +1368,21 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     if (shareUrl) window.open(shareUrl, "_blank", "noopener");
   }
 
-  function groupMenuItems(g, ginfo) {
-    return (
-      <>
-        <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setEditGroup(g); setGroupRename(g.name); }}>
-          <Edit3 size={14} /> {t("dashboard.schedule.editGroupAction")}
-        </button>
-        <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setChangeGroupTime({ id: g.id, date: g.date, time: g.time }); }}>
-          <Clock size={14} /> {t("dashboard.schedule.changeGroupTimeAction")}
-        </button>
-        {g.failed > 0 && (
-          <button
-            className="menu-item retry-item"
-            onClick={() => { setActiveGroupMenu(null); handleRetryGroup(g); }}
-            disabled={ginfo.disabled}
-            title={ginfo.disabled ? ginfo.label : t("dashboard.schedule.retryAction")}
-          >
-            <RefreshCw size={14} /> {ginfo.label}
-          </button>
-        )}
-        {g.posted > 0 && (
-          <div
-            className="menu-has-submenu"
-            onMouseEnter={(e) => handleViewGroupPost(g, false, e)}
-            onMouseLeave={() => setViewGroupPosts(null)}
-          >
-            <button className="menu-item menu-trigger" onClick={(e) => handleViewGroupPost(g, true, e)}>
-              <ExternalLink size={14} />
-              <span>{t("dashboard.schedule.viewPostAction")}</span>
-              {submenuSide === "left" ? <ChevronLeft size={12} className="sub-arrow" /> : <ChevronRight size={12} className="sub-arrow" />}
-            </button>
-            {viewGroupPosts?.groupId === g.id && viewGroupPosts.entries.length > 1 && (
-              <div className={`submenu view-post-submenu${submenuSide === "left" ? " submenu-left" : ""}`}>
-                {viewGroupPosts.entries.map(({ post, name }) => {
-                  const url = getPostUrl(post);
-                  const clickable = isPublished(post) && url;
-                  return (
-                    <button
-                      key={post.id}
-                      disabled={!clickable}
-                      onClick={() => {
-                        if (!url) return;
-                        setActiveGroupMenu(null);
-                        setViewGroupPosts(null);
-                        window.open(url, "_blank", "noopener,noreferrer");
-                      }}
-                    >
-                      <span className="submenu-page">
-                        <PlatformChip platform={post.platform} size="sm" PLATFORMS={PLATFORMS} />
-                        <span className="submenu-page-name">{name || t("dashboard.schedule.pageNotFound")}</span>
-                        {clickable ? (
-                          <ExternalLink size={12} className="submenu-page-link" />
-                        ) : (
-                          <span className={`submenu-page-status submenu-page-status-${post.status}`}>{t(`dashboard.status.${post.status}`)}</span>
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-        <div className="menu-divider" />
-        <button className="menu-item danger" onClick={() => { setActiveGroupMenu(null); setDeleteGroup(g); setGroupDeleteConfirm(""); }}>
-          <Trash2 size={14} /> {t("dashboard.schedule.deleteGroupAction")}
-        </button>
-      </>
-    );
-  }
-
-  function groupMenuContent(g, ginfo) {
-    return (
-      <div className="action-menu">
-        {groupMenuItems(g, ginfo)}
-      </div>
-    );
+  function groupMenuProps(g, ginfo) {
+    const open = activeGroupMenu === g.id;
+    return {
+      g, ginfo, t, PLATFORMS, open,
+      onToggle: (e) => { e.stopPropagation(); setActiveGroupMenu(open ? null : g.id); if (!open) setViewGroupPosts(null); },
+      onRename: () => { setActiveGroupMenu(null); setEditGroup(g); setGroupRename(g.name); },
+      onChangeTime: () => { setActiveGroupMenu(null); setChangeGroupTime({ id: g.id, date: g.date, time: g.time }); },
+      onRetry: () => { setActiveGroupMenu(null); handleRetryGroup(g); },
+      onDelete: () => { setActiveGroupMenu(null); setDeleteGroup(g); setGroupDeleteConfirm(""); },
+      onViewSubmenu: (evt, fromClick) => handleViewGroupPost(g, fromClick, evt),
+      onSubmenuClose: () => setViewGroupPosts(null),
+      onCloseMenu: () => { setActiveGroupMenu(null); setViewGroupPosts(null); },
+      viewGroupPosts, submenuSide,
+      getPostUrl, isPublished,
+    };
   }
 
   return (
@@ -1649,6 +1690,7 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
             ) : (
               timelineItems.map((g, i) => {
                 const active = i === tlActive;
+                const ginfo = retryInfo(g, t);
                 return (
                   <div
                     className={"timeline-item" + (active ? " tl-active" : "")}
@@ -1679,6 +1721,7 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
                         {g.failed > 0 && <span className="status-count failed">{g.failed}</span>}
                       </div>
                     </div>
+                    <GroupActionMenu {...groupMenuProps(g, ginfo)} iconSize={14} portal wrapperClass="group-actions group-actions--flow" />
                   </div>
                 );
               })
@@ -1747,15 +1790,7 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
                         </div>
                       </div>
                     </div>
-                    <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
-                      <button
-                        className="icon-btn"
-                        onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); if (activeGroupMenu !== g.id) setViewGroupPosts(null); }}
-                      >
-                        <MoreHorizontal size={14} />
-                      </button>
-                      {activeGroupMenu === g.id && groupMenuContent(g, ginfo)}
-                    </div>
+                    <GroupActionMenu {...groupMenuProps(g, ginfo)} iconSize={14} />
                   </div>
                 );
               })}
@@ -1775,15 +1810,7 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
                       {g.pending > 0 && <span className="status-count pending">{g.pending}</span>}
                       {g.failed > 0 && <span className="status-count failed">{g.failed}</span>}
                     </div>
-                    <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
-                      <button
-                        className="icon-btn"
-                        onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); if (activeGroupMenu !== g.id) setViewGroupPosts(null); }}
-                      >
-                        <MoreHorizontal size={15} />
-                      </button>
-                      {activeGroupMenu === g.id && groupMenuContent(g, ginfo)}
-                    </div>
+                    <GroupActionMenu {...groupMenuProps(g, ginfo)} iconSize={15} />
                   </div>
                 );
               })}
@@ -1827,20 +1854,7 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
                             </div>
                           </td>
                           <td className="td-actions">
-                            <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
-                              <button
-                                className="icon-btn"
-                                ref={(el) => { if (el) btnRefs.current[g.id] = el; else delete btnRefs.current[g.id]; }}
-                                onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); if (activeGroupMenu !== g.id) setViewGroupPosts(null); }}
-                              >
-                                <MoreHorizontal size={15} />
-                              </button>
-                              {activeGroupMenu === g.id && (
-                                <TableMenuPortal anchorEl={btnRefs.current[g.id]} key={g.id}>
-                                  {groupMenuItems(g, ginfo)}
-                                </TableMenuPortal>
-                              )}
-                            </div>
+                            <GroupActionMenu {...groupMenuProps(g, ginfo)} iconSize={15} portal />
                           </td>
                         </tr>
                       );
@@ -4409,9 +4423,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .retry-chip:hover:not(:disabled) { background: var(--danger); color: #fff; }
         .retry-chip:disabled { opacity: .5; cursor: not-allowed; }
         .menu-item.retry-item { color: var(--danger); }
-        .menu-item.retry-item:hover:not(:disabled) { background: var(--badge-failed-bg); color: var(--danger); }
+        .menu-item.retry-item:hover:not(:disabled) { background: var(--menu-hover); color: var(--danger); }
         .menu-item.retry-item:disabled { opacity: .5; cursor: not-allowed; }
         .group-actions { position: absolute; top: 12px; right: 10px; z-index: 5; }
+        .group-actions--flow { position: static; flex-shrink: 0; z-index: auto; }
         .group-actions .action-menu { right: 0; left: auto; }
         .group-detail-head { position: relative; margin-bottom: 18px; }
         .group-detail-head .link-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; margin-bottom: 8px; }
@@ -4638,13 +4653,11 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .action-menu {
           position: absolute; right: 0; top: 100%; margin-top: 4px;
           margin-left: 0; z-index: 50;
-          background: var(--surface);
-          backdrop-filter: blur(var(--glass-blur-lg));
-          -webkit-backdrop-filter: blur(var(--glass-blur-lg));
-          border: 1px solid var(--glass-border-light);
-          border-radius: 12px; padding: 8px;
+          background: var(--menu-bg);
+          border: 1px solid var(--menu-border);
+          border-radius: 12px; padding: 6px;
           min-width: 160px; max-width: calc(100vw - 24px);
-          box-shadow: 0 25px 50px -12px rgba(0,0,0,.35), var(--shadow);
+          box-shadow: 0 20px 25px -5px rgba(0,0,0,.15), 0 8px 10px -6px rgba(0,0,0,.12), var(--shadow);
         }
         .portal-menu {
           position: fixed !important;
@@ -4656,13 +4669,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .menu-item-group { display: flex; flex-direction: column; }
         .menu-item {
           display: flex; align-items: center; gap: 8px; width: 100%;
-          background: none; border: none; color: var(--text);
+          background: none; border: none; color: var(--menu-text);
           font-size: 12.5px; padding: 9px 12px; border-radius: 6px; cursor: pointer;
           transition: background .1s;
         }
-        .menu-item:hover { background: var(--hover-bg); }
+        .menu-item:hover { background: var(--menu-hover); }
         .menu-item.danger { color: var(--danger); }
-        .menu-item.danger:hover { background: var(--badge-failed-bg); }
+        .menu-item.danger:hover { background: var(--menu-hover); }
         .menu-item:disabled { opacity: .35; cursor: not-allowed; }
 
         .menu-has-submenu { position: relative; z-index: 100; }
@@ -4670,13 +4683,11 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .sub-arrow { margin-left: auto; opacity: .5; }
         .submenu {
           position: absolute; left: 100%; top: 0; z-index: 999; margin-left: 8px;
-          background: var(--glass-bg-dark);
-          backdrop-filter: blur(var(--glass-blur-lg));
-          -webkit-backdrop-filter: blur(var(--glass-blur-lg));
-          border: 1px solid var(--glass-border-accent);
+          background: var(--menu-bg);
+          border: 1px solid var(--menu-border);
           border-radius: 10px; padding: 4px; min-width: 140px;
           white-space: nowrap;
-          box-shadow: 0 25px 60px -12px rgba(0,0,0,.4), var(--shadow);
+          box-shadow: 0 20px 25px -5px rgba(0,0,0,.15), 0 8px 10px -6px rgba(0,0,0,.12), var(--shadow);
         }
         .submenu-left {
           left: auto; right: 100%; margin-left: 0; margin-right: 8px;
@@ -4686,10 +4697,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         .submenu button {
           display: block; width: 100%; text-align: left; background: none; border: none;
-          color: var(--text); font-size: 12px; padding: 8px 12px; border-radius: 6px; cursor: pointer;
+          color: var(--menu-text); font-size: 12px; padding: 8px 12px; border-radius: 6px; cursor: pointer;
           transition: background .1s;
         }
-        .submenu button:hover { background: var(--hover-bg); }
+        .submenu button:hover { background: var(--menu-hover); }
         .submenu button:disabled { opacity: .35; cursor: not-allowed; }
 
         .view-post-submenu { min-width: 190px; }
@@ -4702,7 +4713,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .submenu-page-status-pending { color: var(--badge-pending-text); background: var(--badge-pending-bg); }
         .submenu-page-status-failed { color: var(--badge-failed-text); background: var(--badge-failed-bg); }
 
-        .menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
+        .menu-divider { height: 1px; background: var(--menu-border); margin: 6px 0; }
 
         .menu-share { padding: 8px 12px; }
         .menu-share-label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 6px; }

@@ -73,6 +73,10 @@ export default function RootLayout({ children }) {
 
                 /* Badges (soft bg + readable text) */
                 --hover-bg: rgba(255,255,255,.07);
+                --menu-bg: #0F172A;
+                --menu-border: #1E293B;
+                --menu-text: #E2E8F0;
+                --menu-hover: #1E293B;
                 --badge-success-bg: rgba(62,207,142,.15);
                 --badge-success-text: #3ECF8E;
                 --badge-failed-bg: rgba(255,107,129,.15);
@@ -156,6 +160,10 @@ export default function RootLayout({ children }) {
 
                 /* Badges (soft tint + saturated text) */
                 --hover-bg: #F7F7F9;
+                --menu-bg: #FFFFFF;
+                --menu-border: #E2E8F0;
+                --menu-text: #334155;
+                --menu-hover: #F1F5F9;
                 --badge-success-bg: #DCFCE7;
                 --badge-success-text: #15803D;
                 --badge-failed-bg: #FEE2E2;
@@ -219,6 +227,10 @@ export default function RootLayout({ children }) {
                   --info: #3B82F6;
                   --shadow: 0 10px 35px rgba(20,20,20,.08);
                   --hover-bg: #F7F7F9;
+                  --menu-bg: #FFFFFF;
+                  --menu-border: #E2E8F0;
+                  --menu-text: #334155;
+                  --menu-hover: #F1F5F9;
                   --badge-success-bg: #DCFCE7;
                   --badge-success-text: #15803D;
                   --badge-failed-bg: #FEE2E2;
@@ -274,6 +286,10 @@ export default function RootLayout({ children }) {
                   --info: #6AA8FF;
                   --shadow: 0 12px 40px rgba(0,0,0,.45);
                   --hover-bg: rgba(255,255,255,.07);
+                  --menu-bg: #0F172A;
+                  --menu-border: #1E293B;
+                  --menu-text: #E2E8F0;
+                  --menu-hover: #1E293B;
                   --badge-success-bg: rgba(62,207,142,.15);
                   --badge-success-text: #3ECF8E;
                   --badge-failed-bg: rgba(255,107,129,.15);

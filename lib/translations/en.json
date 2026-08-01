@@ -359,6 +359,7 @@
       "editGroupAction": "Rename",
       "changeGroupTimeAction": "Change Time",
       "deleteGroupAction": "Delete",
+      "menuLabel": "Group actions",
       "editGroupTitle": "Rename Group",
       "groupNameLabel": "Group name",
       "changeGroupTimeTitle": "Change Schedule Time",

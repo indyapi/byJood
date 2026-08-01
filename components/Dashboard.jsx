@@ -3055,7 +3055,6 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
   const nav = [
     { key: "schedule", label: t("dashboard.sidebar.navSchedule"), icon: CalendarClock },
-    { key: "connections", label: t("dashboard.sidebar.navPages"), icon: Link2 },
     { key: "gallery", label: t("dashboard.sidebar.navGallery"), icon: Images },
     { key: "logs", label: t("dashboard.sidebar.navLogs"), icon: ScrollText },
     { key: "profile", label: t("nav.profile"), icon: User },
@@ -4127,24 +4126,6 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             t={t}
             PLATFORMS={PLATFORMS}
             locale={locale}
-          />
-        )}
-        {tab === "connections" && (
-          <ConnectionsView
-            pages={pages}
-            folders={folders}
-            onAdd={handleAddPage}
-            onRemove={handleRemovePage}
-            onUpdate={handleUpdatePage}
-            onMovePage={handleMovePage}
-            onTogglePageFavorite={handleTogglePageFavorite}
-            onAddFolder={handleAddFolder}
-            onRenameFolder={handleRenameFolder}
-            onDeleteFolder={handleDeleteFolder}
-            onToggleFolderFavorite={handleToggleFolderFavorite}
-            authed={authed}
-            t={t}
-            PLATFORMS={PLATFORMS}
           />
         )}
         {tab === "logs" && <LogsView logs={logs} t={t} PLATFORMS={PLATFORMS} />}

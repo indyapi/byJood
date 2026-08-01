@@ -9,7 +9,7 @@ import {
   CheckCircle2, XCircle, Link2, CalendarClock, ScrollText, Copy,
   Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal, User,
   Mail, Shield, Edit3, Camera, Check, LogOut, Menu, Folder, ThumbsUp, ExternalLink, MessageCircle, Share2,
-  Images, Loader2, Upload,
+  Images, Loader2, Upload, Star, Home, ChevronDown, FolderPlus, FolderOpen,
 } from "lucide-react";
 import Breadcrumb from "./Breadcrumb";
 import { createClientSupabase } from "@/lib/supabase-client";
@@ -111,43 +111,146 @@ function StatusPill({ status, t }) {
 }
 
 /* ---------------------------------------------------------
-   Pages (Connections) view
+   Pages (Connections) view — File Explorer with folders
 --------------------------------------------------------- */
-function ConnectionsView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORMS, embedded }) {
+function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage, onTogglePageFavorite, onAddFolder, onRenameFolder, onDeleteFolder, onToggleFolderFavorite, authed, t, PLATFORMS, embedded }) {
   const [revealed, setRevealed] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [editPage, setEditPage] = useState(null);
+  const [currentFolderId, setCurrentFolderId] = useState(null);
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [renameId, setRenameId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [confirmFolder, setConfirmFolder] = useState(null);
+
+  const folderMap = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders]);
+
+  const childFolders = folders.filter((f) => (f.parent_id || null) === (currentFolderId || null));
+  const currentPages = pages.filter((p) => (p.folderId || null) === (currentFolderId || null));
+
+  const trail = [];
+  let cur = currentFolderId ? folderMap.get(currentFolderId) : null;
+  while (cur) {
+    trail.unshift(cur);
+    cur = cur.parent_id ? folderMap.get(cur.parent_id) : null;
+  }
+
+  const favFolders = folders.filter((f) => f.is_favorite);
+  const favPages = pages.filter((p) => p.isFavorite);
+
+  function createFolder(e) {
+    e.preventDefault();
+    if (!newFolderName.trim()) return;
+    onAddFolder({ name: newFolderName.trim(), parent_id: currentFolderId });
+    setNewFolderName("");
+    setNewFolderOpen(false);
+  }
+
+  function submitRename(folder) {
+    if (renameValue.trim()) onRenameFolder(folder.id, renameValue.trim());
+    setRenameId(null);
+    setRenameValue("");
+  }
+
+  const head = embedded ? (
+    <div className="profile-section-head">
+      <div>
+        <span className="eyebrow">{t("dashboard.connections.eyebrow")}</span>
+        <h2>{t("dashboard.connections.title")}</h2>
+        <p className="sub">{t("dashboard.connections.subtitle")}</p>
+      </div>
+    </div>
+  ) : (
+    <div className="view-head">
+      <div>
+        <span className="eyebrow">{t("dashboard.connections.eyebrow")}</span>
+        <h1>{t("dashboard.connections.title")}</h1>
+        <p className="sub">{t("dashboard.connections.subtitle")}</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className={embedded ? "profile-section" : "view"}>
-      {embedded ? (
-        <div className="profile-section-head">
-          <div>
-            <span className="eyebrow">{t("dashboard.connections.eyebrow")}</span>
-            <h2>{t("dashboard.connections.title")}</h2>
-            <p className="sub">{t("dashboard.connections.subtitle")}</p>
-          </div>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
-            <Plus size={16} /> {t("dashboard.connections.addBtn")}
-          </button>
-        </div>
-      ) : (
-        <div className="view-head">
-          <div>
-            <span className="eyebrow">{t("dashboard.connections.eyebrow")}</span>
-            <h1>{t("dashboard.connections.title")}</h1>
-            <p className="sub">{t("dashboard.connections.subtitle")}</p>
-          </div>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
-            <Plus size={16} /> {t("dashboard.connections.addBtn")}
-          </button>
-        </div>
-      )}
+      {head}
 
       <div className="notice">
         <Info size={15} />
         <span>{t("dashboard.connections.notice")}</span>
       </div>
+
+      {(favFolders.length > 0 || favPages.length > 0) && (
+        <div className="explorer-favorites">
+          <div className="explorer-favorites-head">
+            <Star size={14} className="fav-head-icon" />
+            <span>{t("dashboard.folders.favoritesTitle")}</span>
+          </div>
+          <div className="explorer-favorites-grid">
+            {favFolders.map((f) => (
+              <div key={f.id} className="fav-card">
+                <button className="fav-card-main" onClick={() => setCurrentFolderId(f.id)} title={f.name}>
+                  <Star size={13} className="fav-star" />
+                  <FolderOpen size={16} className="fav-card-icon" />
+                  <span className="fav-card-name">{f.name}</span>
+                </button>
+                <button className="icon-btn" onClick={() => onToggleFolderFavorite(f.id, false)} aria-label={t("dashboard.folders.favoriteRemoveAria")}>
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            {favPages.map((p) => (
+              <div key={p.id} className="fav-card">
+                <button className="fav-card-main" onClick={() => setEditPage(p)} title={p.label}>
+                  <Star size={13} className="fav-star" />
+                  <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
+                  <span className="fav-card-name">{p.label}</span>
+                </button>
+                <button className="icon-btn" onClick={() => onTogglePageFavorite(p.id, false)} aria-label={t("dashboard.folders.favoriteRemoveAria")}>
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="explorer-bar">
+        <div className="breadcrumb">
+          <button className={`bc-crumb ${currentFolderId ? "" : "active"}`} onClick={() => setCurrentFolderId(null)}>
+            <Home size={13} /> {t("dashboard.folders.rootName")}
+          </button>
+          {trail.map((f) => (
+            <React.Fragment key={f.id}>
+              <ChevronRight size={12} className="bc-sep" />
+              <button className="bc-crumb" onClick={() => setCurrentFolderId(f.id)}>{f.name}</button>
+            </React.Fragment>
+          ))}
+        </div>
+        <div className="explorer-actions">
+          <button className="btn btn-ghost" onClick={() => { setNewFolderOpen((v) => !v); setNewFolderName(""); }} disabled={!authed}>
+            <FolderPlus size={15} /> {t("dashboard.folders.newFolder")}
+          </button>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}>
+            <Plus size={16} /> {t("dashboard.connections.addBtn")}
+          </button>
+        </div>
+      </div>
+
+      {newFolderOpen && (
+        <form className="explorer-new-folder" onSubmit={createFolder}>
+          <Folder size={14} />
+          <input
+            className="input"
+            autoFocus
+            placeholder={t("dashboard.folders.newFolderPlaceholder")}
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+          />
+          <button type="submit" className="btn btn-primary" disabled={!newFolderName.trim()}>{t("common.save")}</button>
+          <button type="button" className="btn btn-ghost" onClick={() => { setNewFolderOpen(false); setNewFolderName(""); }}>{t("common.cancel")}</button>
+        </form>
+      )}
 
       {pages.length === 0 ? (
         <div className="empty">
@@ -155,9 +258,45 @@ function ConnectionsView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORM
           <p>{t("dashboard.connections.empty")}</p>
           <button className="btn btn-primary" onClick={() => setModalOpen(true)} disabled={!authed}><Plus size={16} /> {t("dashboard.connections.addBtn")}</button>
         </div>
+      ) : childFolders.length === 0 && currentPages.length === 0 ? (
+        <div className="empty">
+          <FolderOpen size={28} />
+          <p>{t("dashboard.folders.folderEmpty")}</p>
+        </div>
       ) : (
-        <div className="grid-cards">
-          {pages.map((pg) => (
+        <div className="explorer-grid">
+          {childFolders.map((f) => (
+            <div className="folder-card" key={f.id}>
+              <button className="folder-card-main" onClick={() => setCurrentFolderId(f.id)}>
+                <FolderOpen size={32} className="folder-card-icon" />
+                <span className="folder-card-name">{f.name}</span>
+              </button>
+              <div className="folder-card-actions">
+                <button
+                  className={`icon-btn ${f.is_favorite ? "starred" : ""}`}
+                  onClick={() => onToggleFolderFavorite(f.id, !f.is_favorite)}
+                  disabled={!authed}
+                  aria-label={t("dashboard.folders.favoriteAria")}
+                >
+                  <Star size={14} />
+                </button>
+                <button className="icon-btn" onClick={() => { setRenameId(f.id); setRenameValue(f.name); }} disabled={!authed} aria-label={t("dashboard.folders.renameAria")}>
+                  <Edit3 size={14} />
+                </button>
+                <button className="icon-btn danger" onClick={() => setConfirmFolder(f)} disabled={!authed} aria-label={t("dashboard.folders.deleteAria")}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              {renameId === f.id && (
+                <form className="folder-rename" onSubmit={(e) => { e.preventDefault(); submitRename(f); }} onClick={(e) => e.stopPropagation()}>
+                  <input className="input" autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
+                  <button className="btn btn-primary btn-xs" type="submit" aria-label={t("common.save")}><Check size={13} /></button>
+                </form>
+              )}
+            </div>
+          ))}
+
+          {currentPages.map((pg) => (
             <div className={`card${pg.status === "expired" ? " card-alert" : ""}`} key={pg.id}>
               <div className="card-top">
                 <PlatformChip platform={pg.platform} PLATFORMS={PLATFORMS} />
@@ -197,6 +336,14 @@ function ConnectionsView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORM
               <div className="card-foot">
                 <span className="label-dim">{t("dashboard.connections.addedPrefix")}{pg.addedAt}</span>
                 <div className="card-foot-actions">
+                  <button
+                    className={`icon-btn ${pg.isFavorite ? "starred" : ""}`}
+                    onClick={() => onTogglePageFavorite(pg.id, !pg.isFavorite)}
+                    disabled={!authed}
+                    aria-label={t("dashboard.folders.favoriteAria")}
+                  >
+                    <Star size={14} />
+                  </button>
                   <button className="icon-btn" onClick={() => setEditPage(pg)} disabled={!authed} aria-label={t("dashboard.connections.editAria")}>
                     <Edit3 size={14} />
                   </button>
@@ -205,8 +352,40 @@ function ConnectionsView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORM
                   </button>
                 </div>
               </div>
+              <div className="card-foot-move">
+                <span className="label-dim">{t("dashboard.folders.moveTo")}</span>
+                <select
+                  className="input folder-move-select"
+                  value={pg.folderId || ""}
+                  disabled={!authed}
+                  onChange={(e) => onMovePage(pg.id, e.target.value || null)}
+                >
+                  <option value="">{t("dashboard.folders.rootName")}</option>
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {confirmFolder && (
+        <div className="modal-overlay">
+          <div className="modal modal-sm">
+            <div className="modal-head">
+              <h2>{t("dashboard.folders.deleteFolderTitle")}</h2>
+              <button className="icon-btn" onClick={() => setConfirmFolder(null)}><X size={18} /></button>
+            </div>
+            <p className="delete-body">{t("dashboard.folders.deleteFolderConfirm")}</p>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setConfirmFolder(null)}>{t("common.cancel")}</button>
+              <button className="btn btn-danger" onClick={() => { onDeleteFolder(confirmFolder.id); setConfirmFolder(null); }}>
+                <Trash2 size={14} /> {t("common.delete")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -404,7 +583,7 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
 /* ---------------------------------------------------------
    Schedule view
 --------------------------------------------------------- */
-function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, authed, t, PLATFORMS, locale }) {
+function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefresh, authed, t, PLATFORMS, locale }) {
   const router = useRouter();
   const [filterMonth, setFilterMonth] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -1159,6 +1338,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
       {modalOpen && (
         <AddPostModal
           pages={pages}
+          folders={folders}
           defaultDate={selectedDate || toDateKey(new Date())}
           onClose={() => setModalOpen(false)}
           onAdd={(result) => {
@@ -1314,7 +1494,7 @@ function ScheduleView({ posts, pages, onAdd, onUpdate, onDelete, onRefresh, auth
 
 const MAX_PAGES_PER_POST = 10;
 
-function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
+function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORMS }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState([]);
   const [content, setContent] = useState("");
@@ -1330,6 +1510,8 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const uidCounter = useRef(0);
+  const [pageFilter, setPageFilter] = useState("all");
+  const [expandedFolders, setExpandedFolders] = useState(() => new Set(folders.filter((f) => !f.parent_id).map((f) => f.id)));
 
   const nextUid = () => `img-${++uidCounter.current}-${Date.now()}`;
 
@@ -1345,6 +1527,109 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
 
   function selectAll() {
     setSelectedIds(pages.slice(0, MAX_PAGES_PER_POST).map((p) => p.id));
+  }
+
+  function childFolderIds(folderId) {
+    return folders.filter((f) => (f.parent_id || null) === (folderId || null)).map((f) => f.id);
+  }
+
+  function collectFolderPageIds(folderId) {
+    const ids = [];
+    ids.push(...pages.filter((p) => (p.folderId || null) === folderId).map((p) => p.id));
+    for (const cid of childFolderIds(folderId)) ids.push(...collectFolderPageIds(cid));
+    return ids;
+  }
+
+  function toggleFolder(folderId) {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
+      return next;
+    });
+  }
+
+  function folderSelectedCount(folderId) {
+    const ids = collectFolderPageIds(folderId);
+    return ids.filter((id) => selectedIds.includes(id)).length;
+  }
+
+  function isFolderFullySelected(folderId) {
+    const ids = collectFolderPageIds(folderId);
+    return ids.length > 0 && ids.every((id) => selectedIds.includes(id));
+  }
+
+  function toggleFolderSelection(folderId) {
+    const ids = collectFolderPageIds(folderId);
+    if (ids.length === 0) return;
+    const allSelected = isFolderFullySelected(folderId);
+    setSelectedIds((prev) => {
+      if (allSelected) return prev.filter((x) => !ids.includes(x));
+      const existing = new Set(prev);
+      const next = [...prev];
+      for (const id of ids) {
+        if (existing.has(id)) continue;
+        if (next.length >= MAX_PAGES_PER_POST) break;
+        next.push(id);
+        existing.add(id);
+      }
+      return next;
+    });
+  }
+
+  const favFolders = folders.filter((f) => f.is_favorite);
+  const favPages = pages.filter((p) => p.isFavorite);
+
+  const selectedFolderCount = useMemo(() => {
+    const withFolder = pages.filter((p) => selectedIds.includes(p.id) && p.folderId);
+    return new Set(withFolder.map((p) => p.folderId)).size;
+  }, [pages, selectedIds]);
+
+  function renderFolderTree(parentId, depth) {
+    const sub = folders.filter((f) => (f.parent_id || null) === (parentId || null));
+    const leafPages = pages.filter((p) => (p.folderId || null) === (parentId || null));
+    return [
+      ...sub.map((f) => {
+        const selected = isFolderFullySelected(f.id);
+        const partial = !selected && folderSelectedCount(f.id) > 0;
+        const expanded = expandedFolders.has(f.id);
+        return (
+          <div key={f.id} className="tree-folder">
+            <div className="tree-folder-row" style={{ paddingLeft: depth * 20 }}>
+              <button type="button" className="tree-caret" onClick={() => toggleFolder(f.id)} aria-label={t("dashboard.folders.expandAria")}>
+                {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
+              <label className="tree-check-wrap">
+                <input
+                  type="checkbox"
+                  className="tree-check"
+                  checked={selected}
+                  ref={(el) => { if (el) el.indeterminate = partial; }}
+                  onChange={() => toggleFolderSelection(f.id)}
+                />
+              </label>
+              <Folder size={14} className="tree-folder-icon" />
+              <span className="tree-folder-name">{f.name}</span>
+              <span className="tree-folder-count">{collectFolderPageIds(f.id).length}</span>
+            </div>
+            {expanded && renderFolderTree(f.id, depth + 1)}
+          </div>
+        );
+      }),
+      ...leafPages.map((p) => {
+        const checked = selectedIds.includes(p.id);
+        const disabled = !checked && atMax;
+        return (
+          <div key={p.id} className="tree-page-row" style={{ paddingLeft: depth * 20 + 28 }}>
+            <label className="tree-check-wrap">
+              <input type="checkbox" className="tree-check" checked={checked} disabled={disabled} onChange={() => toggle(p.id)} />
+            </label>
+            <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
+            <span className="page-option-name">{p.label}</span>
+          </div>
+        );
+      }),
+    ];
   }
 
   const loadGallery = useCallback(async () => {
@@ -1496,20 +1781,69 @@ function AddPostModal({ pages, defaultDate, onClose, onAdd, t, PLATFORMS }) {
               <label className="field-label">{t("dashboard.fields.maxPages", { max: MAX_PAGES_PER_POST })}</label>
               <button type="button" className="link-btn" onClick={selectAll}>{t("dashboard.fields.selectAll")}</button>
             </div>
-            <div className="page-picker">
-              {pages.map((p) => {
-                const checked = selectedIds.includes(p.id);
-                const disabled = !checked && atMax;
-                return (
-                  <label key={p.id} className={`page-option ${checked ? "selected" : ""} ${disabled ? "disabled" : ""}`}>
-                    <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggle(p.id)} />
-                    <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
-                    <span className="page-option-name">{p.label}</span>
-                  </label>
-                );
-              })}
+
+            <div className="page-tabs">
+              <button type="button" className={`page-tab ${pageFilter === "all" ? "active" : ""}`} onClick={() => setPageFilter("all")}>
+                {t("dashboard.fields.allTab")}
+              </button>
+              <button type="button" className={`page-tab ${pageFilter === "favorites" ? "active" : ""}`} onClick={() => setPageFilter("favorites")}>
+                <Star size={13} /> {t("dashboard.fields.favoritesTab")}
+              </button>
             </div>
-            <div className={`select-count ${atMax ? "at-max" : ""}`}>{t("dashboard.fields.selectedCount", { count: selectedIds.length, max: MAX_PAGES_PER_POST })}</div>
+
+            {pageFilter === "favorites" ? (
+              <div className="page-picker fav-picker">
+                {favFolders.length === 0 && favPages.length === 0 && (
+                  <div className="fav-picker-empty">{t("dashboard.fields.favoritesEmpty")}</div>
+                )}
+                {favFolders.map((f) => {
+                  const selected = isFolderFullySelected(f.id);
+                  const partial = !selected && folderSelectedCount(f.id) > 0;
+                  return (
+                    <label key={f.id} className={`page-option folder-option ${selected ? "selected" : ""}`}>
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        ref={(el) => { if (el) el.indeterminate = partial; }}
+                        onChange={() => toggleFolderSelection(f.id)}
+                      />
+                      <Star size={13} className="fav-star" />
+                      <Folder size={14} />
+                      <span className="page-option-name">{f.name}</span>
+                    </label>
+                  );
+                })}
+                {favPages.map((p) => {
+                  const checked = selectedIds.includes(p.id);
+                  const disabled = !checked && atMax;
+                  return (
+                    <label key={p.id} className={`page-option ${checked ? "selected" : ""} ${disabled ? "disabled" : ""}`}>
+                      <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggle(p.id)} />
+                      <Star size={13} className="fav-star" />
+                      <PlatformChip platform={p.platform} size="sm" PLATFORMS={PLATFORMS} />
+                      <span className="page-option-name">{p.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="page-picker page-tree">
+                {pages.length === 0 ? (
+                  <div className="page-tree-empty">{t("dashboard.connections.empty")}</div>
+                ) : (
+                  renderFolderTree(null, 0)
+                )}
+              </div>
+            )}
+
+            <div className={`select-count ${atMax ? "at-max" : ""}`}>
+              {t("dashboard.fields.selectedCount", { count: selectedIds.length, max: MAX_PAGES_PER_POST })}
+              {selectedIds.length > 0 && (
+                <span className="select-count-badge">
+                  {t("dashboard.fields.selectedFolderSummary", { count: selectedIds.length, folders: selectedFolderCount })}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="field-group">
@@ -2209,7 +2543,7 @@ const PROVIDER_ICONS = {
   google: "G", facebook: "F", github: "Gh", email: "E",
 };
 
-function ProfileView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORMS }) {
+function ProfileView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage, onTogglePageFavorite, onAddFolder, onRenameFolder, onDeleteFolder, onToggleFolderFavorite, authed, t, PLATFORMS }) {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -2396,9 +2730,16 @@ function ProfileView({ pages, onAdd, onRemove, onUpdate, authed, t, PLATFORMS })
 
       <ConnectionsView
         pages={pages}
+        folders={folders}
         onAdd={onAdd}
         onRemove={onRemove}
         onUpdate={onUpdate}
+        onMovePage={onMovePage}
+        onTogglePageFavorite={onTogglePageFavorite}
+        onAddFolder={onAddFolder}
+        onRenameFolder={onRenameFolder}
+        onDeleteFolder={onDeleteFolder}
+        onToggleFolderFavorite={onToggleFolderFavorite}
         authed={authed}
         t={t}
         PLATFORMS={PLATFORMS}
@@ -2437,6 +2778,8 @@ function pageFromDb(p) {
     expiresAt: p.expires_at || null,
     addedAt: p.created_at?.slice(0, 10),
     tokenPreview: token?.access_token ? token.access_token.slice(0, 6) + "••••••••" + token.access_token.slice(-4) : "—",
+    folderId: p.folder_id || null,
+    isFavorite: !!p.is_favorite,
   };
 }
 
@@ -2564,6 +2907,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
   const [pages, setPages] = useState(initialPages.map(pageFromDb));
   const [posts, setPosts] = useState(initialPosts.map(postFromDb).filter(Boolean));
   const [logs, setLogs] = useState(initialLogs.map(logFromDb));
+  const [folders, setFolders] = useState([]);
 
   const refreshPages = useCallback(async () => {
     const res = await authedFetch("/api/pages");
@@ -2589,6 +2933,14 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     if (res?.ok) {
       const data = await res.json();
       setLogs(data.map(logFromDb));
+    }
+  }, []);
+
+  const refreshFolders = useCallback(async () => {
+    const res = await authedFetch("/api/folders");
+    if (res?.ok) {
+      const data = await res.json();
+      setFolders(Array.isArray(data) ? data : []);
     }
   }, []);
 
@@ -2624,14 +2976,86 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     setPages((prev) => prev.map((p) => p.id === updated.id ? pageFromDb(updated) : p));
   }, []);
 
+  const handleAddFolder = useCallback(async (raw) => {
+    const res = await authedFetch("/api/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: raw.name, parent_id: raw.parent_id || null }),
+    });
+    if (res.ok) {
+      const created = await res.json();
+      setFolders((prev) => [...prev, created]);
+      return created;
+    }
+    return null;
+  }, []);
+
+  const handleRenameFolder = useCallback(async (id, name) => {
+    const res = await authedFetch(`/api/folders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setFolders((prev) => prev.map((f) => f.id === updated.id ? updated : f));
+    }
+  }, []);
+
+  const handleToggleFolderFavorite = useCallback(async (id, is_favorite) => {
+    const res = await authedFetch(`/api/folders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_favorite }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setFolders((prev) => prev.map((f) => f.id === updated.id ? updated : f));
+    }
+  }, []);
+
+  const handleDeleteFolder = useCallback(async (id) => {
+    const res = await authedFetch(`/api/folders/${id}`, { method: "DELETE" });
+    if (res.ok || res.status === 204) {
+      setFolders((prev) => prev.filter((f) => f.id !== id));
+      refreshPages();
+    }
+  }, [refreshPages]);
+
+  const handleMovePage = useCallback(async (id, folderId) => {
+    const res = await authedFetch(`/api/pages/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder_id: folderId }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setPages((prev) => prev.map((p) => p.id === updated.id ? pageFromDb(updated) : p));
+    }
+  }, []);
+
+  const handleTogglePageFavorite = useCallback(async (id, is_favorite) => {
+    const res = await authedFetch(`/api/pages/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_favorite }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setPages((prev) => prev.map((p) => p.id === updated.id ? pageFromDb(updated) : p));
+    }
+  }, []);
+
   useEffect(() => {
     refreshPages();
     refreshPosts();
     refreshLogs();
-  }, [refreshPages, refreshPosts, refreshLogs]);
+    refreshFolders();
+  }, [refreshPages, refreshPosts, refreshLogs, refreshFolders]);
 
   const nav = [
     { key: "schedule", label: t("dashboard.sidebar.navSchedule"), icon: CalendarClock },
+    { key: "connections", label: t("dashboard.sidebar.navPages"), icon: Link2 },
     { key: "gallery", label: t("dashboard.sidebar.navGallery"), icon: Images },
     { key: "logs", label: t("dashboard.sidebar.navLogs"), icon: ScrollText },
     { key: "profile", label: t("nav.profile"), icon: User },
@@ -2835,6 +3259,57 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .label-dim { color: var(--text-dim); min-width: 34px; font-size: 11px; }
         .card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); }
         .card-foot-actions { display: flex; align-items: center; gap: 2px; }
+
+        .card-foot-move { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 11px; }
+        .card-foot-move .label-dim { min-width: auto; white-space: nowrap; }
+        .folder-move-select { padding: 6px 8px; font-size: 12px; flex: 1; min-width: 0; }
+        .icon-btn.starred { color: var(--warning); }
+        .icon-btn.starred:hover { color: var(--warning); }
+
+        .explorer-favorites { margin-bottom: 16px; }
+        .explorer-favorites-head { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; }
+        .fav-head-icon { color: var(--warning); }
+        .explorer-favorites-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .fav-card {
+          display: flex; align-items: center; gap: 4px;
+          background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius);
+          padding: 4px 6px 4px 4px; box-shadow: var(--shadow);
+        }
+        .fav-card-main { display: flex; align-items: center; gap: 7px; padding: 6px 8px; background: none; border: none; cursor: pointer; border-radius: 6px; color: var(--text); min-width: 0; }
+        .fav-card-main:hover { background: var(--glass-bg-dark); }
+        .fav-card-name { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .fav-star { color: var(--warning); flex-shrink: 0; }
+
+        .explorer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+        .breadcrumb { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-height: 30px; }
+        .bc-crumb {
+          display: inline-flex; align-items: center; gap: 5px;
+          background: none; border: none; color: var(--text-muted); cursor: pointer;
+          font-size: 13px; padding: 4px 8px; border-radius: 6px;
+        }
+        .bc-crumb:hover { background: var(--glass-bg-dark); color: var(--text); }
+        .bc-crumb.active { color: var(--text); font-weight: 600; }
+        .bc-sep { color: var(--text-dim); flex-shrink: 0; }
+        .explorer-actions { display: flex; gap: 8px; }
+
+        .explorer-new-folder { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 10px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); }
+        .explorer-new-folder .input { flex: 1; }
+
+        .explorer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; align-items: start; }
+        .folder-card {
+          background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius);
+          padding: 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow);
+          position: relative; transition: border-color .15s;
+        }
+        .folder-card:hover { border-color: var(--glass-border-accent); }
+        .folder-card-main { display: flex; flex-direction: column; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; color: var(--text); }
+        .folder-card-main:hover { background: var(--glass-bg-dark); }
+        .folder-card-icon { color: var(--accent); opacity: .9; }
+        .folder-card-name { font-size: 13px; font-weight: 600; text-align: center; word-break: break-word; }
+        .folder-card-actions { display: flex; justify-content: center; gap: 2px; }
+        .folder-rename { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+        .folder-rename .input { flex: 1; padding: 6px 8px; font-size: 12px; }
+        .btn-xs { padding: 6px 8px; font-size: 12px; }
 
         .chip { display: inline-flex; align-items: center; gap: 6px; }
         .chip-code {
@@ -3338,6 +3813,35 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .page-option-name { flex: 1; }
         .select-count { font-size: 11px; color: var(--text-dim); margin-top: 6px; text-align: right; }
         .select-count.at-max { color: var(--warning); }
+        .select-count-badge { display: inline-block; margin-left: 8px; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 10px; font-weight: 600; }
+
+        .page-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+        .page-tab {
+          display: inline-flex; align-items: center; gap: 6px;
+          background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-muted);
+          font-size: 12px; padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all .12s;
+        }
+        .page-tab:hover { color: var(--text); }
+        .page-tab.active { color: var(--accent); border-color: var(--glass-border-accent); background: var(--accent-soft); }
+
+        .page-tree { display: block; padding: 4px 2px; }
+        .tree-folder-row { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 6px; cursor: default; }
+        .tree-folder-row:hover { background: var(--glass-bg-dark); }
+        .tree-caret {
+          background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 2px;
+          display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 4px;
+        }
+        .tree-caret:hover { color: var(--text); }
+        .tree-check-wrap { display: inline-flex; align-items: center; }
+        .tree-check { accent-color: var(--accent); cursor: pointer; }
+        .tree-folder-icon { color: var(--accent); opacity: .9; flex-shrink: 0; }
+        .tree-folder-name { flex: 1; font-weight: 500; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tree-folder-count { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+        .tree-page-row { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 6px; }
+        .tree-page-row:hover { background: var(--glass-bg-dark); }
+        .page-tree-empty, .fav-picker-empty { padding: 16px; text-align: center; color: var(--text-dim); font-size: 12.5px; }
+        .fav-picker .fav-star { margin-left: 2px; }
+        .fav-picker .folder-option { justify-content: flex-start; }
 
         .batch-tag {
           display: inline-block; margin-left: 8px; font-family: var(--font-mono); font-size: 10px;
@@ -3614,6 +4118,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           <ScheduleView
             posts={posts}
             pages={pages}
+            folders={folders}
             onAdd={(newPosts) => setPosts((prev) => [...newPosts.map(postFromDb), ...prev])}
             onUpdate={(updated) => setPosts((prev) => prev.map((p) => p.id === updated.id ? postFromDb(updated) : p))}
             onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
@@ -3624,14 +4129,39 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             locale={locale}
           />
         )}
+        {tab === "connections" && (
+          <ConnectionsView
+            pages={pages}
+            folders={folders}
+            onAdd={handleAddPage}
+            onRemove={handleRemovePage}
+            onUpdate={handleUpdatePage}
+            onMovePage={handleMovePage}
+            onTogglePageFavorite={handleTogglePageFavorite}
+            onAddFolder={handleAddFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onToggleFolderFavorite={handleToggleFolderFavorite}
+            authed={authed}
+            t={t}
+            PLATFORMS={PLATFORMS}
+          />
+        )}
         {tab === "logs" && <LogsView logs={logs} t={t} PLATFORMS={PLATFORMS} />}
         {tab === "gallery" && <GalleryView authed={authed} t={t} />}
         {tab === "profile" && (
           <ProfileView
             pages={pages}
+            folders={folders}
             onAdd={handleAddPage}
             onRemove={handleRemovePage}
             onUpdate={handleUpdatePage}
+            onMovePage={handleMovePage}
+            onTogglePageFavorite={handleTogglePageFavorite}
+            onAddFolder={handleAddFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onToggleFolderFavorite={handleToggleFolderFavorite}
             authed={authed}
             t={t}
             PLATFORMS={PLATFORMS}

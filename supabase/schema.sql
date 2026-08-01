@@ -111,6 +111,30 @@ create table oauth_states (
 --   $$ delete from oauth_states where created_at < now() - interval '10 minutes' $$);
 
 -- ==========================================================
+-- 6. Folders — File-Explorer organization for pages
+-- ==========================================================
+create table folders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) not null,
+  name text not null,
+  parent_id uuid references folders(id) on delete cascade,
+  is_favorite boolean not null default false,
+  created_at timestamptz default now()
+);
+
+-- Organize pages into folders (nullable = root level)
+alter table pages add column if not exists folder_id uuid references folders(id) on delete set null;
+-- Star pages for the Favorites quick-access section
+alter table pages add column if not exists is_favorite boolean not null default false;
+
+create index idx_folders_user_parent on folders (user_id, parent_id);
+create index idx_pages_folder on pages (user_id, folder_id);
+
+alter table folders enable row level security;
+create policy "user manages own folders" on folders
+  for all using (auth.uid() = user_id);
+
+-- ==========================================================
 -- Row Level Security: ผู้ใช้เห็นเฉพาะข้อมูลของตัวเอง
 -- Worker ใช้ service_role key จึงข้าม RLS ได้อัตโนมัติ (ปลอดภัย เพราะรันฝั่ง server เท่านั้น)
 -- ==========================================================

@@ -160,6 +160,7 @@
       "brandSub": "byJood / Control Room",
       "status": "Supabase • เชื่อมต่อแล้ว",
       "navSchedule": "ตั้งเวลาโพสต์",
+      "navPages": "จัดการเพจ",
       "navGallery": "แกลเลอรี",
       "navLogs": "Logs"
     },
@@ -192,7 +193,11 @@
       "image": "รูปภาพ",
       "fileTooLarge": "ไฟล์ต้องไม่เกิน 5 MB",
       "removeImage": "ลบรูป",
-      "uploadFailed": "อัปโหลดรูปไม่สำเร็จ"
+      "uploadFailed": "อัปโหลดรูปไม่สำเร็จ",
+      "allTab": "ทั้งหมด",
+      "favoritesTab": "รายการโปรด",
+      "favoritesEmpty": "ยังไม่มีรายการโปรด แตะดาวบนเพจหรือโฟลเดอร์เพื่อปักหมุดไว้ที่นี่",
+      "selectedFolderSummary": "เลือก {count} เพจ จาก {folders} โฟลเดอร์"
     },
     "status": {
       "pending": "รอคิว",
@@ -224,6 +229,7 @@
       "tokenLabel": "Token",
       "addedPrefix": "เพิ่มเมื่อ ",
       "revealAria": "แสดง/ซ่อน token",
+      "editAria": "แก้ไขการเชื่อมต่อ",
       "deleteAria": "ลบการเชื่อมต่อ",
       "modalTitle": "เพิ่มการเชื่อมต่อ",
       "formNotice": "ค่าที่กรอกจะถูกส่งไปเก็บเป็น secret บน Supabase ผ่าน backend เท่านั้น ไม่มีการเก็บไว้ฝั่ง frontend",
@@ -231,6 +237,21 @@
       "save": "บันทึกการเชื่อมต่อ",
       "updated": "อัปเดตแล้ว",
       "tokenUpdated": "อัปเดตการเชื่อมต่อแล้ว — token ใช้งานได้"
+    },
+    "folders": {
+      "favoritesTitle": "รายการโปรด",
+      "rootName": "รูท",
+      "newFolder": "สร้างโฟลเดอร์",
+      "newFolderPlaceholder": "ชื่อโฟลเดอร์...",
+      "folderEmpty": "โฟลเดอร์นี้ว่างเปล่า สร้างโฟลเดอร์หรือเพิ่มเพจที่นี่",
+      "moveTo": "ย้ายไปยัง",
+      "favoriteAria": "สลับรายการโปรด",
+      "favoriteRemoveAria": "นำออกจากรายการโปรด",
+      "renameAria": "เปลี่ยนชื่อโฟลเดอร์",
+      "deleteAria": "ลบโฟลเดอร์",
+      "expandAria": "ย่อ/ขยายโฟลเดอร์",
+      "deleteFolderTitle": "ลบโฟลเดอร์",
+      "deleteFolderConfirm": "ลบโฟลเดอร์นี้? เพจภายในจะถูกย้ายไปที่รูท และโฟลเดอร์ย่อยจะถูกเลื่อนขึ้นหนึ่งระดับ"
     },
     "gallery": {
       "eyebrow": "GALLERY",

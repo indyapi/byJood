@@ -160,6 +160,7 @@
       "brandSub": "byJood / Control Room",
       "status": "Supabase • Connected",
       "navSchedule": "Schedule Posts",
+      "navPages": "Manage Pages",
       "navGallery": "Gallery",
       "navLogs": "Logs"
     },
@@ -192,7 +193,11 @@
       "image": "Image",
       "fileTooLarge": "File must not exceed 5 MB",
       "removeImage": "Remove",
-      "uploadFailed": "Image upload failed"
+      "uploadFailed": "Image upload failed",
+      "allTab": "All",
+      "favoritesTab": "Favorites",
+      "favoritesEmpty": "No favorites yet. Star pages or folders to pin them here.",
+      "selectedFolderSummary": "{count} pages selected from {folders} folders"
     },
     "status": {
       "pending": "Pending",
@@ -224,6 +229,7 @@
       "tokenLabel": "Token",
       "addedPrefix": "Added ",
       "revealAria": "Show/hide token",
+      "editAria": "Edit connection",
       "deleteAria": "Delete connection",
       "modalTitle": "Add Connection",
       "formNotice": "Values are sent to Supabase as secrets via the backend only — not stored client-side.",
@@ -231,6 +237,21 @@
       "save": "Save Connection",
       "updated": "Updated",
       "tokenUpdated": "Connection updated — token is active."
+    },
+    "folders": {
+      "favoritesTitle": "Favorites",
+      "rootName": "Root",
+      "newFolder": "New Folder",
+      "newFolderPlaceholder": "Folder name...",
+      "folderEmpty": "This folder is empty. Create a folder or add pages here.",
+      "moveTo": "Move to",
+      "favoriteAria": "Toggle favorite",
+      "favoriteRemoveAria": "Remove from favorites",
+      "renameAria": "Rename folder",
+      "deleteAria": "Delete folder",
+      "expandAria": "Expand/collapse folder",
+      "deleteFolderTitle": "Delete Folder",
+      "deleteFolderConfirm": "Delete this folder? Pages inside it will be moved to the root and sub-folders will be moved up one level."
     },
     "gallery": {
       "eyebrow": "GALLERY",

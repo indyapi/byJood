@@ -40,12 +40,34 @@ export async function PATCH(request, { params }) {
   if (auth.error) return Response.json({ error: auth.error }, { status: auth.status });
 
   const body = await request.json();
-  const { display_name, label, app_id, app_secret, access_token, page_id: tokenPageId } = body;
+  const { display_name, label, app_id, app_secret, access_token, page_id: tokenPageId, folder_id, is_favorite } = body;
 
   // Update pages table if display_name/label provided
   const name = display_name || label;
   if (name && name.trim()) {
     const { error } = await admin.from("pages").update({ display_name: name.trim() }).eq("id", id);
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  // Move to a folder / toggle favorite on the pages row
+  const pageUpdates = {};
+  if (folder_id !== undefined) {
+    if (folder_id) {
+      const { data: folderRow } = await admin
+        .from("folders")
+        .select("id")
+        .eq("id", folder_id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!folderRow) return Response.json({ error: "Folder not found" }, { status: 404 });
+      pageUpdates.folder_id = folder_id;
+    } else {
+      pageUpdates.folder_id = null;
+    }
+  }
+  if (is_favorite !== undefined) pageUpdates.is_favorite = !!is_favorite;
+  if (Object.keys(pageUpdates).length > 0) {
+    const { error } = await admin.from("pages").update(pageUpdates).eq("id", id);
     if (error) return Response.json({ error: error.message }, { status: 500 });
   }
 

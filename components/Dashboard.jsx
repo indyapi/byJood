@@ -4426,8 +4426,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         .retry-chip:hover:not(:disabled) { background: var(--danger); color: #fff; }
         .retry-chip:disabled { opacity: .5; cursor: not-allowed; }
-        .menu-item.retry-item { color: var(--danger); }
-        .menu-item.retry-item:hover:not(:disabled) { background: var(--menu-hover); color: var(--danger); }
+        .menu-item.retry-item { color: var(--menu-danger); }
+        .menu-item.retry-item:hover:not(:disabled) { background: var(--menu-danger-hover); color: var(--menu-danger); }
         .menu-item.retry-item:disabled { opacity: .5; cursor: not-allowed; }
         .group-actions { position: absolute; top: 12px; right: 10px; z-index: 5; }
         .group-actions--flow { position: static; flex-shrink: 0; z-index: auto; }
@@ -4678,8 +4678,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           transition: background .1s;
         }
         .menu-item:hover { background: var(--menu-hover); }
-        .menu-item.danger { color: var(--danger); }
-        .menu-item.danger:hover { background: var(--menu-hover); }
+        .menu-item.danger { color: var(--menu-danger); }
+        .menu-item.danger:hover { background: var(--menu-danger-hover); color: var(--menu-danger); }
         .menu-item:disabled { opacity: .35; cursor: not-allowed; }
 
         .menu-has-submenu { position: relative; z-index: 100; }

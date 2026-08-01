@@ -10,6 +10,7 @@ import {
   Info, RefreshCw, Search, Image as ImageIcon, MoreHorizontal, User,
   Mail, Shield, Edit3, Camera, Check, LogOut, Menu, Folder, ThumbsUp, ExternalLink, MessageCircle, Share2,
   Images, Loader2, Upload, Star, Home, ChevronDown, FolderPlus, FolderOpen,
+  Timer, Sunrise, Sunset,
 } from "lucide-react";
 import Breadcrumb from "./Breadcrumb";
 import { createClientSupabase } from "@/lib/supabase-client";
@@ -1585,7 +1586,7 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
   const [selectedIds, setSelectedIds] = useState([]);
   const [content, setContent] = useState("");
   const [date, setDate] = useState(defaultDate);
-  const [time, setTime] = useState("09:00");
+  const [time, setTime] = useState(() => roundUpTime(new Date(), 15));
   const [imageTab, setImageTab] = useState("upload");
   const [selectedImages, setSelectedImages] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -1854,6 +1855,37 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
     setDragOverIndex(null);
   }
 
+  function applyPreset(kind) {
+    const now = new Date();
+    const parseScheduled = () => {
+      const [y, m, d] = date.split("-").map(Number);
+      const [h, mi] = time.split(":").map(Number);
+      return new Date(y, m - 1, d, h, mi);
+    };
+    const apply = (dt, timeStr) => {
+      setDate(dateKey(dt));
+      setTime(timeStr || `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`);
+    };
+
+    if (kind === "plus30") {
+      const dt = parseScheduled();
+      dt.setMinutes(dt.getMinutes() + 30);
+      apply(dt);
+    } else if (kind === "plus1h") {
+      const dt = parseScheduled();
+      dt.setHours(dt.getHours() + 1);
+      apply(dt);
+    } else if (kind === "tomorrow9") {
+      const dt = new Date();
+      dt.setDate(dt.getDate() + 1);
+      apply(dt, "09:00");
+    } else if (kind === "today18") {
+      const dt = new Date();
+      if (now.getHours() >= 18) dt.setDate(dt.getDate() + 1);
+      apply(dt, "18:00");
+    }
+  }
+
   async function submit(e) {
     e.preventDefault();
     if (selectedIds.length === 0) return;
@@ -1931,6 +1963,8 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
         </div>
         <form onSubmit={submit}>
+          <div className="post-grid">
+          <div className="post-col">
           <div className="field-group">
             <div className="field-label-row">
               <label className="field-label">{t("dashboard.fields.maxPages", { max: MAX_PAGES_PER_POST })}</label>
@@ -2001,6 +2035,33 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
             </div>
           </div>
 
+          <div className="field-row">
+            <div className="field-group">
+              <label className="field-label">{t("dashboard.fields.date")}</label>
+              <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
+            <div className="field-group">
+              <label className="field-label">{t("dashboard.fields.time")}</label>
+              <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+            </div>
+          </div>
+          <div className="time-presets">
+            <button type="button" className="preset-chip" onClick={() => applyPreset("plus30")}>
+              <Timer size={12} /> {t("dashboard.schedule.presetPlus30")}
+            </button>
+            <button type="button" className="preset-chip" onClick={() => applyPreset("plus1h")}>
+              <Clock size={12} /> {t("dashboard.schedule.presetPlus1h")}
+            </button>
+            <button type="button" className="preset-chip" onClick={() => applyPreset("tomorrow9")}>
+              <Sunrise size={12} /> {t("dashboard.schedule.presetTomorrow9")}
+            </button>
+            <button type="button" className="preset-chip" onClick={() => applyPreset("today18")}>
+              <Sunset size={12} /> {t("dashboard.schedule.presetToday18")}
+            </button>
+          </div>
+          </div>
+
+          <div className="post-col">
           <div className="field-group">
             <label className="field-label">{t("dashboard.fields.content")}</label>
             <textarea className="input textarea" rows={8} placeholder={t("dashboard.fields.contentPlaceholder")} value={content} onChange={(e) => setContent(e.target.value)} required />
@@ -2157,15 +2218,7 @@ function AddPostModal({ pages, folders, defaultDate, onClose, onAdd, t, PLATFORM
               </div>
             )}
           </div>
-          <div className="field-row">
-            <div className="field-group">
-              <label className="field-label">{t("dashboard.fields.date")}</label>
-              <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-            </div>
-            <div className="field-group">
-              <label className="field-label">{t("dashboard.fields.time")}</label>
-              <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
-            </div>
+          </div>
           </div>
 
           <div className="notice small">
@@ -2927,6 +2980,16 @@ function ProfileView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage, on
 --------------------------------------------------------- */
 function pad2(n) {
   return String(n).padStart(2, "0");
+}
+
+function roundUpTime(d = new Date(), step = 15) {
+  const rem = (step - (d.getMinutes() % step)) % step;
+  const dt = new Date(d.getTime() + rem * 60000);
+  return `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+}
+
+function dateKey(d = new Date()) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
 // Deterministic local-timezone YYYY-MM-DD / HH:mm (avoid locale/UTC drift when comparing dates)
@@ -3785,7 +3848,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         .fb-toggle:hover { text-decoration: underline; }
 
-        .modal-lg { max-width: 896px; width: 100%; }
+        .modal-lg { max-width: min(1100px, 92vw); width: 100%; }
+        .modal-lg.fb-modal { max-width: 768px; }
         .modal-sm { max-width: 360px; width: 100%; }
         .delete-body { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 4px; }
         .delete-images-option { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; font-size: 13px; color: var(--text-muted); cursor: pointer; }
@@ -3987,6 +4051,16 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .field-group { margin-bottom: 14px; }
         .field-row { display: flex; gap: 10px; }
         .field-row .field-group { flex: 1; }
+        .post-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+        .post-grid .field-group:last-child { margin-bottom: 0; }
+        .time-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+        .preset-chip {
+          display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px;
+          background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 999px;
+          color: var(--text-muted); font-size: 11.5px; cursor: pointer;
+          transition: border-color .12s, color .12s;
+        }
+        .preset-chip:hover { color: var(--text); border-color: var(--glass-border-accent); }
         .field-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
         .input {
           width: 100%;
@@ -4201,6 +4275,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           .modal-overlay { padding: 20px 12px; }
           .modal { padding: 16px; }
           .modal-lg, .fb-modal, .modal-sm { max-width: 100%; width: 100%; margin: 0; }
+          .modal-lg.fb-modal { max-width: 100%; }
           .grid-cards { grid-template-columns: 1fr; }
           .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
           .gallery-actions { opacity: 1; }
@@ -4210,6 +4285,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           .stat { padding: 12px 14px; min-width: 80px; }
           .page-picker { grid-template-columns: 1fr; max-height: 200px; }
           .field-row { flex-wrap: wrap; }
+          .post-grid { grid-template-columns: 1fr; }
           .fb-img { max-height: 300px; }
           .fb-view-btn { margin-left: auto; }
           .fb-page-row { flex-wrap: wrap; gap: 8px; }

@@ -739,6 +739,7 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
   const [deletePost, setDeletePost] = useState(null);
   const [activeGroupMenu, setActiveGroupMenu] = useState(null);
   const [viewGroupPosts, setViewGroupPosts] = useState(null);
+  const [submenuSide, setSubmenuSide] = useState("right");
   const [detailMenu, setDetailMenu] = useState(false);
   const [openedGroup, setOpenedGroup] = useState(null);
   const [groupPosts, setGroupPosts] = useState([]);
@@ -1038,7 +1039,12 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     return entries;
   }
 
-  async function handleViewGroupPost(group, fromClick = false) {
+  async function handleViewGroupPost(group, fromClick = false, evt = null) {
+    if (evt && typeof evt.currentTarget?.getBoundingClientRect === "function") {
+      const rect = evt.currentTarget.getBoundingClientRect();
+      const spaceRight = window.innerWidth - rect.right;
+      setSubmenuSide(spaceRight - 12 < 200 ? "left" : "right");
+    }
     const posts = viewGroupPosts?.groupId === group.id ? viewGroupPosts.posts : await fetchGroupPosts(group);
     if (posts.length === 0) return;
     const entries = groupPageEntries(posts);
@@ -1282,16 +1288,16 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
         {g.posted > 0 && (
           <div
             className="menu-has-submenu"
-            onMouseEnter={() => handleViewGroupPost(g)}
+            onMouseEnter={(e) => handleViewGroupPost(g, false, e)}
             onMouseLeave={() => setViewGroupPosts(null)}
           >
-            <button className="menu-item menu-trigger" onClick={() => handleViewGroupPost(g, true)}>
+            <button className="menu-item menu-trigger" onClick={(e) => handleViewGroupPost(g, true, e)}>
               <ExternalLink size={14} />
               <span>{t("dashboard.schedule.viewPostAction")}</span>
-              <ChevronRight size={12} className="sub-arrow" />
+              {submenuSide === "left" ? <ChevronLeft size={12} className="sub-arrow" /> : <ChevronRight size={12} className="sub-arrow" />}
             </button>
             {viewGroupPosts?.groupId === g.id && viewGroupPosts.entries.length > 1 && (
-              <div className="submenu view-post-submenu">
+              <div className={`submenu view-post-submenu${submenuSide === "left" ? " submenu-left" : ""}`}>
                 {viewGroupPosts.entries.map(({ post, name }) => {
                   const url = getPostUrl(post);
                   const clickable = isPublished(post) && url;
@@ -4485,7 +4491,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .empty .btn-ghost { margin-top: 12px; }
 
         /* Grid cards (2-col: thumbnail + info) */
-        .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 14px; }
+        .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 14px; overflow: visible; }
         .group-card {
           cursor: pointer; position: relative; overflow: visible;
           transition: border-color .12s;
@@ -4513,7 +4519,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .group-card-main .group-card-status { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: auto; }
 
         /* List view */
-        .group-list { display: flex; flex-direction: column; gap: 8px; }
+        .group-list { display: flex; flex-direction: column; gap: 8px; overflow: visible; }
         .group-list-row {
           display: flex; align-items: center; gap: 12px;
           background: var(--glass-bg);
@@ -4521,6 +4527,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           -webkit-backdrop-filter: blur(var(--glass-blur));
           border: 1px solid var(--glass-border);
           border-radius: 10px; padding: 10px 42px 10px 12px; cursor: pointer; position: relative; z-index: 1;
+          overflow: visible;
           transition: border-color .12s;
         }
         .group-list-row:hover { border-color: var(--glass-border-accent); }
@@ -4662,14 +4669,17 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .menu-trigger { display: flex; align-items: center; gap: 8px; width: 100%; }
         .sub-arrow { margin-left: auto; opacity: .5; }
         .submenu {
-          position: absolute; left: 100%; top: 0; z-index: 100; margin-left: 8px;
+          position: absolute; left: 100%; top: 0; z-index: 999; margin-left: 8px;
           background: var(--glass-bg-dark);
           backdrop-filter: blur(var(--glass-blur-lg));
           -webkit-backdrop-filter: blur(var(--glass-blur-lg));
           border: 1px solid var(--glass-border-accent);
           border-radius: 10px; padding: 4px; min-width: 140px;
           white-space: nowrap;
-          box-shadow: 0 12px 32px rgba(0,0,0,.28), var(--shadow);
+          box-shadow: 0 25px 60px -12px rgba(0,0,0,.4), var(--shadow);
+        }
+        .submenu-left {
+          left: auto; right: 100%; margin-left: 0; margin-right: 8px;
         }
         .group-detail-actions .submenu {
           left: auto; right: 100%; margin-left: 0; margin-right: 8px;

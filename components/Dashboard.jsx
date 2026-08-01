@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import LangSwitcher from "./LangSwitcher";
 import { useTranslation } from "@/lib/TranslationsProvider";
@@ -92,6 +93,59 @@ function MediaThumb({ src, size = 44, icon = "image" }) {
     <span className="thumb" style={{ width: size, height: size }}>
       <img src={src} alt="" className="thumb-img" loading="lazy" />
     </span>
+  );
+}
+
+function TableMenuPortal({ anchorEl, children }) {
+  const menuRef = useRef(null);
+  const [pos, setPos] = useState(null);
+
+  const measure = useCallback(() => {
+    if (!anchorEl || !menuRef.current) return;
+    const rect = anchorEl.getBoundingClientRect();
+    const menuH = menuRef.current.offsetHeight;
+    const gap = 6;
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    let top = rect.bottom + gap;
+    if (top + menuH > viewH - 8 && rect.top - gap - menuH > 8) {
+      top = rect.top - gap - menuH;
+    }
+    const next = {
+      top: Math.max(8, Math.round(top)),
+      right: Math.max(8, Math.round(viewW - rect.right)),
+    };
+    setPos((p) => (p && p.top === next.top && p.right === next.right ? p : next));
+  }, [anchorEl]);
+
+  useEffect(() => {
+    if (!anchorEl) return;
+    const raf = requestAnimationFrame(measure);
+    document.addEventListener("scroll", measure, true);
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("scroll", measure, true);
+      window.removeEventListener("resize", measure);
+    };
+  }, [anchorEl, measure]);
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      className="action-menu portal-menu"
+      style={{
+        position: "fixed",
+        top: pos ? pos.top : -9999,
+        right: pos ? pos.right : -9999,
+        left: "auto",
+        bottom: "auto",
+        visibility: pos ? "visible" : "hidden",
+      }}
+    >
+      {children}
+    </div>,
+    document.body
   );
 }
 
@@ -702,6 +756,7 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
   const timelineWrapRef = useRef(null);
   const tlRaf = useRef(null);
   const tlDrag = useRef(null);
+  const btnRefs = useRef({});
 
   useEffect(() => { fetchGroups(); }, []);
 
@@ -731,7 +786,8 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     function handleClick(e) {
       const inPostActions = e.target.closest(".post-actions");
       const inGroupActions = e.target.closest(".group-actions");
-      if ((activeMenu || activeGroupMenu || viewGroupPosts) && !inPostActions && !inGroupActions) {
+      const inActionMenu = e.target.closest(".action-menu");
+      if ((activeMenu || activeGroupMenu || viewGroupPosts) && !inPostActions && !inGroupActions && !inActionMenu) {
         setActiveMenu(null);
         setActiveSubmenu(null);
         setActiveGroupMenu(null);
@@ -1204,9 +1260,9 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     if (shareUrl) window.open(shareUrl, "_blank", "noopener");
   }
 
-  function groupMenuContent(g, ginfo) {
+  function groupMenuItems(g, ginfo) {
     return (
-      <div className="action-menu">
+      <>
         <button className="menu-item" onClick={() => { setActiveGroupMenu(null); setEditGroup(g); setGroupRename(g.name); }}>
           <Edit3 size={14} /> {t("dashboard.schedule.editGroupAction")}
         </button>
@@ -1270,6 +1326,14 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
         <button className="menu-item danger" onClick={() => { setActiveGroupMenu(null); setDeleteGroup(g); setGroupDeleteConfirm(""); }}>
           <Trash2 size={14} /> {t("dashboard.schedule.deleteGroupAction")}
         </button>
+      </>
+    );
+  }
+
+  function groupMenuContent(g, ginfo) {
+    return (
+      <div className="action-menu">
+        {groupMenuItems(g, ginfo)}
       </div>
     );
   }
@@ -1760,11 +1824,16 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
                             <div className="group-actions" onClick={(e) => { e.stopPropagation(); }}>
                               <button
                                 className="icon-btn"
+                                ref={(el) => { if (el) btnRefs.current[g.id] = el; else delete btnRefs.current[g.id]; }}
                                 onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(activeGroupMenu === g.id ? null : g.id); if (activeGroupMenu !== g.id) setViewGroupPosts(null); }}
                               >
                                 <MoreHorizontal size={15} />
                               </button>
-                              {activeGroupMenu === g.id && groupMenuContent(g, ginfo)}
+                              {activeGroupMenu === g.id && (
+                                <TableMenuPortal anchorEl={btnRefs.current[g.id]} key={g.id}>
+                                  {groupMenuItems(g, ginfo)}
+                                </TableMenuPortal>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -4413,22 +4482,6 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         }
         .sort-box select:focus { border-color: var(--glass-border-accent); }
 
-        .schedule-scroll {
-          max-height: calc(100vh - 320px); overflow-y: auto; padding-right: 4px;
-          scrollbar-width: thin;
-          scrollbar-color: var(--scrollbar-thumb, rgba(127,127,127,.35)) transparent;
-        }
-        .schedule-scroll::-webkit-scrollbar { width: 9px; }
-        .schedule-scroll::-webkit-scrollbar-track { background: transparent; }
-        .schedule-scroll::-webkit-scrollbar-thumb {
-          background: var(--scrollbar-thumb, rgba(127,127,127,.35));
-          border-radius: 8px; border: 2px solid transparent; background-clip: padding-box;
-        }
-        .schedule-scroll::-webkit-scrollbar-thumb:hover {
-          background: var(--scrollbar-thumb-hover, rgba(127,127,127,.55));
-          border-radius: 8px; border: 2px solid transparent; background-clip: padding-box;
-        }
-
         .empty .btn-ghost { margin-top: 12px; }
 
         /* Grid cards (2-col: thumbnail + info) */
@@ -4577,14 +4630,21 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
         .action-menu {
           position: absolute; right: 0; top: 100%; margin-top: 4px;
-          margin-left: 0; z-index: 100;
+          margin-left: 0; z-index: 50;
           background: var(--surface);
           backdrop-filter: blur(var(--glass-blur-lg));
           -webkit-backdrop-filter: blur(var(--glass-blur-lg));
-          border: 1px solid var(--border);
-          border-radius: 10px; padding: 4px;
-          min-width: 210px; max-width: calc(100vw - 24px);
-          box-shadow: 0 18px 40px rgba(0,0,0,.3), 0 6px 16px rgba(0,0,0,.16), var(--shadow);
+          border: 1px solid var(--glass-border-light);
+          border-radius: 12px; padding: 8px;
+          min-width: 160px; max-width: calc(100vw - 24px);
+          box-shadow: 0 25px 50px -12px rgba(0,0,0,.35), var(--shadow);
+        }
+        .portal-menu {
+          position: fixed !important;
+          z-index: 999;
+        }
+        .portal-menu .submenu {
+          left: auto; right: 100%; margin-left: 0; margin-right: 8px;
         }
         .menu-item-group { display: flex; flex-direction: column; }
         .menu-item {

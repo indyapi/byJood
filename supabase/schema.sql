@@ -153,6 +153,25 @@ create policy "users manage own ai_settings" on ai_settings
   for all using (auth.uid() = user_id);
 
 -- ==========================================================
+-- 8. Realtime — enable tables for live dashboard updates
+--    (Worker/Queue เปลี่ยนข้อมูล → หน้า dashboard อัปเดตเอง)
+--    RLS ยังบังคับใช้กับ realtime (ผู้ใช้เห็นเฉพาะแถวของตัวเอง)
+-- ==========================================================
+do $$
+declare tbl text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach tbl in array array['scheduled_posts','post_groups','post_logs','pages','folders']
+    loop
+      begin
+        execute format('alter publication supabase_realtime add table %I', tbl);
+      exception when duplicate_object then null;
+      end;
+    end loop;
+  end if;
+end $$;
+
+-- ==========================================================
 -- Row Level Security: ผู้ใช้เห็นเฉพาะข้อมูลของตัวเอง
 -- Worker ใช้ service_role key จึงข้าม RLS ได้อัตโนมัติ (ปลอดภัย เพราะรันฝั่ง server เท่านั้น)
 -- ==========================================================

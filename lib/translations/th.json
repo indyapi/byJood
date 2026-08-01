@@ -189,6 +189,11 @@
       "navGallery": "แกลเลอรี",
       "navLogs": "Logs"
     },
+    "realtime": {
+      "live": "สด",
+      "connecting": "กำลังเชื่อมต่อ…",
+      "offline": "ออฟไลน์ — กำลังดึงข้อมูล"
+    },
     "platforms": {
       "facebook": "Facebook Page",
       "instagram": "Instagram",

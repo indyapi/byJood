@@ -187,7 +187,11 @@
       "navSchedule": "Schedule Posts",
       "navPages": "Manage Pages",
       "navGallery": "Gallery",
-      "navLogs": "Logs"
+      "navLogs": "Logs"    },
+    "realtime": {
+      "live": "Live",
+      "connecting": "Connecting…",
+      "offline": "Offline — polling"
     },
     "platforms": {
       "facebook": "Facebook Page",

@@ -670,7 +670,7 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
 /* ---------------------------------------------------------
    Schedule view
 --------------------------------------------------------- */
-function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefresh, authed, t, PLATFORMS, locale }) {
+function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefresh, authed, t, PLATFORMS, locale, groupsVersion = 0 }) {
   const router = useRouter();
   const [filterMonth, setFilterMonth] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -696,6 +696,8 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
   const [groups, setGroups] = useState([]);
 
   useEffect(() => { fetchGroups(); }, []);
+
+  useEffect(() => { if (groupsVersion > 0) fetchGroups(); }, [groupsVersion]);
 
   async function fetchGroups() {
     const res = await fetch("/api/post-groups");
@@ -3375,6 +3377,12 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
   const [posts, setPosts] = useState(initialPosts.map(postFromDb).filter(Boolean));
   const [logs, setLogs] = useState(initialLogs.map(logFromDb));
   const [folders, setFolders] = useState([]);
+  const [realtimeStatus, setRealtimeStatus] = useState("connecting");
+  const [groupsVersion, setGroupsVersion] = useState(0);
+
+  const pagesRef = useRef(pages);
+  useEffect(() => { pagesRef.current = pages; }, [pages]);
+  const bumpGroups = useCallback(() => setGroupsVersion((v) => v + 1), []);
 
   const refreshPages = useCallback(async () => {
     const res = await authedFetch("/api/pages");
@@ -3520,6 +3528,71 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     refreshFolders();
   }, [refreshPages, refreshPosts, refreshLogs, refreshFolders]);
 
+  // Real-time updates: subscribe to DB changes, fall back to polling on disconnect.
+  useEffect(() => {
+    if (!authed) return;
+    let sb = null;
+    let channel = null;
+    let pollTimer = null;
+    let logDebounce = null;
+    let mounted = true;
+
+    const stopPolling = () => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } };
+    const startPolling = () => {
+      if (pollTimer) return;
+      pollTimer = setInterval(() => {
+        refreshPosts();
+        refreshPages();
+        refreshFolders();
+        refreshLogs();
+        bumpGroups();
+      }, 15000);
+    };
+
+    const queueLogsRefresh = () => {
+      if (logDebounce) clearTimeout(logDebounce);
+      logDebounce = setTimeout(() => { if (mounted) refreshLogs(); }, 300);
+    };
+
+    const onStatus = (status) => {
+      if (status === "SUBSCRIBED") {
+        stopPolling();
+        if (mounted) setRealtimeStatus("live");
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        startPolling();
+        if (mounted) setRealtimeStatus("offline");
+      }
+    };
+
+    (async () => {
+      const { createClientSupabase } = await import("@/lib/supabase-client");
+      if (!mounted) return;
+      sb = createClientSupabase();
+      channel = sb
+        .channel("dashboard-realtime")
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "post_logs" }, (payload) => {
+          const row = payload.new;
+          const page = pagesRef.current.find((p) => p.id === row.page_id);
+          setLogs((prev) => [logFromDb({ ...row, page: page ? { display_name: page.label } : null }), ...prev]);
+          queueLogsRefresh();
+        })
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "post_logs" }, queueLogsRefresh)
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "post_logs" }, queueLogsRefresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "scheduled_posts" }, () => { refreshPosts(); bumpGroups(); })
+        .on("postgres_changes", { event: "*", schema: "public", table: "post_groups" }, () => { bumpGroups(); refreshPosts(); })
+        .on("postgres_changes", { event: "*", schema: "public", table: "pages" }, refreshPages)
+        .on("postgres_changes", { event: "*", schema: "public", table: "folders" }, refreshFolders)
+        .subscribe(onStatus);
+    })();
+
+    return () => {
+      mounted = false;
+      stopPolling();
+      if (logDebounce) clearTimeout(logDebounce);
+      if (channel) sb?.removeChannel(channel);
+    };
+  }, [authed, refreshPosts, refreshPages, refreshFolders, refreshLogs, bumpGroups]);
+
   const nav = [
     { key: "schedule", label: t("dashboard.sidebar.navSchedule"), icon: CalendarClock },
     { key: "gallery", label: t("dashboard.sidebar.navGallery"), icon: Images },
@@ -3605,6 +3678,20 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .sidebar-avatar { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid var(--glass-border); }
 
         .main-top { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .rt-status {
+          display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
+          font-size: 11.5px; font-weight: 600; color: var(--text-muted);
+          background: var(--glass-bg); border: 1px solid var(--glass-border);
+          padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+        }
+        .rt-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); }
+        .rt-live { color: var(--success); }
+        .rt-live .rt-dot { background: var(--success); box-shadow: 0 0 0 3px var(--success-soft); animation: rt-pulse 2s infinite; }
+        .rt-offline { color: var(--danger); }
+        .rt-offline .rt-dot { background: var(--danger); }
+        .rt-connecting .rt-dot { animation: rt-blink 1s infinite; }
+        @keyframes rt-pulse { 0%,100% { box-shadow: 0 0 0 3px var(--success-soft); } 50% { box-shadow: 0 0 0 5px transparent; } }
+        @keyframes rt-blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
         .main-menu-btn {
           display: none;
           background: var(--glass-bg);
@@ -4639,6 +4726,10 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             <Menu size={18} />
           </button>
           <Breadcrumb paths={[{ label: t("nav.controlRoom"), href: "/dashboard" }]} />
+          <span className={`rt-status rt-${realtimeStatus}`} title={realtimeStatus === "live" ? t("dashboard.realtime.live") : realtimeStatus === "offline" ? t("dashboard.realtime.offline") : t("dashboard.realtime.connecting")}>
+            <span className="rt-dot" />
+            {t(realtimeStatus === "live" ? "dashboard.realtime.live" : realtimeStatus === "offline" ? "dashboard.realtime.offline" : "dashboard.realtime.connecting")}
+          </span>
         </div>
         <div className="stats-bar">
           <div className="stat-card">
@@ -4692,6 +4783,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             t={t}
             PLATFORMS={PLATFORMS}
             locale={locale}
+            groupsVersion={groupsVersion}
           />
         )}
         {tab === "logs" && <LogsView logs={logs} t={t} PLATFORMS={PLATFORMS} />}

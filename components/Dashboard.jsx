@@ -1063,12 +1063,8 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     if (res.status === 401) { router.replace("/sign-in"); return; }
     if (res.ok) {
       const data = await res.json();
-      console.log("[Dashboard] GET /api/post-groups ->", data);
       const mapped = (Array.isArray(data) ? data : []).map(groupFromDb).filter(Boolean);
-      console.log("[Dashboard] groups mapped ->", mapped);
       setGroups(mapped);
-    } else {
-      console.error("[Dashboard] GET /api/post-groups failed", res.status, await res.text().catch(() => ""));
     }
   }
 
@@ -1307,17 +1303,14 @@ function ScheduleView({ posts, pages, folders, onAdd, onUpdate, onDelete, onRefr
     if (res.ok) {
       const data = await res.json();
       const mapped = (Array.isArray(data.posts) ? data.posts : []).map(postFromDb).filter(Boolean);
-      console.log("[Dashboard] group detail ->", data, "posts mapped ->", mapped);
       setGroupPosts(mapped);
-    } else {
-      console.error("[Dashboard] GET /api/post-groups/[id] failed", res.status);
     }
   }
 
   async function fetchGroupPosts(group) {
     const res = await fetch(`/api/post-groups/${group.id}`);
     if (res.status === 401) { router.replace("/sign-in"); return []; }
-    if (!res.ok) { console.error("[Dashboard] GET /api/post-groups/[id] failed", res.status); return []; }
+    if (!res.ok) { return []; }
     const data = await res.json();
     return (Array.isArray(data.posts) ? data.posts : []).map(postFromDb).filter(Boolean);
   }
@@ -4039,10 +4032,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     const res = await authedFetch("/api/scheduled-posts");
     if (res?.ok) {
       const data = await res.json();
-      console.log("[Dashboard] GET /api/scheduled-posts ->", data);
       setPosts((Array.isArray(data) ? data : []).map(postFromDb).filter(Boolean));
-    } else {
-      console.error("[Dashboard] GET /api/scheduled-posts failed", res?.status);
     }
   }, []);
 

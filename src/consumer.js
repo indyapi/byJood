@@ -68,7 +68,61 @@ async function processJob(job, env) {
 }
 
 async function logResult(env, job, result) {
-  await fetch(`${env.SUPABASE_URL}/rest/v1/post_logs`, {
+  try {
+    const base = {
+      post_id: job.post_id,
+      page_id: job.page_id,
+      platform: job.platform,
+      success: result.success,
+      external_post_id: result.externalPostId ?? null,
+      error_message: result.error ?? null,
+      created_at: new Date().toISOString(),
+    };
+
+    // Write the log row. If the DB doesn't have the structured error columns yet
+    // (schema migration not applied), retry once without them so logging and the
+    // status update below never silently break.
+    let insertRes = await insertLog(env, {
+      ...base,
+      error_code: result.errorCode ?? null,
+      error_type: result.errorType ?? null,
+      error_subcode: result.errorSubcode ?? null,
+    });
+    if (!insertRes.ok) {
+      const detail = await insertRes.text().catch(() => "");
+      console.error(`[consumer] post_logs insert failed (${insertRes.status}) ${detail} — retrying without structured error fields`);
+      insertRes = await insertLog(env, base);
+      if (!insertRes.ok) {
+        console.error(`[consumer] post_logs insert failed (${insertRes.status}) ${await insertRes.text().catch(() => "")}`);
+      }
+    }
+
+    // อัปเดตสถานะโพสต์หลักด้วย ถ้าสำเร็จ
+    if (result.success) {
+      const patchBody = { status: "posted" };
+      if (result.externalPostId) patchBody.external_post_id = result.externalPostId;
+      const patchRes = await fetch(`${env.SUPABASE_URL}/rest/v1/scheduled_posts?id=eq.${job.post_id}`, {
+        method: "PATCH",
+        headers: {
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(patchBody),
+      });
+      if (!patchRes.ok) {
+        console.error(`[consumer] scheduled_posts PATCH failed (${patchRes.status}) ${await patchRes.text().catch(() => "")}`);
+      }
+    }
+  } catch (err) {
+    // Never let logging failures throw — otherwise the queue message would
+    // retry forever even after a successful post.
+    console.error(`[consumer] logResult failed: ${String(err)}`);
+  }
+}
+
+async function insertLog(env, body) {
+  return fetch(`${env.SUPABASE_URL}/rest/v1/post_logs`, {
     method: "POST",
     headers: {
       apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -76,32 +130,6 @@ async function logResult(env, job, result) {
       "Content-Type": "application/json",
       Prefer: "return=minimal",
     },
-    body: JSON.stringify({
-      post_id: job.post_id,
-      page_id: job.page_id,
-      platform: job.platform,
-      success: result.success,
-      external_post_id: result.externalPostId ?? null,
-      error_message: result.error ?? null,
-      error_code: result.errorCode ?? null,
-      error_type: result.errorType ?? null,
-      error_subcode: result.errorSubcode ?? null,
-      created_at: new Date().toISOString(),
-    }),
+    body: JSON.stringify(body),
   });
-
-  // อัปเดตสถานะโพสต์หลักด้วย ถ้าสำเร็จ
-  if (result.success) {
-    const patchBody = { status: "posted" };
-    if (result.externalPostId) patchBody.external_post_id = result.externalPostId;
-    await fetch(`${env.SUPABASE_URL}/rest/v1/scheduled_posts?id=eq.${job.post_id}`, {
-      method: "PATCH",
-      headers: {
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(patchBody),
-    });
-  }
 }

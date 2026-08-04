@@ -43,6 +43,7 @@ export async function convertImageToJpeg(imageUrl, env) {
     res = await fetch(imageUrl, {
       headers: { Accept: "image/avif,image/webp,image/jpeg,image/png,*/*" },
       cf: { image: { format: "jpeg", quality: JPEG_QUALITY, fit: "scale-down" } },
+      signal: AbortSignal.timeout(20000),
     });
   } catch (err) {
     return { ok: false, error: `Failed to fetch source image for conversion: ${String(err)}` };
@@ -53,7 +54,7 @@ export async function convertImageToJpeg(imageUrl, env) {
   }
 
   const contentType = (res.headers.get("content-type") || "").toLowerCase();
-  const isJpeg = contentType === "image/jpeg" || contentType.startsWith("image/jpg");
+  const isJpeg = contentType.startsWith("image/jpeg") || contentType.startsWith("image/jpg");
   const bytes = await res.arrayBuffer().catch(() => null);
 
   if (!isJpeg || !bytes || bytes.byteLength === 0) {
@@ -64,16 +65,22 @@ export async function convertImageToJpeg(imageUrl, env) {
   }
 
   const name = `converted/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.jpg`;
-  const uploadRes = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${CONVERTED_BUCKET}/${name}`, {
-    method: "POST",
-    headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "image/jpeg",
-      "x-upsert": "true",
-    },
-    body: bytes,
-  });
+  let uploadRes;
+  try {
+    uploadRes = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${CONVERTED_BUCKET}/${name}`, {
+      method: "POST",
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "image/jpeg",
+        "x-upsert": "true",
+      },
+      body: bytes,
+      signal: AbortSignal.timeout(20000),
+    });
+  } catch (err) {
+    return { ok: false, error: `Failed to upload converted image to storage: ${String(err)}` };
+  }
 
   if (!uploadRes.ok) {
     const detail = await uploadRes.text().catch(() => "");

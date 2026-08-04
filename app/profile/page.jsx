@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/TranslationsProvider";
-import { User, Mail, Shield, ArrowLeft, LogOut, Edit3, Check, X as XIcon, Camera } from "lucide-react";
+import { User, Mail, Shield, ArrowLeft, LogOut, Edit3, Check, X as XIcon, Camera, LayoutGrid } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 
 const PROVIDER_LABELS = {
@@ -150,6 +150,7 @@ export default function ProfilePage() {
               <div className="gl-prof-row"><Mail size={14} /><span className="gl-prlbl">{t("profile.email")}</span><span className="gl-prval">{profile.email}</span></div>
               <div className="gl-prof-row"><Shield size={14} /><span className="gl-prlbl">{t("profile.loginMethod")}</span><span className="gl-prval"><span className="gl-prvdr"><span className="gl-prvdr-icon">{providerIcon}</span>{providerLabel}</span></span></div>
             </div>
+            <button className="gl-prof-manage" onClick={() => router.push("/dashboard/pages")}><LayoutGrid size={14} /> {t("profile.managePages")}</button>
             <button className="gl-prof-signout" onClick={handleSignOut}><LogOut size={14} /> {t("nav.signOut")}</button>
           </>
         )}
@@ -253,6 +254,21 @@ const profStyles = `
     font-size: 9px; font-weight: 600; font-family: var(--font-mono);
     color: var(--text);
   }
+  .gl-prof-manage {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-dim);
+    border: 1px solid var(--glass-border-accent);
+    color: var(--accent);
+    font-size: 12.5px; font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    margin-bottom: 10px;
+    transition: background .15s;
+  }
+  .gl-prof-manage:hover { background: var(--accent-dim); }
   .gl-prof-signout {
     width: 100%;
     display: flex; align-items: center; justify-content: center; gap: 8px;

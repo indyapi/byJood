@@ -3634,7 +3634,7 @@ function AiSettingsSection({ t }) {
   );
 }
 
-function ProfileView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage, onTogglePageFavorite, onAddFolder, onRenameFolder, onDeleteFolder, onToggleFolderFavorite, authed, t, PLATFORMS }) {
+function ProfileView({ t }) {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -3819,23 +3819,21 @@ function ProfileView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage, on
         </div>
       </div>
 
-      <ConnectionsView
-        pages={pages}
-        folders={folders}
-        onAdd={onAdd}
-        onRemove={onRemove}
-        onUpdate={onUpdate}
-        onMovePage={onMovePage}
-        onTogglePageFavorite={onTogglePageFavorite}
-        onAddFolder={onAddFolder}
-        onRenameFolder={onRenameFolder}
-        onDeleteFolder={onDeleteFolder}
-        onToggleFolderFavorite={onToggleFolderFavorite}
-        authed={authed}
-        t={t}
-        PLATFORMS={PLATFORMS}
-        embedded
-      />
+      <div className="profile-section">
+        <div className="profile-section-head">
+          <div>
+            <span className="eyebrow">{t("profile.pagesSectionEyebrow")}</span>
+            <h2>{t("profile.pagesSectionTitle")}</h2>
+            <p className="sub">{t("profile.pagesSectionSubtitle")}</p>
+          </div>
+          <button className="btn btn-primary" onClick={() => router.push("/dashboard/pages")}>
+            <LayoutGrid size={16} /> {t("profile.managePages")}
+          </button>
+        </div>
+        <div className="profile-section-body">
+          <p className="sub" style={{ margin: 0 }}>{t("profile.pagesSectionHint")}</p>
+        </div>
+      </div>
 
       <AiSettingsSection t={t} />
     </div>
@@ -3980,7 +3978,8 @@ function logFromDb(l) {
 /* ---------------------------------------------------------
    App shell
 --------------------------------------------------------- */
-export default function Dashboard({ initialPages = [], initialPosts = [], initialLogs = [] }) {
+export default function Dashboard({ initialPages = [], initialPosts = [], initialLogs = [], mode }) {
+  const pagesMode = mode === "pages";
   const router = useRouter();
   const { t, locale } = useTranslation();
   const PLATFORMS = usePlatforms(t);
@@ -4008,7 +4007,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
     return res;
   }
 
-  const [tab, setTab] = useState("schedule");
+  const [tab, setTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search).get("tab");
+      if (p && ["schedule", "gallery", "logs", "profile"].includes(p)) return p;
+    }
+    return "schedule";
+  });
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [pages, setPages] = useState(initialPages.map(pageFromDb));
   const [posts, setPosts] = useState(initialPosts.map(postFromDb).filter(Boolean));
@@ -4230,10 +4235,26 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
 
   const nav = [
     { key: "schedule", label: t("dashboard.sidebar.navSchedule"), icon: CalendarClock },
+    { key: "pages", label: t("dashboard.sidebar.navPages"), icon: LayoutGrid },
     { key: "gallery", label: t("dashboard.sidebar.navGallery"), icon: Images },
     { key: "logs", label: t("dashboard.sidebar.navLogs"), icon: ScrollText },
     { key: "profile", label: t("nav.profile"), icon: User },
   ];
+
+  const activeKey = pagesMode ? "pages" : tab;
+
+  const handleNavClick = useCallback((key) => {
+    setMobileSidebar(false);
+    if (key === "pages") {
+      if (!pagesMode) router.push("/dashboard/pages");
+      return;
+    }
+    if (pagesMode) {
+      router.push(`/dashboard${key === "schedule" ? "" : `?tab=${key}`}`);
+      return;
+    }
+    setTab(key);
+  }, [pagesMode, router]);
 
   return (
     <div className="shell">
@@ -4421,9 +4442,9 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           border-left: 2px solid var(--accent);
           padding: 10px 12px; border-radius: var(--radius-sm);
           font-size: 12.5px; color: var(--text-muted);
-          margin-bottom: 20px; line-height: 1.5;
+          margin-bottom: 16px; line-height: 1.5;
         }
-        .notice.small { font-size: 11.5px; margin-bottom: 14px; }
+        .notice.small { font-size: 11.5px; margin-bottom: 12px; }
         .notice.success { border-left-color: var(--success); color: var(--success); }
 
         .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
@@ -4484,7 +4505,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .icon-btn.starred { color: var(--warning); }
         .icon-btn.starred:hover { color: var(--warning); }
 
-        .explorer-favorites { margin-bottom: 16px; }
+        .explorer-favorites { margin-bottom: 12px; }
         .explorer-favorites-head { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; }
         .fav-head-icon { color: var(--warning); }
         .explorer-favorites-grid { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -4498,7 +4519,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .fav-card-name { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
         .fav-star { color: var(--warning); flex-shrink: 0; }
 
-        .explorer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+        .explorer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
         .breadcrumb { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-height: 30px; }
         .bc-crumb {
           display: inline-flex; align-items: center; gap: 5px;
@@ -4513,7 +4534,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .explorer-new-folder { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 10px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); }
         .explorer-new-folder .input { flex: 1; }
 
-        .explorer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; align-items: start; }
+        .explorer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; align-items: start; }
         .folder-card {
           background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius);
           padding: 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow);
@@ -5558,7 +5579,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           <div className="brand-sub">← {t("nav.home")}</div>
         </button>
         {nav.map((n) => (
-          <button key={n.key} className={`nav-item ${tab === n.key ? "active" : ""}`} onClick={() => setTab(n.key)}>
+          <button key={n.key} className={`nav-item ${activeKey === n.key ? "active" : ""}`} onClick={() => handleNavClick(n.key)}>
             {n.key === "profile" && profileAvatar ? (
               <img src={profileAvatar} alt="" className="sidebar-avatar" />
             ) : (
@@ -5576,12 +5597,13 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
           <button className="main-menu-btn" onClick={() => setMobileSidebar(true)} aria-label="Open menu">
             <Menu size={18} />
           </button>
-          <Breadcrumb paths={[{ label: t("nav.controlRoom"), href: "/dashboard" }]} />
+          <Breadcrumb paths={[{ label: pagesMode ? t("dashboard.sidebar.navPages") : t("nav.controlRoom"), href: pagesMode ? "/dashboard/pages" : "/dashboard" }]} />
           <span className={`rt-status rt-${realtimeStatus}`} title={realtimeStatus === "live" ? t("dashboard.realtime.live") : realtimeStatus === "offline" ? t("dashboard.realtime.offline") : t("dashboard.realtime.connecting")}>
             <span className="rt-dot" />
             {t(realtimeStatus === "live" ? "dashboard.realtime.live" : realtimeStatus === "offline" ? "dashboard.realtime.offline" : "dashboard.realtime.connecting")}
           </span>
         </div>
+        {!pagesMode && (
         <div className="stats-bar">
           <div className="stat-card">
             <div className="stat-card-icon" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
@@ -5620,7 +5642,27 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             </div>
           </div>
         </div>
+        )}
 
+        {pagesMode ? (
+          <ConnectionsView
+            pages={pages}
+            folders={folders}
+            onAdd={handleAddPage}
+            onRemove={handleRemovePage}
+            onUpdate={handleUpdatePage}
+            onMovePage={handleMovePage}
+            onTogglePageFavorite={handleTogglePageFavorite}
+            onAddFolder={handleAddFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onToggleFolderFavorite={handleToggleFolderFavorite}
+            authed={authed}
+            t={t}
+            PLATFORMS={PLATFORMS}
+          />
+        ) : (
+        <>
         {tab === "schedule" && (
           <ScheduleView
             posts={posts}
@@ -5640,22 +5682,9 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         {tab === "logs" && <LogsView logs={logs} t={t} PLATFORMS={PLATFORMS} />}
         {tab === "gallery" && <GalleryView authed={authed} t={t} />}
         {tab === "profile" && (
-          <ProfileView
-            pages={pages}
-            folders={folders}
-            onAdd={handleAddPage}
-            onRemove={handleRemovePage}
-            onUpdate={handleUpdatePage}
-            onMovePage={handleMovePage}
-            onTogglePageFavorite={handleTogglePageFavorite}
-            onAddFolder={handleAddFolder}
-            onRenameFolder={handleRenameFolder}
-            onDeleteFolder={handleDeleteFolder}
-            onToggleFolderFavorite={handleToggleFolderFavorite}
-            authed={authed}
-            t={t}
-            PLATFORMS={PLATFORMS}
-          />
+          <ProfileView t={t} />
+        )}
+        </>
         )}
       </main>
 
@@ -5672,8 +5701,8 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
             {nav.map((n) => (
               <button
                 key={n.key}
-                className={`nav-item ${tab === n.key ? "active" : ""}`}
-                onClick={() => { setTab(n.key); setMobileSidebar(false); }}
+                className={`nav-item ${activeKey === n.key ? "active" : ""}`}
+                onClick={() => handleNavClick(n.key)}
               >
                 {n.key === "profile" && profileAvatar ? (
                   <img src={profileAvatar} alt="" className="sidebar-avatar" />

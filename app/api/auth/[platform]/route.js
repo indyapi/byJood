@@ -5,7 +5,7 @@ import { buildAuthUrl } from "@/lib/oauth-configs";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export async function GET(request, { params }) {
-  const { platform } = params;
+  const { platform } = await params;
 
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();

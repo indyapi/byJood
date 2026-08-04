@@ -19,7 +19,7 @@ export async function DELETE(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
-  const { id } = params;
+  const { id } = await params;
   const auth = await authorize(admin, id, user);
   if (auth.error) return Response.json({ error: auth.error }, { status: auth.status });
 
@@ -35,7 +35,7 @@ export async function PATCH(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
-  const { id } = params;
+  const { id } = await params;
   const auth = await authorize(admin, id, user);
   if (auth.error) return Response.json({ error: auth.error }, { status: auth.status });
 

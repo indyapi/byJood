@@ -8,11 +8,12 @@ export async function POST(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
+  const { id } = await params;
 
   const { data: group, error: gErr } = await admin
     .from("post_groups")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -38,7 +39,7 @@ export async function POST(request, { params }) {
   const { error: pErr } = await admin
     .from("scheduled_posts")
     .update({ status: "pending", error_message: null, failed_at: null, updated_at: nowIso })
-    .eq("group_id", params.id)
+    .eq("group_id", id)
     .eq("status", "failed")
     .eq("user_id", user.id);
 
@@ -47,7 +48,7 @@ export async function POST(request, { params }) {
   const { data: updated, error: uErr } = await admin
     .from("post_groups")
     .update(fields)
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .select("*")
     .single();

@@ -7,7 +7,7 @@ export async function DELETE(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
-  const { id } = params;
+  const { id } = await params;
 
   const { data: media, error: fetchError } = await admin
     .from("media")

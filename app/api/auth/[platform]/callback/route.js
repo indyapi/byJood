@@ -5,7 +5,7 @@ import { OAUTH_CONFIGS } from "@/lib/oauth-configs";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export async function GET(request, { params }) {
-  const { platform } = params;
+  const { platform } = await params;
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");

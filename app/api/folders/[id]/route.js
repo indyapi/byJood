@@ -18,7 +18,8 @@ export async function PATCH(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
-  const auth = await authorize(admin, params.id, user);
+  const { id } = await params;
+  const auth = await authorize(admin, id, user);
   if (auth.error) return Response.json({ error: auth.error }, { status: auth.status });
 
   const body = await request.json();
@@ -37,7 +38,7 @@ export async function PATCH(request, { params }) {
   const { data, error } = await admin
     .from("folders")
     .update(updates)
-    .eq("id", params.id)
+    .eq("id", id)
     .select()
     .single();
 
@@ -51,7 +52,8 @@ export async function DELETE(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
-  const auth = await authorize(admin, params.id, user);
+  const { id } = await params;
+  const auth = await authorize(admin, id, user);
   if (auth.error) return Response.json({ error: auth.error }, { status: auth.status });
 
   const { folder } = auth;
@@ -61,7 +63,7 @@ export async function DELETE(request, { params }) {
   // Detach pages inside the deleted folder (move them to root)
   await admin.from("pages").update({ folder_id: null }).eq("folder_id", folder.id);
 
-  const { error } = await admin.from("folders").delete().eq("id", params.id);
+  const { error } = await admin.from("folders").delete().eq("id", id);
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   return new Response(null, { status: 204 });

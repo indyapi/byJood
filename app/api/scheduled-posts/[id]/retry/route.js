@@ -9,11 +9,12 @@ export async function POST(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
+  const { id } = await params;
 
   const { data: post, error: fetchError } = await admin
     .from("scheduled_posts")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -48,7 +49,7 @@ export async function POST(request, { params }) {
       failed_at: null,
       updated_at: nowIso,
     })
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .select()
     .single();

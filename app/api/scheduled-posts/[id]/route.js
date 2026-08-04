@@ -8,10 +8,11 @@ export async function GET(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
+  const { id } = await params;
   const { data, error } = await admin
     .from("scheduled_posts")
     .select("*, page:page_id(display_name, platform, external_page_id)")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -26,6 +27,7 @@ export async function PATCH(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
+  const { id } = await params;
   const body = await request.json();
 
   const allowedFields = ["content", "scheduled_at", "media_urls"];
@@ -41,7 +43,7 @@ export async function PATCH(request, { params }) {
   const { data, error } = await admin
     .from("scheduled_posts")
     .update(updates)
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .select()
     .single();
@@ -65,11 +67,12 @@ export async function DELETE(request, { params }) {
   }
 
   const admin = createAdminSupabase();
+  const { id } = await params;
 
   const { data: post, error: fetchError } = await admin
     .from("scheduled_posts")
     .select("external_post_id, platform, page_id, media_urls")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -96,7 +99,7 @@ export async function DELETE(request, { params }) {
   const { error: deleteError } = await admin
     .from("scheduled_posts")
     .delete()
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id);
 
   if (deleteError) return Response.json({ error: deleteError.message }, { status: 500 });

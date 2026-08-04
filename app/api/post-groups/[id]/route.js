@@ -26,11 +26,12 @@ export async function GET(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
+  const { id } = await params;
 
   const { data: group, error: gErr } = await admin
     .from("post_groups")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -40,7 +41,7 @@ export async function GET(request, { params }) {
   const { data: posts, error: pErr } = await admin
     .from("scheduled_posts")
     .select("*, page:page_id(display_name)")
-    .eq("group_id", params.id)
+    .eq("group_id", id)
     .eq("user_id", user.id)
     .order("scheduled_at", { ascending: true });
 
@@ -55,6 +56,7 @@ export async function PATCH(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
+  const { id } = await params;
   const body = await request.json();
   const { name, scheduled_at } = body;
 
@@ -69,7 +71,7 @@ export async function PATCH(request, { params }) {
   const { data: group, error: gErr } = await admin
     .from("post_groups")
     .update(updates)
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .select()
     .single();
@@ -80,7 +82,7 @@ export async function PATCH(request, { params }) {
     await admin
       .from("scheduled_posts")
       .update({ scheduled_at })
-      .eq("group_id", params.id)
+      .eq("group_id", id)
       .eq("user_id", user.id);
   }
 
@@ -102,11 +104,12 @@ export async function DELETE(request, { params }) {
   }
 
   const admin = createAdminSupabase();
+  const { id } = await params;
 
   const { data: posts, error: fetchErr } = await admin
     .from("scheduled_posts")
     .select("id, external_post_id, platform, page_id, media_urls")
-    .eq("group_id", params.id)
+    .eq("group_id", id)
     .eq("user_id", user.id);
 
   if (fetchErr) return Response.json({ error: fetchErr.message }, { status: 500 });
@@ -134,7 +137,7 @@ export async function DELETE(request, { params }) {
   const { error: delPosts } = await admin
     .from("scheduled_posts")
     .delete()
-    .eq("group_id", params.id)
+    .eq("group_id", id)
     .eq("user_id", user.id);
 
   if (delPosts) return Response.json({ error: delPosts.message }, { status: 500 });
@@ -142,7 +145,7 @@ export async function DELETE(request, { params }) {
   const { error: delGroup } = await admin
     .from("post_groups")
     .delete()
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id);
 
   if (delGroup) return Response.json({ error: delGroup.message }, { status: 500 });

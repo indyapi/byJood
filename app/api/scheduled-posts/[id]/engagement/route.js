@@ -7,10 +7,11 @@ export async function GET(request, { params }) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminSupabase();
+  const { id } = await params;
   const { data: post, error } = await admin
     .from("scheduled_posts")
     .select("id, external_post_id, platform, page_id")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single();
 

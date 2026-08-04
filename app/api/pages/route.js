@@ -49,7 +49,14 @@ export async function GET() {
 async function fetchPlatformPageName(platform, externalPageId, accessToken, igBusinessAccountId) {
   if (!accessToken) return null;
   try {
-    if (["facebook", "instagram", "threads"].includes(platform)) {
+    if (platform === "threads") {
+      const res = await fetch(
+        `https://graph.threads.net/v1.0/me?fields=username,id&access_token=${encodeURIComponent(accessToken)}`
+      );
+      const data = await res.json();
+      return data?.username ?? null;
+    }
+    if (["facebook", "instagram"].includes(platform)) {
       // For Instagram, prefer the IG Business Account ID (it is the node the
       // Graph API posts to); fall back to the FB Page ID for older rows.
       const lookupId = platform === "instagram" && igBusinessAccountId ? igBusinessAccountId : externalPageId;

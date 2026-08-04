@@ -249,6 +249,31 @@ async function waitForContainerStatus(containerId, accessToken, timeoutMs = 6000
   return { ok: false, status: lastStatus, error: `Media container did not reach FINISHED within ${timeoutMs / 1000}s (last status: ${lastStatus || "unknown"})` };
 }
 
+/**
+ * Threads-specific container poller. Threads runs on graph.threads.net (v1.0),
+ * so it cannot reuse the Facebook poller above. Polls until FINISHED.
+ */
+async function waitForThreadsContainerStatus(containerId, accessToken, timeoutMs = 60000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastStatus = null;
+  while (Date.now() < deadline) {
+    const res = await fetch(
+      `https://graph.threads.net/v1.0/${containerId}?fields=status,status_detail&access_token=${encodeURIComponent(accessToken)}`
+    );
+    const data = await res.json();
+    if (data?.error) {
+      return { ok: false, status: null, error: extractMetaError(data, "Unknown error while checking Threads container status") };
+    }
+    lastStatus = data?.status || null;
+    if (lastStatus === "FINISHED") return { ok: true, status: lastStatus };
+    if (["ERROR", "EXPIRED", "FAILED"].includes(lastStatus)) {
+      return { ok: false, status: lastStatus, error: `Threads container ${lastStatus}: ${data?.status_detail || "unknown reason"}` };
+    }
+    await sleep(3000);
+  }
+  return { ok: false, status: lastStatus, error: `Threads container did not reach FINISHED within ${timeoutMs / 1000}s (last status: ${lastStatus || "unknown"})` };
+}
+
 export async function postToInstagram(job, env) {
   const { page_id, content, media_urls, access_token, ig_business_account_id } = job;
 
@@ -361,29 +386,91 @@ export async function postToTikTok(job) {
   return { success: true, externalPostId: data.data?.publish_id };
 }
 
-export async function postToThreads(job) {
-  const { page_id, content, access_token } = job;
-  const containerRes = await fetch(
-    `https://graph.threads.net/v1.0/${page_id}/threads`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ media_type: "TEXT", text: content, access_token }),
-    }
-  );
-  const container = await containerRes.json();
-  if (!containerRes.ok) return { success: false, error: container.error?.message };
+export async function postToThreads(job, env) {
+  const { page_id, content, media_urls, access_token } = job;
 
-  const publishRes = await fetch(
-    `https://graph.threads.net/v1.0/${page_id}/threads_publish`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ creation_id: container.id, access_token }),
+  // Step 1 — Threads posts to the Threads User ID node (external_page_id).
+  const threadsUserId = page_id;
+  if (!threadsUserId) {
+    return { success: false, error: "Missing Threads User ID" };
+  }
+  if (!access_token) {
+    return { success: false, error: "Missing Threads access token" };
+  }
+
+  // Step 2 — media type: IMAGE when an image is attached (Threads supports
+  // one image), otherwise a pure TEXT thread (unlike Instagram).
+  const imageUrl = Array.isArray(media_urls) && media_urls[0] ? media_urls[0].trim() : null;
+  if (imageUrl) {
+    try {
+      const parsed = new URL(imageUrl);
+      if (parsed.protocol !== "https:") {
+        return { success: false, error: `Threads image URL must be an HTTPS URL (got "${parsed.protocol}//")` };
+      }
+    } catch {
+      return { success: false, error: `Threads image URL is not a valid URL: "${imageUrl}"` };
     }
-  );
-  const publish = await publishRes.json();
-  if (!publishRes.ok) return { success: false, error: publish.error?.message };
+  }
+  const mediaType = imageUrl ? "IMAGE" : "TEXT";
+
+  // Step 3 — create the container
+  let containerRes, container;
+  try {
+    containerRes = await fetch(
+      `https://graph.threads.net/v1.0/${threadsUserId}/threads`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          media_type: mediaType,
+          text: content,
+          ...(imageUrl ? { image_url: imageUrl } : {}),
+          access_token,
+        }),
+      }
+    );
+    container = await containerRes.json();
+  } catch (err) {
+    return { success: false, error: `Network error creating Threads container: ${String(err)}` };
+  }
+  if (!containerRes.ok || !container.id) {
+    return {
+      success: false,
+      error: extractMetaError(container, "Unknown error creating Threads container"),
+      ...extractMetaErrorFields(container),
+    };
+  }
+  const creationId = container.id;
+
+  // Step 4 — poll the container until it is ready to publish
+  const status = await waitForThreadsContainerStatus(creationId, access_token);
+  if (!status.ok) {
+    return { success: false, error: status.error };
+  }
+
+  // Step 5 — publish the finished container
+  let publishRes, publish;
+  try {
+    publishRes = await fetch(
+      `https://graph.threads.net/v1.0/${threadsUserId}/threads_publish`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creation_id: creationId, access_token }),
+      }
+    );
+    publish = await publishRes.json();
+  } catch (err) {
+    return { success: false, error: `Network error publishing Threads: ${String(err)}` };
+  }
+  if (!publishRes.ok || !publish.id) {
+    return {
+      success: false,
+      error: extractMetaError(publish, "Unknown error publishing Threads"),
+      ...extractMetaErrorFields(publish),
+    };
+  }
+
   return { success: true, externalPostId: publish.id };
 }
 

@@ -1,4 +1,4 @@
-import { PLATFORM_HANDLERS } from "./platforms.js";
+import { PLATFORM_HANDLERS, postToThreads } from "./platforms.js";
 
 /**
  * consumer.js
@@ -60,6 +60,8 @@ async function processJob(job, env) {
   if (!handler) {
     return { success: false, error: `ไม่รองรับแพลตฟอร์ม: ${job.platform}` };
   }
+
+  if (job.platform === "threads") return await postToThreads(job, env);
 
   return handler(
     {

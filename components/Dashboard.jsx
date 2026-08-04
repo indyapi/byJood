@@ -382,6 +382,7 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
   const [renameId, setRenameId] = useState(null);
   const [renameValue, setRenameValue] = useState("");
   const [confirmFolder, setConfirmFolder] = useState(null);
+  const [confirmDeletePage, setConfirmDeletePage] = useState(null);
   const [dragPageId, setDragPageId] = useState(null);
   const [dropTargetId, setDropTargetId] = useState(null);
 
@@ -698,7 +699,7 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
                   <button className="icon-btn" onClick={() => setEditPage(pg)} disabled={!authed} aria-label={t("dashboard.connections.editAria")}>
                     <Edit3 size={14} />
                   </button>
-                  <button className="icon-btn danger" onClick={() => onRemove(pg.id)} disabled={!authed} aria-label={t("dashboard.connections.deleteAria")}>
+                  <button className="icon-btn danger" onClick={() => setConfirmDeletePage(pg)} disabled={!authed} aria-label={t("dashboard.connections.deleteAria")}>
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -734,6 +735,26 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
               <button className="btn btn-ghost" onClick={() => setConfirmFolder(null)}>{t("common.cancel")}</button>
               <button className="btn btn-danger" onClick={() => { onDeleteFolder(confirmFolder.id); setConfirmFolder(null); }}>
                 <Trash2 size={14} /> {t("common.delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeletePage && (
+        <div className="modal-overlay">
+          <div className="modal modal-sm">
+            <div className="modal-head">
+              <h2>{t("dashboard.connections.deletePageTitle")}</h2>
+              <button className="icon-btn" onClick={() => setConfirmDeletePage(null)}><X size={18} /></button>
+            </div>
+            <p className="delete-body">
+              {t("dashboard.connections.deletePageConfirm")} <strong>{confirmDeletePage.label}</strong>?
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setConfirmDeletePage(null)}>{t("common.cancel")}</button>
+              <button className="btn btn-danger" onClick={() => { onRemove(confirmDeletePage.id); setConfirmDeletePage(null); }}>
+                <Trash2 size={14} /> {t("dashboard.connections.deletePageBtn")}
               </button>
             </div>
           </div>

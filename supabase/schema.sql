@@ -35,7 +35,7 @@ create table page_tokens (
 create table scheduled_posts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id),
-  page_id uuid references pages(id) not null,
+  page_id uuid references pages(id) on delete cascade not null,
   platform text not null,
   content text not null,
   media_urls text[] default '{}',       -- ลิงก์ไฟล์ใน Supabase Storage
@@ -53,7 +53,7 @@ create index idx_scheduled_posts_due
 create table post_logs (
   id uuid primary key default gen_random_uuid(),
   post_id uuid references scheduled_posts(id) on delete cascade,
-  page_id uuid references pages(id),
+  page_id uuid references pages(id) on delete cascade,
   platform text not null,
   success boolean not null,
   external_post_id text,
@@ -78,6 +78,15 @@ alter table post_logs add column if not exists error_subcode text;
 -- Instagram Business Account ID derived from Meta Graph API
 alter table pages add column if not exists ig_business_account_id text;
 comment on column pages.ig_business_account_id is 'Instagram Business Account ID derived from Meta Graph API';
+
+-- Deleting a page must not fail because of child rows: cascade to the page's
+-- scheduled posts and post logs (recreated idempotently for existing DBs).
+alter table scheduled_posts drop constraint if exists scheduled_posts_page_id_fkey;
+alter table scheduled_posts add constraint scheduled_posts_page_id_fkey
+  foreign key (page_id) references pages(id) on delete cascade;
+alter table post_logs drop constraint if exists post_logs_page_id_fkey;
+alter table post_logs add constraint post_logs_page_id_fkey
+  foreign key (page_id) references pages(id) on delete cascade;
 
 -- Token status column added after initial deploy (idempotent for existing DBs)
 alter table page_tokens add column if not exists status text default 'active';

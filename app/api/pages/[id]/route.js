@@ -118,8 +118,8 @@ export async function PATCH(request, { params }) {
         .eq("id", existing.id);
       if (error) return Response.json({ error: error.message }, { status: 500 });
     } else {
-      // No token row yet — create one
-      const { data: created, error } = await admin
+      // No token row yet — create one (the re-fetch below reads the created row)
+      const { error } = await admin
         .from("page_tokens")
         .insert({
           page_id: id,
@@ -131,9 +131,6 @@ export async function PATCH(request, { params }) {
         .select("id")
         .single();
       if (error) return Response.json({ error: error.message }, { status: 500 });
-      if (created?.id) {
-        existing = { id: created.id };
-      }
     }
   }
 

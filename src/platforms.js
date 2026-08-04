@@ -220,6 +220,21 @@ function extractMetaErrorFields(data) {
   };
 }
 
+/**
+ * Threads error diagnostics. The Threads API returns the same Meta-style error
+ * envelope; when the account/node cannot be found ("The requested resource does
+ * not exist") it is almost always a wrong Threads User ID, a bad token, or a
+ * missing threads_content_publish permission — so append actionable guidance.
+ */
+function extractThreadsError(data, fallback) {
+  const base = extractMetaError(data, fallback);
+  const msg = data?.error?.message || "";
+  if (/requested resource does not exist/i.test(msg)) {
+    return `${base} — Please check the Threads User ID (external_page_id) and the access token. Verify that the threads_content_publish permission has been granted.`;
+  }
+  return base;
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -262,7 +277,7 @@ async function waitForThreadsContainerStatus(containerId, accessToken, timeoutMs
     );
     const data = await res.json();
     if (data?.error) {
-      return { ok: false, status: null, error: extractMetaError(data, "Unknown error while checking Threads container status") };
+      return { ok: false, status: null, error: extractThreadsError(data, "Unknown error while checking Threads container status") };
     }
     lastStatus = data?.status || null;
     if (lastStatus === "FINISHED") return { ok: true, status: lastStatus };
@@ -392,10 +407,10 @@ export async function postToThreads(job, env) {
   // Step 1 — Threads posts to the Threads User ID node (external_page_id).
   const threadsUserId = page_id;
   if (!threadsUserId) {
-    return { success: false, error: "Missing Threads User ID" };
+    return { success: false, error: "Missing Threads User ID (external_page_id) — กรุณาเพิ่ม Threads User ID ใน Manage Pages" };
   }
   if (!access_token) {
-    return { success: false, error: "Missing Threads access token" };
+    return { success: false, error: "Missing Threads access token (page_tokens.access_token) — กรุณาแก้ไข connection ใน Manage Pages" };
   }
 
   // Step 2 — media type: IMAGE when an image is attached (Threads supports
@@ -436,7 +451,7 @@ export async function postToThreads(job, env) {
   if (!containerRes.ok || !container.id) {
     return {
       success: false,
-      error: extractMetaError(container, "Unknown error creating Threads container"),
+      error: extractThreadsError(container, "Unknown error creating Threads container"),
       ...extractMetaErrorFields(container),
     };
   }
@@ -466,7 +481,7 @@ export async function postToThreads(job, env) {
   if (!publishRes.ok || !publish.id) {
     return {
       success: false,
-      error: extractMetaError(publish, "Unknown error publishing Threads"),
+      error: extractThreadsError(publish, "Unknown error publishing Threads"),
       ...extractMetaErrorFields(publish),
     };
   }

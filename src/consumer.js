@@ -40,6 +40,10 @@ async function processJob(job, env) {
   if (!pageRow) {
     return { success: false, error: "ไม่พบเพจนี้" };
   }
+  if (!pageRow.external_page_id) {
+    const fieldName = job.platform === "threads" ? "Threads User ID" : "Page ID / Account ID";
+    return { success: false, error: `ไม่พบ external_page_id (${fieldName}) ในตาราง pages — กรุณาเพิ่มข้อมูลใน Manage Pages` };
+  }
 
   // 2. ดึง access token ล่าสุดของเพจนี้จาก Supabase (เผื่อมีการ refresh token ไปแล้ว)
   const tokenRes = await fetch(
@@ -53,7 +57,10 @@ async function processJob(job, env) {
   );
   const [tokenRow] = await tokenRes.json();
   if (!tokenRow) {
-    return { success: false, error: "ไม่พบ token สำหรับเพจนี้" };
+    return { success: false, error: `ไม่พบแถว token สำหรับแพลตฟอร์ม ${job.platform} ในตาราง page_tokens` };
+  }
+  if (!tokenRow.access_token) {
+    return { success: false, error: `พบแถว token แต่ access_token ว่างเปล่า (${job.platform}) — กรุณาแก้ไข connection ใน Manage Pages` };
   }
 
   const handler = PLATFORM_HANDLERS[job.platform];

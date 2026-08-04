@@ -4,6 +4,8 @@
  * job.access_token ควรถูกดึงมาจาก Supabase ก่อนเรียก (ดู consumer.js)
  */
 
+import { convertImageToJpeg, needsJpegConversion } from "./image-utils.js";
+
 // Permissions ที่ Facebook Page Access Token ต้องมีจึงจะโพสต์และอ่าน engagement ได้
 const REQUIRED_FB_PERMS = ["pages_manage_posts", "pages_read_engagement"];
 
@@ -117,9 +119,7 @@ export async function postToFacebook(job) {
 
 // ---------- Instagram helpers ----------
 
-const IG_IMAGE_EXT = new Set(["jpg", "jpeg", "png"]);
 const IG_VIDEO_EXT = new Set(["mp4", "mov", "m4v", "avi", "webm", "mkv", "3gp", "wmv", "flv"]);
-const IG_KNOWN_BAD_EXT = new Set(["gif", "webp", "heic", "heif", "bmp", "tif", "tiff", "svg", "pdf"]);
 
 function getPathExtension(pathname) {
   const base = pathname.split("/").pop() || "";
@@ -136,7 +136,9 @@ function isPrivateHostname(hostname) {
 
 /**
  * Validate that media_urls[0] is a public HTTPS image URL that the Meta API
- * can fetch (no localhost / private host / blob / data, and a supported format).
+ * can fetch (no localhost / private host / blob / data, and not a video).
+ * Non-JPEG formats are NOT rejected here — they are converted by the image
+ * utility in postToInstagram.
  */
 function validateInstagramImage(mediaUrls) {
   const url = Array.isArray(mediaUrls) ? mediaUrls[0] : null;
@@ -161,12 +163,6 @@ function validateInstagramImage(mediaUrls) {
   const ext = getPathExtension(parsed.pathname);
   if (IG_VIDEO_EXT.has(ext)) {
     return { ok: false, error: `Instagram image_url only accepts images — got a video file (.${ext}). Video posting is not supported yet.` };
-  }
-  if (IG_KNOWN_BAD_EXT.has(ext)) {
-    return { ok: false, error: `Instagram image must be JPEG/JPG or PNG — got ".${ext}". Convert the image and re-upload it.` };
-  }
-  if (ext && !IG_IMAGE_EXT.has(ext)) {
-    return { ok: false, error: `Unsupported image file type ".${ext}" — Instagram image_url accepts JPEG/JPG and PNG only.` };
   }
 
   return { ok: true, url: url.trim() };
@@ -253,7 +249,7 @@ async function waitForContainerStatus(containerId, accessToken, timeoutMs = 6000
   return { ok: false, status: lastStatus, error: `Media container did not reach FINISHED within ${timeoutMs / 1000}s (last status: ${lastStatus || "unknown"})` };
 }
 
-export async function postToInstagram(job) {
+export async function postToInstagram(job, env) {
   const { page_id, content, media_urls, access_token } = job;
 
   // 1. Validate the image URL/format before hitting the API
@@ -262,6 +258,20 @@ export async function postToInstagram(job) {
 
   const accessible = await checkImageAccessible(imageCheck.url);
   if (!accessible.ok) return { success: false, error: accessible.error };
+
+  // 1.5 Instagram image_url effectively accepts JPEG/JPG, so transcode any
+  //     other format (PNG/WebP/HEIC/BMP/...) to high-quality JPEG first.
+  let imageUrl = imageCheck.url;
+  if (needsJpegConversion(imageUrl)) {
+    const converted = await convertImageToJpeg(imageUrl, env);
+    if (converted.ok) {
+      imageUrl = converted.url;
+      console.log(`[Image Utility] Successfully converted image to JPEG for Instagram: ${imageCheck.url} -> ${imageUrl}`);
+    } else {
+      // Fallback: keep the original URL and let Meta decide, but report loudly.
+      console.error(`[Image Utility] Conversion failed — falling back to original URL. ${converted.error}`);
+    }
+  }
 
   // 2. Step 1 — create the media container
   let containerRes, container;
@@ -272,7 +282,7 @@ export async function postToInstagram(job) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image_url: imageCheck.url,
+          image_url: imageUrl,
           caption: content,
           access_token,
         }),

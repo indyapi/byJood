@@ -227,7 +227,64 @@
       "allTab": "ทั้งหมด",
       "favoritesTab": "รายการโปรด",
       "favoritesEmpty": "ยังไม่มีรายการโปรด แตะดาวบนเพจหรือโฟลเดอร์เพื่อปักหมุดไว้ที่นี่",
-      "selectedFolderSummary": "เลือก {count} เพจ จาก {folders} โฟลเดอร์"
+      "selectedFolderSummary": "เลือก {count} เพจ จาก {folders} โฟลเดอร์",
+      "optional": "ไม่บังคับ",
+      "platformSpecs": {
+        "instagram": {
+          "externalIdLabel": "Instagram Business Account ID",
+          "externalIdPlaceholder": "เช่น 17841400000000000",
+          "externalIdHelper": "⚠️ ต้องเป็น IG Business Account ID (ตัวเลขทั้งหมดเท่านั้น) — ห้ามใช้ Facebook Page ID เป็นอันขาด หาได้จาก Meta Explorer: GET /me/accounts?fields=instagram_business_account",
+          "externalIdError": "กรุณากรอก Instagram Business Account ID ที่เป็นตัวเลขเท่านั้น",
+          "accessTokenLabel": "Facebook Page Access Token",
+          "accessTokenPlaceholder": "EAAG...",
+          "accessTokenHelper": "ใช้ long-lived Facebook Page Access Token ที่ผูกกับเพจนี้ โดยมี Scopes: instagram_basic, instagram_content_publish"
+        },
+        "facebook": {
+          "externalIdLabel": "Facebook Page ID",
+          "externalIdPlaceholder": "เช่น 574715995732557",
+          "externalIdHelper": "Page ID ตัวเลขของ Facebook Page ของคุณ",
+          "externalIdError": "กรุณากรอก Facebook Page ID ที่ถูกต้อง",
+          "accessTokenLabel": "Page Access Token",
+          "accessTokenPlaceholder": "EAAG...",
+          "accessTokenHelper": "Long-lived Page Access Token ที่มีสิทธิ์ \"pages_manage_posts\""
+        },
+        "tiktok": {
+          "externalIdLabel": "TikTok Open ID",
+          "externalIdPlaceholder": "เช่น Open ID ของบัญชี TikTok",
+          "externalIdHelper": "Open ID ของผู้ใช้ TikTok ของคุณ มาจาก GET /v2/user/info/",
+          "externalIdError": "กรุณากรอก TikTok Open ID ของคุณ",
+          "accessTokenLabel": "TikTok Access Token",
+          "accessTokenPlaceholder": "วาง Access Token",
+          "accessTokenHelper": "Token ที่มี Scopes: video.publish, video.upload"
+        },
+        "threads": {
+          "externalIdLabel": "Threads User ID",
+          "externalIdPlaceholder": "เช่น 314216",
+          "externalIdHelper": "Threads User ID ตัวเลข มาจาก GET /v1.0/me",
+          "externalIdError": "กรุณากรอก Threads User ID ของคุณ",
+          "accessTokenLabel": "Threads Access Token",
+          "accessTokenPlaceholder": "วาง Access Token",
+          "accessTokenHelper": "Token ที่มี Scopes: threads_basic, threads_content_publish"
+        },
+        "youtube": {
+          "externalIdLabel": "YouTube Channel ID",
+          "externalIdPlaceholder": "เช่น UCz2D...",
+          "externalIdHelper": "Channel ID ของช่อง YouTube ของคุณ (ขึ้นต้นด้วย \"UC\")",
+          "externalIdError": "กรุณากรอก YouTube Channel ID ของคุณ",
+          "accessTokenLabel": "YouTube API Key / Token",
+          "accessTokenPlaceholder": "วาง API Key หรือ OAuth Token",
+          "accessTokenHelper": "API key หรือ OAuth 2.0 token ที่มี scope youtube.upload"
+        },
+        "website": {
+          "externalIdLabel": "ชื่อไซต์ / Webhook",
+          "externalIdPlaceholder": "เช่น my-blog",
+          "externalIdHelper": "ตัวระบุใด ๆ สำหรับปลายทางเว็บไซต์/webhook นี้",
+          "externalIdError": "กรุณากรอกตัวระบุสำหรับเว็บไซต์นี้",
+          "accessTokenLabel": "Webhook URL",
+          "accessTokenPlaceholder": "https://example.com/api/post",
+          "accessTokenHelper": "Webhook URL ที่จะรับ POST { content, media_urls }"
+        }
+      }
     },
     "status": {
       "pending": "รอคิว",
@@ -263,6 +320,8 @@
       "deleteAria": "ลบการเชื่อมต่อ",
       "modalTitle": "เพิ่มการเชื่อมต่อ",
       "formNotice": "ค่าที่กรอกจะถูกส่งไปเก็บเป็น secret บน Supabase ผ่าน backend เท่านั้น ไม่มีการเก็บไว้ฝั่ง frontend",
+      "requiredField": "กรุณากรอกข้อมูลในช่องนี้",
+      "formInvalid": "กรุณาแก้ไขช่องที่ไฮไลต์สีแดงก่อนบันทึก",
       "cancel": "ยกเลิก",
       "save": "บันทึกการเชื่อมต่อ",
       "updated": "อัปเดตแล้ว",

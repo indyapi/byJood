@@ -31,13 +31,87 @@ function usePlatforms(t) {
   };
 }
 
-function useConnectionFields(t) {
+/**
+ * Platform-aware field descriptors for the Add/Edit Connection modals.
+ * Labels, placeholders, helper text and required state change per platform.
+ * Each field: { key, label, placeholder, helper, required, secret, validate }
+ */
+function connectionFieldsFor(platform, t) {
+  const spec = t(`dashboard.fields.platformSpecs.${platform}`);
+  const igError = t("dashboard.fields.platformSpecs.instagram.externalIdError");
+  const isInstagram = platform === "instagram";
+
   return [
-    { key: "appId", label: t("dashboard.fields.appId"), placeholder: t("dashboard.fields.appIdPlaceholder") },
-    { key: "pageId", label: t("dashboard.fields.pageId"), placeholder: t("dashboard.fields.pageIdPlaceholder") },
-    { key: "appSecret", label: t("dashboard.fields.appSecret"), secret: true, placeholder: t("dashboard.fields.appSecretPlaceholder") },
-    { key: "accessToken", label: t("dashboard.fields.accessToken"), secret: true, placeholder: t("dashboard.fields.accessTokenPlaceholder") },
+    {
+      key: "pageId",
+      label: spec.externalIdLabel,
+      placeholder: spec.externalIdPlaceholder,
+      helper: spec.externalIdHelper,
+      required: true,
+      secret: false,
+      validate: (v) => (isInstagram && !/^\d+$/.test(v.trim()) ? igError : null),
+    },
+    {
+      key: "accessToken",
+      label: spec.accessTokenLabel,
+      placeholder: spec.accessTokenPlaceholder,
+      helper: spec.accessTokenHelper,
+      required: true,
+      secret: true,
+      validate: null,
+    },
+    {
+      key: "appId",
+      label: t("dashboard.fields.appId"),
+      placeholder: t("dashboard.fields.appIdPlaceholder"),
+      helper: "",
+      required: false,
+      secret: false,
+      validate: null,
+    },
+    {
+      key: "appSecret",
+      label: t("dashboard.fields.appSecret"),
+      placeholder: t("dashboard.fields.appSecretPlaceholder"),
+      helper: "",
+      required: false,
+      secret: true,
+      validate: null,
+    },
   ];
+}
+
+function ConnectionField({ field, value, error, showSecret, onValue, onToggleSecret, disabled, optionalLabel }) {
+  return (
+    <div className="field-group">
+      <label className="field-label">
+        {field.label}
+        {field.required ? (
+          <span className="req-star"> *</span>
+        ) : (
+          <span className="req-optional"> ({optionalLabel})</span>
+        )}
+      </label>
+      <div className="input-with-icon">
+        <input
+          className={`input mono ${error ? "input-error" : ""}`}
+          type={field.secret && !showSecret ? "password" : "text"}
+          placeholder={field.placeholder}
+          value={value || ""}
+          onChange={(e) => onValue(e.target.value)}
+          disabled={disabled}
+          autoComplete={field.secret ? "off" : "on"}
+        />
+        {field.secret && (
+          <button type="button" className="icon-btn" onClick={onToggleSecret} disabled={disabled}>
+            {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        )}
+      </div>
+      {field.required && field.helper && !error && <p className="field-helper">{field.helper}</p>}
+      {error && <p className="field-error">{error}</p>}
+    </div>
+  );
 }
 
 /* ---------------------------------------------------------
@@ -645,11 +719,34 @@ function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
   const [label, setLabel] = useState("");
   const [values, setValues] = useState({});
   const [showSecret, setShowSecret] = useState({});
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState(null);
 
-  const fields = useConnectionFields(t);
+  const fields = useMemo(() => connectionFieldsFor(platform, t), [platform, t]);
+  const optionalLabel = t("dashboard.fields.optional");
+  const requiredLabel = t("dashboard.connections.requiredField");
+
+  function validate() {
+    const next = {};
+    for (const f of fields) {
+      const v = (values[f.key] || "").trim();
+      if (f.required && !v) {
+        next[f.key] = requiredLabel;
+      } else if (v && f.validate) {
+        const e = f.validate(v);
+        if (e) next[f.key] = e;
+      }
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
 
   function submit(e) {
     e.preventDefault();
+    if (!validate()) {
+      setFormError(t("dashboard.connections.formInvalid"));
+      return;
+    }
     onAdd({
       platform,
       label: label || PLATFORMS[platform].name,
@@ -669,7 +766,7 @@ function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
         </div>
 
-        <form onSubmit={submit}>
+        <form onSubmit={submit} noValidate>
           <div className="field-group">
             <label className="field-label">{t("dashboard.fields.platform")}</label>
             <div className="platform-picker">
@@ -679,7 +776,7 @@ function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
                   key={key}
                   className={`platform-option ${platform === key ? "selected" : ""}`}
                   style={{ "--chip-color": p.color, "--chip-text": p.dark ? "#111318" : "#fff" }}
-                  onClick={() => { setPlatform(key); setValues({}); }}
+                  onClick={() => { setPlatform(key); setValues({}); setErrors({}); setFormError(null); }}
                 >
                   <span className="chip-code">{p.code}</span>
                   <span className="platform-option-name">{p.name}</span>
@@ -694,25 +791,24 @@ function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
           </div>
 
           {fields.map((f) => (
-            <div className="field-group" key={f.key}>
-              <label className="field-label">{f.label}</label>
-              <div className="input-with-icon">
-                <input
-                  className="input mono"
-                  type={f.secret && !showSecret[f.key] ? "password" : "text"}
-                  placeholder={f.placeholder}
-                  value={values[f.key] || ""}
-                  onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                  required
-                />
-                {f.secret && (
-                  <button type="button" className="icon-btn" onClick={() => setShowSecret((s) => ({ ...s, [f.key]: !s[f.key] }))}>
-                    {showSecret[f.key] ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                )}
-              </div>
-            </div>
+            <ConnectionField
+              key={f.key}
+              field={f}
+              value={values[f.key]}
+              error={errors[f.key]}
+              showSecret={showSecret[f.key]}
+              optionalLabel={optionalLabel}
+              onValue={(v) => setValues((prev) => ({ ...prev, [f.key]: v }))}
+              onToggleSecret={() => setShowSecret((s) => ({ ...s, [f.key]: !s[f.key] }))}
+            />
           ))}
+
+          {formError && (
+            <div className="notice small error">
+              <XCircle size={13} />
+              <span>{formError}</span>
+            </div>
+          )}
 
           <div className="notice small">
             <Info size={13} />
@@ -738,8 +834,14 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
   const [appId, setAppId] = useState("");
   const [appSecret, setAppSecret] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [showSecret, setShowSecret] = useState({});
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const platform = page.platform;
+  const fields = useMemo(() => connectionFieldsFor(platform, t), [platform, t]);
+  const optionalLabel = t("dashboard.fields.optional");
+  const byKey = (k) => fields.find((f) => f.key === k);
 
   async function submit(e) {
     e.preventDefault();
@@ -771,6 +873,9 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
   }
 
   const disabled = saving || success;
+  const tokenSpec = byKey("accessToken");
+  const appIdSpec = byKey("appId");
+  const appSecretSpec = byKey("appSecret");
 
   return (
     <div className="modal-overlay">
@@ -793,20 +898,38 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
             <input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={page.label} disabled={disabled} />
           </div>
 
-          <div className="field-group">
-            <label className="field-label">App ID</label>
-            <input className="input mono" value={appId} onChange={(e) => setAppId(e.target.value)} placeholder="Leave empty to keep current" disabled={disabled} />
-          </div>
+          <ConnectionField
+            field={{ key: "appId", label: appIdSpec.label, placeholder: "Leave empty to keep current", helper: "", required: false, secret: false }}
+            value={appId}
+            error={null}
+            showSecret={false}
+            optionalLabel={optionalLabel}
+            onValue={setAppId}
+            onToggleSecret={() => {}}
+            disabled={disabled}
+          />
 
-          <div className="field-group">
-            <label className="field-label">App Secret</label>
-            <input className="input mono" type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="Leave empty to keep current" disabled={disabled} />
-          </div>
+          <ConnectionField
+            field={{ key: "appSecret", label: appSecretSpec.label, placeholder: "Leave empty to keep current", helper: "", required: false, secret: true }}
+            value={appSecret}
+            error={null}
+            showSecret={showSecret.appSecret}
+            optionalLabel={optionalLabel}
+            onValue={setAppSecret}
+            onToggleSecret={() => setShowSecret((s) => ({ ...s, appSecret: !s.appSecret }))}
+            disabled={disabled}
+          />
 
-          <div className="field-group">
-            <label className="field-label">Access Token</label>
-            <input className="input mono" type="password" value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="Leave empty to keep current" disabled={disabled} />
-          </div>
+          <ConnectionField
+            field={{ key: "accessToken", label: tokenSpec.label, placeholder: "Leave empty to keep current", helper: tokenSpec.helper, required: false, secret: true }}
+            value={accessToken}
+            error={null}
+            showSecret={showSecret.accessToken}
+            optionalLabel={optionalLabel}
+            onValue={setAccessToken}
+            onToggleSecret={() => setShowSecret((s) => ({ ...s, accessToken: !s.accessToken }))}
+            disabled={disabled}
+          />
 
           <div className="notice small">
             <Info size={13} />
@@ -5044,6 +5167,15 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         .ai-loading { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
         .ai-error { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--danger); margin-top: 8px; }
         .field-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
+        .req-star { color: var(--danger, #ff4d4f); font-weight: 700; }
+        .req-optional { color: var(--text-dim); font-weight: 400; font-size: 11px; }
+        .field-helper {
+          margin: 6px 0 0; font-size: 11px; line-height: 1.5; color: var(--warning, #e0b341);
+          background: rgba(255, 193, 7, 0.08); border: 1px solid rgba(255, 193, 7, 0.25);
+          border-radius: var(--radius-sm); padding: 6px 8px;
+        }
+        .field-error { margin: 6px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--danger, #ff4d4f); }
+        .input-error { border-color: var(--danger, #ff4d4f) !important; }
         .input {
           width: 100%;
           background: var(--glass-bg-dark);

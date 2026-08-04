@@ -226,7 +226,64 @@
       "allTab": "All",
       "favoritesTab": "Favorites",
       "favoritesEmpty": "No favorites yet. Star pages or folders to pin them here.",
-      "selectedFolderSummary": "{count} pages selected from {folders} folders"
+      "selectedFolderSummary": "{count} pages selected from {folders} folders",
+      "optional": "Optional",
+      "platformSpecs": {
+        "instagram": {
+          "externalIdLabel": "Instagram Business Account ID",
+          "externalIdPlaceholder": "e.g., 17841400000000000",
+          "externalIdHelper": "⚠️ Must be an IG Business Account ID (all numbers) only — do NOT use the Facebook Page ID. Retrievable from Meta Explorer: GET /me/accounts?fields=instagram_business_account",
+          "externalIdError": "Please enter an Instagram Business Account ID that is numbers only",
+          "accessTokenLabel": "Facebook Page Access Token",
+          "accessTokenPlaceholder": "EAAG...",
+          "accessTokenHelper": "Use the long-lived Facebook Page Access Token linked to the page, with scopes: instagram_basic, instagram_content_publish"
+        },
+        "facebook": {
+          "externalIdLabel": "Facebook Page ID",
+          "externalIdPlaceholder": "e.g., 574715995732557",
+          "externalIdHelper": "The numeric ID of your Facebook Page.",
+          "externalIdError": "Please enter a valid Facebook Page ID",
+          "accessTokenLabel": "Page Access Token",
+          "accessTokenPlaceholder": "EAAG...",
+          "accessTokenHelper": "Long-lived Page Access Token with the \"pages_manage_posts\" permission"
+        },
+        "tiktok": {
+          "externalIdLabel": "TikTok Open ID",
+          "externalIdPlaceholder": "e.g., your TikTok user's Open ID",
+          "externalIdHelper": "Your TikTok user's Open ID, returned by GET /v2/user/info/.",
+          "externalIdError": "Please enter your TikTok Open ID",
+          "accessTokenLabel": "TikTok Access Token",
+          "accessTokenPlaceholder": "Paste the access token",
+          "accessTokenHelper": "Token with scopes: video.publish, video.upload"
+        },
+        "threads": {
+          "externalIdLabel": "Threads User ID",
+          "externalIdPlaceholder": "e.g., 314216",
+          "externalIdHelper": "Numeric Threads User ID, returned by GET /v1.0/me.",
+          "externalIdError": "Please enter your Threads User ID",
+          "accessTokenLabel": "Threads Access Token",
+          "accessTokenPlaceholder": "Paste the access token",
+          "accessTokenHelper": "Token with scopes: threads_basic, threads_content_publish"
+        },
+        "youtube": {
+          "externalIdLabel": "YouTube Channel ID",
+          "externalIdPlaceholder": "e.g., UCz2D...",
+          "externalIdHelper": "The channel ID of your YouTube channel (starts with \"UC\").",
+          "externalIdError": "Please enter your YouTube Channel ID",
+          "accessTokenLabel": "YouTube API Key / Token",
+          "accessTokenPlaceholder": "Paste the API key or OAuth token",
+          "accessTokenHelper": "API key or OAuth 2.0 token with the youtube.upload scope"
+        },
+        "website": {
+          "externalIdLabel": "Site / Webhook Name",
+          "externalIdPlaceholder": "e.g., my-blog",
+          "externalIdHelper": "Any identifier for this website/webhook destination.",
+          "externalIdError": "Please enter an identifier for this website",
+          "accessTokenLabel": "Webhook URL",
+          "accessTokenPlaceholder": "https://example.com/api/post",
+          "accessTokenHelper": "The webhook URL that will receive POST { content, media_urls }"
+        }
+      }
     },
     "status": {
       "pending": "Pending",
@@ -262,6 +319,8 @@
       "deleteAria": "Delete connection",
       "modalTitle": "Add Connection",
       "formNotice": "Values are sent to Supabase as secrets via the backend only — not stored client-side.",
+      "requiredField": "This field is required",
+      "formInvalid": "Please fix the highlighted fields before saving.",
       "cancel": "Cancel",
       "save": "Save Connection",
       "updated": "Updated",

@@ -67,6 +67,7 @@ export async function GET(request, { params }) {
           platform,
           external_page_id: account.id,
           display_name: account.name,
+          ig_business_account_id: account.ig_business_account_id ?? null,
         },
         { onConflict: "user_id,platform,external_page_id" }
       )
@@ -131,6 +132,7 @@ async function fetchManagedAccounts(platform, accessToken) {
 
   if (platform === "instagram") {
     // ต้องผ่าน Facebook Page ก่อน แล้วดึง instagram_business_account ที่ผูกอยู่
+    // external_page_id = FB Page ID, ig_business_account_id = IG Business Account ID
     const pagesRes = await fetch(
       `https://graph.facebook.com/v25.0/me/accounts?fields=instagram_business_account,access_token&access_token=${accessToken}`
     );
@@ -138,7 +140,8 @@ async function fetchManagedAccounts(platform, accessToken) {
     return (pagesData.data ?? [])
       .filter((p) => p.instagram_business_account)
       .map((p) => ({
-        id: p.instagram_business_account.id,
+        id: p.id,
+        ig_business_account_id: p.instagram_business_account.id,
         name: p.name,
         access_token: p.access_token,
       }));

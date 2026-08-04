@@ -36,7 +36,7 @@ export async function GET() {
       page.expires_at = null;
     }
 
-    const name = await fetchPlatformPageName(page.platform, page.external_page_id, token.access_token);
+    const name = await fetchPlatformPageName(page.platform, page.external_page_id, token.access_token, page.ig_business_account_id);
     if (name && name !== page.display_name) {
       await admin.from("pages").update({ display_name: name }).eq("id", page.id);
       page.display_name = name;
@@ -46,12 +46,15 @@ export async function GET() {
   return Response.json(pages);
 }
 
-async function fetchPlatformPageName(platform, externalPageId, accessToken) {
+async function fetchPlatformPageName(platform, externalPageId, accessToken, igBusinessAccountId) {
   if (!accessToken) return null;
   try {
     if (["facebook", "instagram", "threads"].includes(platform)) {
+      // For Instagram, prefer the IG Business Account ID (it is the node the
+      // Graph API posts to); fall back to the FB Page ID for older rows.
+      const lookupId = platform === "instagram" && igBusinessAccountId ? igBusinessAccountId : externalPageId;
       const res = await fetch(
-        `https://graph.facebook.com/v25.0/${externalPageId}?fields=name&access_token=${accessToken}`
+        `https://graph.facebook.com/v25.0/${lookupId}?fields=name&access_token=${accessToken}`
       );
       const data = await res.json();
       return data.name ?? null;
@@ -67,20 +70,26 @@ export async function POST(request) {
 
   const admin = createAdminSupabase();
   const body = await request.json();
-  const { platform, display_name, external_page_id, fields } = body;
+  const { platform, display_name, external_page_id, ig_business_account_id, fields } = body;
 
   if (!platform || !external_page_id) {
     return Response.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const resolvedName = display_name || (await fetchPlatformPageName(platform, external_page_id, fields?.access_token));
+  const resolvedName = display_name || (await fetchPlatformPageName(platform, external_page_id, fields?.access_token, ig_business_account_id));
   if (!resolvedName) {
     return Response.json({ error: "display_name is required" }, { status: 400 });
   }
 
   const { data: page, error: pageError } = await admin
     .from("pages")
-    .insert({ platform, external_page_id, display_name: resolvedName, user_id: user.id })
+    .insert({
+      platform,
+      external_page_id,
+      display_name: resolvedName,
+      ig_business_account_id: platform === "instagram" ? (ig_business_account_id || null) : null,
+      user_id: user.id,
+    })
     .select()
     .single();
 

@@ -230,10 +230,14 @@
       "optional": "Optional",
       "platformSpecs": {
         "instagram": {
-          "externalIdLabel": "Instagram Business Account ID",
-          "externalIdPlaceholder": "e.g., 17841400000000000",
-          "externalIdHelper": "⚠️ Must be an IG Business Account ID (all numbers) only — do NOT use the Facebook Page ID. Retrievable from Meta Explorer: GET /me/accounts?fields=instagram_business_account",
-          "externalIdError": "Please enter an Instagram Business Account ID that is numbers only",
+          "externalIdLabel": "Facebook Page ID",
+          "externalIdPlaceholder": "e.g., 574715995732557",
+          "externalIdHelper": "The numeric ID of the Facebook Page your Instagram account is linked to. This is NOT the Instagram Business Account ID.",
+          "externalIdError": "Please enter a valid Facebook Page ID",
+          "igBusinessIdLabel": "Instagram Business Account ID",
+          "igBusinessIdPlaceholder": "e.g., 17841400000000000",
+          "igBusinessIdHelper": "⚠️ The IG Business Account ID (all numbers). Retrievable from Meta Explorer: GET /me/accounts?fields=instagram_business_account. Leave blank if you connect via OAuth — it is filled in automatically.",
+          "igBusinessIdError": "Please enter an Instagram Business Account ID that is numbers only",
           "accessTokenLabel": "Facebook Page Access Token",
           "accessTokenPlaceholder": "EAAG...",
           "accessTokenHelper": "Use the long-lived Facebook Page Access Token linked to the page, with scopes: instagram_basic, instagram_content_publish"
@@ -312,6 +316,7 @@
       "notice": "Tokens are sent directly to the backend and stored as secrets in Supabase only — this page will not show the full token again after saving.",
       "empty": "No connections yet. Add your first page or API key to start posting.",
       "idLabel": "ID",
+      "igIdLabel": "IG Business Account ID",
       "tokenLabel": "Token",
       "addedPrefix": "Added ",
       "revealAria": "Show/hide token",

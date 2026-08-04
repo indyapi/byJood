@@ -40,7 +40,7 @@ export async function PATCH(request, { params }) {
   if (auth.error) return Response.json({ error: auth.error }, { status: auth.status });
 
   const body = await request.json();
-  const { display_name, label, app_id, app_secret, access_token, page_id: tokenPageId, folder_id, is_favorite } = body;
+  const { display_name, label, app_id, app_secret, access_token, page_id: tokenPageId, folder_id, is_favorite, ig_business_account_id } = body;
 
   // Update pages table if display_name/label provided
   const name = display_name || label;
@@ -51,6 +51,7 @@ export async function PATCH(request, { params }) {
 
   // Move to a folder / toggle favorite on the pages row
   const pageUpdates = {};
+  if (ig_business_account_id !== undefined) pageUpdates.ig_business_account_id = ig_business_account_id || null;
   if (folder_id !== undefined) {
     if (folder_id) {
       const { data: folderRow } = await admin

@@ -75,6 +75,10 @@ alter table post_logs add column if not exists error_code text;
 alter table post_logs add column if not exists error_type text;
 alter table post_logs add column if not exists error_subcode text;
 
+-- Instagram Business Account ID derived from Meta Graph API
+alter table pages add column if not exists ig_business_account_id text;
+comment on column pages.ig_business_account_id is 'Instagram Business Account ID derived from Meta Graph API';
+
 -- Token status column added after initial deploy (idempotent for existing DBs)
 alter table page_tokens add column if not exists status text default 'active';
 

@@ -28,7 +28,7 @@ export async function handleQueueBatch(batch, env) {
 async function processJob(job, env) {
   // 1. ดึง external_page_id ที่แท้จริงของเพจนี้ (ไม่ใช่ UUID ภายใน)
   const pageRes = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/pages?id=eq.${job.page_id}&select=external_page_id`,
+    `${env.SUPABASE_URL}/rest/v1/pages?id=eq.${job.page_id}&select=external_page_id,ig_business_account_id`,
     {
       headers: {
         apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -62,7 +62,13 @@ async function processJob(job, env) {
   }
 
   return handler(
-    { ...job, access_token: tokenRow.access_token, webhook_url: tokenRow.webhook_url, page_id: pageRow.external_page_id },
+    {
+      ...job,
+      access_token: tokenRow.access_token,
+      webhook_url: tokenRow.webhook_url,
+      page_id: pageRow.external_page_id,
+      ig_business_account_id: pageRow.ig_business_account_id ?? null,
+    },
     env
   );
 }

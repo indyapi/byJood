@@ -250,7 +250,14 @@ async function waitForContainerStatus(containerId, accessToken, timeoutMs = 6000
 }
 
 export async function postToInstagram(job, env) {
-  const { page_id, content, media_urls, access_token } = job;
+  const { page_id, content, media_urls, access_token, ig_business_account_id } = job;
+
+  // The IG Graph API posts to the IG Business Account node. Prefer the
+  // dedicated column, fall back to external_page_id for legacy rows.
+  const igTargetId = ig_business_account_id || page_id;
+  if (!igTargetId) {
+    return { success: false, error: "Missing Instagram Business Account ID" };
+  }
 
   // 1. Validate the image URL/format before hitting the API
   const imageCheck = validateInstagramImage(media_urls);
@@ -277,7 +284,7 @@ export async function postToInstagram(job, env) {
   let containerRes, container;
   try {
     containerRes = await fetch(
-      `https://graph.facebook.com/v25.0/${page_id}/media`,
+      `https://graph.facebook.com/v25.0/${igTargetId}/media`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -310,7 +317,7 @@ export async function postToInstagram(job, env) {
   let publishRes, publish;
   try {
     publishRes = await fetch(
-      `https://graph.facebook.com/v25.0/${page_id}/media_publish`,
+      `https://graph.facebook.com/v25.0/${igTargetId}/media_publish`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

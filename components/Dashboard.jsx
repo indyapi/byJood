@@ -38,7 +38,8 @@ function usePlatforms(t) {
  */
 function connectionFieldsFor(platform, t) {
   const spec = t(`dashboard.fields.platformSpecs.${platform}`);
-  const igError = t("dashboard.fields.platformSpecs.instagram.externalIdError");
+  const idError = t("dashboard.fields.platformSpecs.instagram.externalIdError");
+  const igError = t("dashboard.fields.platformSpecs.instagram.igBusinessIdError");
   const tokenError = t("dashboard.connections.tokenInvalid");
   const isInstagram = platform === "instagram";
 
@@ -50,7 +51,7 @@ function connectionFieldsFor(platform, t) {
     return null;
   };
 
-  return [
+  const fields = [
     {
       key: "pageId",
       label: spec.externalIdLabel,
@@ -58,7 +59,7 @@ function connectionFieldsFor(platform, t) {
       helper: spec.externalIdHelper,
       required: true,
       secret: false,
-      validate: (v) => (isInstagram && !/^\d+$/.test(v.trim()) ? igError : null),
+      validate: (v) => (isInstagram && !/^\d+$/.test(v.trim()) ? idError : null),
     },
     {
       key: "accessToken",
@@ -88,6 +89,22 @@ function connectionFieldsFor(platform, t) {
       validate: null,
     },
   ];
+
+  // Instagram needs the dedicated IG Business Account ID (the node the Graph
+  // API posts to). external_page_id holds the FB Page ID instead.
+  if (isInstagram) {
+    fields.splice(1, 0, {
+      key: "igBusinessAccountId",
+      label: t("dashboard.fields.platformSpecs.instagram.igBusinessIdLabel"),
+      placeholder: t("dashboard.fields.platformSpecs.instagram.igBusinessIdPlaceholder"),
+      helper: t("dashboard.fields.platformSpecs.instagram.igBusinessIdHelper"),
+      required: false,
+      secret: false,
+      validate: (v) => (v.trim() && !/^\d+$/.test(v.trim()) ? igError : null),
+    });
+  }
+
+  return fields;
 }
 
 function ConnectionField({ field, value, error, showSecret, onValue, onToggleSecret, disabled, optionalLabel }) {
@@ -117,7 +134,7 @@ function ConnectionField({ field, value, error, showSecret, onValue, onToggleSec
           </button>
         )}
       </div>
-      {field.required && field.helper && !error && <p className="field-helper">{field.helper}</p>}
+      {field.helper && !error && <p className="field-helper">{field.helper}</p>}
       {error && <p className="field-error">{error}</p>}
     </div>
   );
@@ -635,6 +652,12 @@ function ConnectionsView({ pages, folders, onAdd, onRemove, onUpdate, onMovePage
                 <span className="label-dim">{t("dashboard.connections.idLabel")}</span>
                 <span className="mono">{pg.externalId}</span>
               </div>
+              {pg.platform === "instagram" && pg.igBusinessAccountId && (
+                <div className="card-row">
+                  <span className="label-dim">{t("dashboard.connections.igIdLabel")}</span>
+                  <span className="mono">{pg.igBusinessAccountId}</span>
+                </div>
+              )}
               <div className="card-row">
                 <span className="label-dim">{t("dashboard.connections.tokenLabel")}</span>
                 <span className="mono">
@@ -761,6 +784,7 @@ function AddConnectionModal({ onClose, onAdd, t, PLATFORMS }) {
       label: label || PLATFORMS[platform].name,
       appId: values.appId || "",
       pageId: values.pageId || "",
+      igBusinessAccountId: values.igBusinessAccountId || "",
       appSecret: values.appSecret || "",
       accessToken: values.accessToken || "",
     });
@@ -843,6 +867,7 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
   const [appId, setAppId] = useState("");
   const [appSecret, setAppSecret] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [igBusinessAccountId, setIgBusinessAccountId] = useState("");
   const [showSecret, setShowSecret] = useState({});
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -862,6 +887,7 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
     if (appId.trim()) body.app_id = appId.trim();
     if (appSecret.trim()) body.app_secret = appSecret.trim();
     if (accessToken.trim()) body.access_token = accessToken.trim();
+    if (platform === "instagram" && igBusinessAccountId.trim()) body.ig_business_account_id = igBusinessAccountId.trim();
 
     const res = await fetch(`/api/pages/${page.id}`, {
       method: "PATCH",
@@ -885,6 +911,7 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
   const tokenSpec = byKey("accessToken");
   const appIdSpec = byKey("appId");
   const appSecretSpec = byKey("appSecret");
+  const igSpec = platform === "instagram" ? byKey("igBusinessAccountId") : null;
 
   return (
     <div className="modal-overlay">
@@ -906,6 +933,19 @@ function UpdateConnectionModal({ page, onClose, onUpdate, t }) {
             <label className="field-label">{t("dashboard.fields.displayName")}</label>
             <input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={page.label} disabled={disabled} />
           </div>
+
+          {igSpec && (
+            <ConnectionField
+              field={{ key: "igBusinessAccountId", label: igSpec.label, placeholder: "Leave empty to keep current", helper: igSpec.helper, required: false, secret: false }}
+              value={igBusinessAccountId}
+              error={null}
+              showSecret={false}
+              optionalLabel={optionalLabel}
+              onValue={setIgBusinessAccountId}
+              onToggleSecret={() => {}}
+              disabled={disabled}
+            />
+          )}
 
           <ConnectionField
             field={{ key: "appId", label: appIdSpec.label, placeholder: "Leave empty to keep current", helper: "", required: false, secret: false }}
@@ -3821,6 +3861,7 @@ function pageFromDb(p) {
     platform: p.platform,
     label: p.display_name,
     externalId: p.external_page_id,
+    igBusinessAccountId: p.ig_business_account_id || "",
     appId: token?.app_id || "",
     status: p.status || "active",
     expiresAt: p.expires_at || null,
@@ -4008,6 +4049,7 @@ export default function Dashboard({ initialPages = [], initialPosts = [], initia
         platform: raw.platform,
         display_name: raw.label,
         external_page_id: raw.pageId,
+        ig_business_account_id: raw.platform === "instagram" ? (raw.igBusinessAccountId || "") : undefined,
         fields: {
           app_id: raw.appId,
           app_secret: raw.appSecret,

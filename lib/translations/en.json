@@ -262,12 +262,12 @@
         },
         "threads": {
           "externalIdLabel": "Threads User ID",
-          "externalIdPlaceholder": "e.g., 314216",
-          "externalIdHelper": "Numeric Threads User ID, returned by GET /v1.0/me.",
-          "externalIdError": "Please enter your Threads User ID",
+          "externalIdPlaceholder": "e.g., 17841400000000000",
+          "externalIdHelper": "⚠️ Must be Threads User ID only. Retrieved via OAuth or Meta Explorer (GET /me?fields=id&access_token=THREADS_TOKEN)",
+          "externalIdError": "Please enter a Threads User ID that is numbers only",
           "accessTokenLabel": "Threads Access Token",
-          "accessTokenPlaceholder": "Paste the access token",
-          "accessTokenHelper": "Token with scopes: threads_basic, threads_content_publish"
+          "accessTokenPlaceholder": "TH...",
+          "accessTokenHelper": "Use an Access Token with threads_basic and threads_content_publish privileges"
         },
         "youtube": {
           "externalIdLabel": "YouTube Channel ID",

@@ -38,10 +38,11 @@ function usePlatforms(t) {
  */
 function connectionFieldsFor(platform, t) {
   const spec = t(`dashboard.fields.platformSpecs.${platform}`);
-  const idError = t("dashboard.fields.platformSpecs.instagram.externalIdError");
+  const idError = t(`dashboard.fields.platformSpecs.${platform}.externalIdError`);
   const igError = t("dashboard.fields.platformSpecs.instagram.igBusinessIdError");
   const tokenError = t("dashboard.connections.tokenInvalid");
   const isInstagram = platform === "instagram";
+  const digitsOnly = platform === "instagram" || platform === "threads";
 
   // Light sanity check that the pasted token isn't obviously wrong
   // (empty handled separately by the required check).
@@ -59,7 +60,7 @@ function connectionFieldsFor(platform, t) {
       helper: spec.externalIdHelper,
       required: true,
       secret: false,
-      validate: (v) => (isInstagram && !/^\d+$/.test(v.trim()) ? idError : null),
+      validate: (v) => (digitsOnly && !/^\d+$/.test(v.trim()) ? idError : null),
     },
     {
       key: "accessToken",

@@ -263,12 +263,12 @@
         },
         "threads": {
           "externalIdLabel": "Threads User ID",
-          "externalIdPlaceholder": "เช่น 314216",
-          "externalIdHelper": "Threads User ID ตัวเลข มาจาก GET /v1.0/me",
-          "externalIdError": "กรุณากรอก Threads User ID ของคุณ",
+          "externalIdPlaceholder": "เช่น 17841400000000000",
+          "externalIdHelper": "⚠️ ต้องเป็น Threads User ID เท่านั้น หาได้จาก OAuth หรือ Meta Explorer (GET /me?fields=id&access_token=THREADS_TOKEN)",
+          "externalIdError": "กรุณากรอก Threads User ID ที่เป็นตัวเลขเท่านั้น",
           "accessTokenLabel": "Threads Access Token",
-          "accessTokenPlaceholder": "วาง Access Token",
-          "accessTokenHelper": "Token ที่มี Scopes: threads_basic, threads_content_publish"
+          "accessTokenPlaceholder": "TH...",
+          "accessTokenHelper": "ใช้ Access Token ที่มีสิทธิ์ threads_basic และ threads_content_publish"
         },
         "youtube": {
           "externalIdLabel": "YouTube Channel ID",

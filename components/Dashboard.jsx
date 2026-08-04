@@ -39,7 +39,16 @@ function usePlatforms(t) {
 function connectionFieldsFor(platform, t) {
   const spec = t(`dashboard.fields.platformSpecs.${platform}`);
   const igError = t("dashboard.fields.platformSpecs.instagram.externalIdError");
+  const tokenError = t("dashboard.connections.tokenInvalid");
   const isInstagram = platform === "instagram";
+
+  // Light sanity check that the pasted token isn't obviously wrong
+  // (empty handled separately by the required check).
+  const tokenCheck = (v) => {
+    const trimmed = v.trim();
+    if (/\s/.test(trimmed) || trimmed.length < 20) return tokenError;
+    return null;
+  };
 
   return [
     {
@@ -58,7 +67,7 @@ function connectionFieldsFor(platform, t) {
       helper: spec.accessTokenHelper,
       required: true,
       secret: true,
-      validate: null,
+      validate: tokenCheck,
     },
     {
       key: "appId",

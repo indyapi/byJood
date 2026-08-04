@@ -321,6 +321,7 @@
       "formNotice": "Values are sent to Supabase as secrets via the backend only — not stored client-side.",
       "requiredField": "This field is required",
       "formInvalid": "Please fix the highlighted fields before saving.",
+      "tokenInvalid": "This token looks invalid — it should be a single long string with no spaces (min. 20 characters).",
       "cancel": "Cancel",
       "save": "Save Connection",
       "updated": "Updated",

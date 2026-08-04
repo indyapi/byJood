@@ -14,7 +14,7 @@ const REQUIRED_FB_PERMS = ["pages_manage_posts", "pages_read_engagement"];
 async function checkFacebookPermissions(page_id, access_token) {
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v21.0/${page_id}?fields=perms&access_token=${encodeURIComponent(access_token)}`
+      `https://graph.facebook.com/v25.0/${page_id}?fields=perms&access_token=${encodeURIComponent(access_token)}`
     );
     const data = await res.json();
     if (!res.ok || !Array.isArray(data.perms)) {
@@ -40,7 +40,7 @@ export async function postToFacebook(job) {
   }
 
   if (media_urls?.length === 0) {
-    const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, {
+    const res = await fetch(`https://graph.facebook.com/v25.0/${page_id}/feed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: content, access_token, published: true }),
@@ -53,7 +53,7 @@ export async function postToFacebook(job) {
   // 1. โพสต์ข้อความ + รูปเดียว: ส่งไปที่ /photos พร้อม published: true
   //    และห้ามใส่ no_story: true (ไม่งั้นรูปจะถูกอัปโหลดแต่ไม่ขึ้น Feed)
   if (media_urls.length === 1) {
-    const res = await fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
+    const res = await fetch(`https://graph.facebook.com/v25.0/${page_id}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -71,7 +71,7 @@ export async function postToFacebook(job) {
   // 2. โพสต์หลายรูป: Step 1 อัปโหลดรูปแบบ unpublished เพื่อเก็บ photo_id
   //    ใช้ Promise.all โดย map ผลลัพธ์กลับไปที่ index เดิมของ media_urls เพื่อคงลำดับรูป
   const uploads = media_urls.map((url, index) =>
-    fetch(`https://graph.facebook.com/v21.0/${page_id}/photos`, {
+    fetch(`https://graph.facebook.com/v25.0/${page_id}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url, access_token, published: false }),
@@ -100,7 +100,7 @@ export async function postToFacebook(job) {
   // 2. Step 2 สร้าง Feed Post โดยแนบ attached_media ตามลำดับที่ผู้ใช้จัดไว้ แล้วเผยแพร่
   const attachedMedia = orderedPhotoIds.map((media_fbid) => ({ media_fbid }));
 
-  const feedRes = await fetch(`https://graph.facebook.com/v21.0/${page_id}/feed`, {
+  const feedRes = await fetch(`https://graph.facebook.com/v25.0/${page_id}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -123,7 +123,7 @@ export async function postToInstagram(job) {
   }
 
   const containerRes = await fetch(
-    `https://graph.facebook.com/v21.0/${page_id}/media`,
+    `https://graph.facebook.com/v25.0/${page_id}/media`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -138,7 +138,7 @@ export async function postToInstagram(job) {
   if (!containerRes.ok) return { success: false, error: container.error?.message };
 
   const publishRes = await fetch(
-    `https://graph.facebook.com/v21.0/${page_id}/media_publish`,
+    `https://graph.facebook.com/v25.0/${page_id}/media_publish`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

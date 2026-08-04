@@ -72,7 +72,7 @@ async function refreshToken(platform, refreshToken, env) {
       client_secret: env.FACEBOOK_APP_SECRET,
       fb_exchange_token: refreshToken,
     });
-    const res = await fetch(`https://graph.facebook.com/v21.0/oauth/access_token?${params}`);
+    const res = await fetch(`https://graph.facebook.com/v25.0/oauth/access_token?${params}`);
     return res.json();
   }
 

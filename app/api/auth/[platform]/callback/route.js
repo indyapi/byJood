@@ -41,7 +41,7 @@ export async function GET(request, { params }) {
 
   // 2.5 Exchange short-lived → long-lived (60 day) token for Facebook/Instagram
   if (platform === "facebook" || platform === "instagram") {
-    const exchangeUrl = `https://graph.facebook.com/v21.0/oauth/access_token?` +
+    const exchangeUrl = `https://graph.facebook.com/v25.0/oauth/access_token?` +
       `grant_type=fb_exchange_token` +
       `&client_id=${cfg.clientId}` +
       `&client_secret=${cfg.clientSecret}` +
@@ -122,7 +122,7 @@ async function exchangeCodeForToken(platform, cfg, code) {
 async function fetchManagedAccounts(platform, accessToken) {
   if (platform === "facebook") {
     const res = await fetch(
-      `https://graph.facebook.com/v21.0/me/accounts?access_token=${accessToken}`
+      `https://graph.facebook.com/v25.0/me/accounts?access_token=${accessToken}`
     );
     const data = await res.json();
     // แต่ละเพจมี access_token เฉพาะเพจนั้น (Page Access Token) ต่างจาก user token
@@ -132,7 +132,7 @@ async function fetchManagedAccounts(platform, accessToken) {
   if (platform === "instagram") {
     // ต้องผ่าน Facebook Page ก่อน แล้วดึง instagram_business_account ที่ผูกอยู่
     const pagesRes = await fetch(
-      `https://graph.facebook.com/v21.0/me/accounts?fields=instagram_business_account,access_token&access_token=${accessToken}`
+      `https://graph.facebook.com/v25.0/me/accounts?fields=instagram_business_account,access_token&access_token=${accessToken}`
     );
     const pagesData = await pagesRes.json();
     return (pagesData.data ?? [])

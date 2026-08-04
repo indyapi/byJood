@@ -51,7 +51,7 @@ async function fetchPlatformPageName(platform, externalPageId, accessToken) {
   try {
     if (["facebook", "instagram", "threads"].includes(platform)) {
       const res = await fetch(
-        `https://graph.facebook.com/v21.0/${externalPageId}?fields=name&access_token=${accessToken}`
+        `https://graph.facebook.com/v25.0/${externalPageId}?fields=name&access_token=${accessToken}`
       );
       const data = await res.json();
       return data.name ?? null;

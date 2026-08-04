@@ -107,7 +107,7 @@ async function deleteFromPlatform(platform, externalPostId, accessToken) {
   switch (platform) {
     case "facebook":
     case "instagram": {
-      await fetch(`https://graph.facebook.com/v21.0/${externalPostId}?access_token=${accessToken}`, { method: "DELETE" });
+      await fetch(`https://graph.facebook.com/v25.0/${externalPostId}?access_token=${accessToken}`, { method: "DELETE" });
       break;
     }
     case "tiktok": {

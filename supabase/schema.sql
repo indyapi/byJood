@@ -70,6 +70,11 @@ create table post_groups (
   created_at timestamptz default now()
 );
 
+-- Detailed Meta API error fields written by the consumer (shown in the Logs UI)
+alter table post_logs add column if not exists error_code text;
+alter table post_logs add column if not exists error_type text;
+alter table post_logs add column if not exists error_subcode text;
+
 -- Token status column added after initial deploy (idempotent for existing DBs)
 alter table page_tokens add column if not exists status text default 'active';
 

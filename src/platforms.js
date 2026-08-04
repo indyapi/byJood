@@ -115,38 +115,210 @@ export async function postToFacebook(job) {
   return { success: true, externalPostId: feedData.id };
 }
 
-export async function postToInstagram(job) {
-  // IG Graph API ต้องสร้าง media container ก่อน แล้วค่อย publish (2 ขั้นตอน)
-  const { page_id, content, media_urls, access_token } = job;
-  if (!media_urls?.length) {
-    return { success: false, error: "Instagram ต้องมีรูป/วิดีโออย่างน้อย 1 ไฟล์" };
+// ---------- Instagram helpers ----------
+
+const IG_IMAGE_EXT = new Set(["jpg", "jpeg", "png"]);
+const IG_VIDEO_EXT = new Set(["mp4", "mov", "m4v", "avi", "webm", "mkv", "3gp", "wmv", "flv"]);
+const IG_KNOWN_BAD_EXT = new Set(["gif", "webp", "heic", "heif", "bmp", "tif", "tiff", "svg", "pdf"]);
+
+function getPathExtension(pathname) {
+  const base = pathname.split("/").pop() || "";
+  const dot = base.lastIndexOf(".");
+  return dot === -1 || dot === 0 ? "" : base.slice(dot + 1).toLowerCase();
+}
+
+function isPrivateHostname(hostname) {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) return true;
+  if (h === "0.0.0.0" || h === "::" || h === "::1") return true;
+  return /^(0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
+}
+
+/**
+ * Validate that media_urls[0] is a public HTTPS image URL that the Meta API
+ * can fetch (no localhost / private host / blob / data, and a supported format).
+ */
+function validateInstagramImage(mediaUrls) {
+  const url = Array.isArray(mediaUrls) ? mediaUrls[0] : null;
+  if (!url || typeof url !== "string" || !url.trim()) {
+    return { ok: false, error: "Instagram requires at least 1 image" };
   }
 
-  const containerRes = await fetch(
-    `https://graph.facebook.com/v25.0/${page_id}/media`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image_url: media_urls[0],
-        caption: content,
-        access_token,
-      }),
-    }
-  );
-  const container = await containerRes.json();
-  if (!containerRes.ok) return { success: false, error: container.error?.message };
+  let parsed;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return { ok: false, error: `Instagram image URL is not a valid URL: "${url}"` };
+  }
 
-  const publishRes = await fetch(
-    `https://graph.facebook.com/v25.0/${page_id}/media_publish`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ creation_id: container.id, access_token }),
+  if (parsed.protocol !== "https:") {
+    return { ok: false, error: `Instagram image URL must be a public HTTPS URL (got "${parsed.protocol}//")` };
+  }
+  if (isPrivateHostname(parsed.hostname)) {
+    return { ok: false, error: `Instagram image URL must be publicly accessible (got host "${parsed.hostname}")` };
+  }
+
+  const ext = getPathExtension(parsed.pathname);
+  if (IG_VIDEO_EXT.has(ext)) {
+    return { ok: false, error: `Instagram image_url only accepts images — got a video file (.${ext}). Video posting is not supported yet.` };
+  }
+  if (IG_KNOWN_BAD_EXT.has(ext)) {
+    return { ok: false, error: `Instagram image must be JPEG/JPG or PNG — got ".${ext}". Convert the image and re-upload it.` };
+  }
+  if (ext && !IG_IMAGE_EXT.has(ext)) {
+    return { ok: false, error: `Unsupported image file type ".${ext}" — Instagram image_url accepts JPEG/JPG and PNG only.` };
+  }
+
+  return { ok: true, url: url.trim() };
+}
+
+/**
+ * Best-effort HEAD check that the image URL is publicly reachable.
+ * Only fails on definitive signals (4xx/5xx, HTML page, video/audio);
+ * network timeouts are inconclusive so they don't block posting.
+ */
+async function checkImageAccessible(url) {
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.status >= 400 && res.status !== 405) {
+      return { ok: false, error: `Instagram image URL is not publicly accessible (HTTP ${res.status}) — check the link or re-upload.` };
     }
-  );
-  const publish = await publishRes.json();
-  if (!publishRes.ok) return { success: false, error: publish.error?.message };
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.startsWith("text/")) {
+      return { ok: false, error: `Instagram image URL returned an HTML page (${ct}) — the link is not a direct image file.` };
+    }
+    if (/^(video|audio)\//.test(ct)) {
+      return { ok: false, error: `Instagram image URL points to ${ct} — expected an image (JPEG/JPG or PNG).` };
+    }
+  } catch {
+    // Inconclusive — Meta may still be able to fetch it, so don't block.
+  }
+  return { ok: true };
+}
+
+/** Build a human-readable Meta API error string for the Logs UI. */
+function extractMetaError(data, fallback) {
+  const err = data?.error;
+  if (!err) return fallback ?? data?.message ?? "Unknown Meta API error";
+  const parts = [];
+  if (err.error_user_title) parts.push(err.error_user_title);
+  if (err.error_user_msg) parts.push(err.error_user_msg);
+  if (err.message) parts.push(err.message);
+  if (err.type) parts.push(`type: ${err.type}`);
+  if (err.code) parts.push(`code: ${err.code}`);
+  if (err.error_subcode) parts.push(`subcode: ${err.error_subcode}`);
+  if (err.fbtrace_id) parts.push(`trace: ${err.fbtrace_id}`);
+  return parts.join(" — ");
+}
+
+/** Structured Meta error fields, persisted so the Logs UI / queries can filter on them. */
+function extractMetaErrorFields(data) {
+  return {
+    errorCode: data?.error?.code != null ? String(data.error.code) : null,
+    errorType: data?.error?.type ?? null,
+    errorSubcode: data?.error?.error_subcode != null ? String(data.error.error_subcode) : null,
+  };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Poll the media container until it reaches FINISHED (large images take time).
+ * Publishes only once the container is ready, otherwise returns the failure.
+ */
+async function waitForContainerStatus(containerId, accessToken, timeoutMs = 60000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastStatus = null;
+  while (Date.now() < deadline) {
+    const res = await fetch(
+      `https://graph.facebook.com/v25.0/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(accessToken)}`
+    );
+    const data = await res.json();
+    if (data?.error) {
+      return { ok: false, status: null, error: extractMetaError(data, "Unknown error while checking media container status") };
+    }
+    lastStatus = data?.status_code || data?.status || null;
+    if (lastStatus === "FINISHED") return { ok: true, status: lastStatus };
+    if (["ERROR", "EXPIRED", "FAILED"].includes(lastStatus)) {
+      return { ok: false, status: lastStatus, error: `Media container ${lastStatus}: ${data?.status_detail || "unknown reason"}` };
+    }
+    await sleep(3000);
+  }
+  return { ok: false, status: lastStatus, error: `Media container did not reach FINISHED within ${timeoutMs / 1000}s (last status: ${lastStatus || "unknown"})` };
+}
+
+export async function postToInstagram(job) {
+  const { page_id, content, media_urls, access_token } = job;
+
+  // 1. Validate the image URL/format before hitting the API
+  const imageCheck = validateInstagramImage(media_urls);
+  if (!imageCheck.ok) return { success: false, error: imageCheck.error };
+
+  const accessible = await checkImageAccessible(imageCheck.url);
+  if (!accessible.ok) return { success: false, error: accessible.error };
+
+  // 2. Step 1 — create the media container
+  let containerRes, container;
+  try {
+    containerRes = await fetch(
+      `https://graph.facebook.com/v25.0/${page_id}/media`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_url: imageCheck.url,
+          caption: content,
+          access_token,
+        }),
+      }
+    );
+    container = await containerRes.json();
+  } catch (err) {
+    return { success: false, error: `Network error creating Instagram media container: ${String(err)}` };
+  }
+  if (!containerRes.ok || !container.id) {
+    return {
+      success: false,
+      error: extractMetaError(container, "Unknown error creating Instagram media container"),
+      ...extractMetaErrorFields(container),
+    };
+  }
+
+  // 3. Wait for the container to finish processing before publishing
+  const status = await waitForContainerStatus(container.id, access_token);
+  if (!status.ok) {
+    return { success: false, error: status.error };
+  }
+
+  // 4. Step 2 — publish the finished container
+  let publishRes, publish;
+  try {
+    publishRes = await fetch(
+      `https://graph.facebook.com/v25.0/${page_id}/media_publish`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creation_id: container.id, access_token }),
+      }
+    );
+    publish = await publishRes.json();
+  } catch (err) {
+    return { success: false, error: `Network error publishing Instagram media: ${String(err)}` };
+  }
+  if (!publishRes.ok || !publish.id) {
+    return {
+      success: false,
+      error: extractMetaError(publish, "Unknown error publishing Instagram media"),
+      ...extractMetaErrorFields(publish),
+    };
+  }
+
   return { success: true, externalPostId: publish.id };
 }
 

@@ -83,6 +83,9 @@ async function logResult(env, job, result) {
       success: result.success,
       external_post_id: result.externalPostId ?? null,
       error_message: result.error ?? null,
+      error_code: result.errorCode ?? null,
+      error_type: result.errorType ?? null,
+      error_subcode: result.errorSubcode ?? null,
       created_at: new Date().toISOString(),
     }),
   });
